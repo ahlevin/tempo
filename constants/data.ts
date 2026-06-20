@@ -7,7 +7,7 @@ export const CATEGORIES = [
   { id:'celebration', label:'🎉 Celebration' },
   { id:'work',        label:'💼 Work' },
   { id:'personal',    label:'❤️ Personal' },
-];
+] as const;
 
 export const MEMORY_TYPES = [
   { id:'birthday',    icon:'🎂', label:'Birthday',    desc:'Person or pet' },

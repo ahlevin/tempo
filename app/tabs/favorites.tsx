@@ -83,7 +83,7 @@ export default function FavoritesScreen() {
                   </View>
                   <View style={{ height:6, backgroundColor:'rgba(255,255,255,0.07)',
                     borderRadius:3, overflow:'hidden' }}>
-                    <View style={{ height:'100%', width:pct+'%',
+                    <View style={{ height:'100%', width:`${pct}%`,
                       backgroundColor:Colors.teal, borderRadius:3 }} />
                   </View>
                   <Text style={{ fontSize:12, color:Colors.teal, marginTop:5, fontWeight:'600' }}>
