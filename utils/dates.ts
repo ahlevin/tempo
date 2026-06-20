@@ -88,6 +88,13 @@ export function daysSince(dateStr: string): number {
   return Math.floor((now.getTime() - parseISO(dateStr + 'T00:00:00').getTime()) / 86400000);
 }
 
+// Whole calendar days between two yyyy-MM-dd strings (toStr - fromStr).
+export function daysBetween(fromStr: string, toStr: string): number {
+  return Math.round(
+    (parseISO(toStr + 'T00:00:00').getTime() - parseISO(fromStr + 'T00:00:00').getTime()) / 86400000
+  );
+}
+
 export function ordinal(n: number): string {
   return n + (n === 1 ? 'st' : n === 2 ? 'nd' : n === 3 ? 'rd' : 'th');
 }

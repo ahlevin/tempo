@@ -1,5 +1,6 @@
 import { useRef, useState, useEffect } from 'react';
 import { View, Text, ScrollView, Dimensions, TouchableOpacity } from 'react-native';
+import Svg, { Circle } from 'react-native-svg';
 import { Colors, CatColors } from '../constants/colors';
 import { useStore } from '../store/useStore';
 import { nextOccurrence, daysUntil, pctElapsed, recurLabel, nextAnnual, yearsMonthsDays, ordinal } from '../utils/dates';
@@ -21,6 +22,41 @@ function Ring({ pct, color }: { pct: number; color: string }) {
       <View style={{ position:'absolute', inset:0, alignItems:'center', justifyContent:'center' }}>
         <Text style={{ fontSize:17, fontWeight:'800', color }}>{pct}%</Text>
         <Text style={{ fontSize:8, color:Colors.text3, textTransform:'uppercase', letterSpacing:0.5 }}>elapsed</Text>
+      </View>
+    </View>
+  );
+}
+
+// Two concentric SVG rings: outer = time elapsed, inner = goal progress.
+function DualRing({ goalPct, timePct }: { goalPct: number; timePct: number }) {
+  const SIZE = 100, STROKE = 7;
+  const cx = SIZE / 2, cy = SIZE / 2;
+  const rOuter = 46, rInner = 33;
+  const cOuter = 2 * Math.PI * rOuter;
+  const cInner = 2 * Math.PI * rInner;
+  const track  = 'rgba(255,255,255,0.07)';
+
+  return (
+    <View style={{ width: SIZE, height: SIZE, alignItems: 'center', justifyContent: 'center' }}>
+      <Svg width={SIZE} height={SIZE} style={{ position: 'absolute' }}>
+        {/* Outer track + time elapsed */}
+        <Circle cx={cx} cy={cy} r={rOuter} stroke={track} strokeWidth={STROKE} fill="none" />
+        <Circle cx={cx} cy={cy} r={rOuter} stroke={Colors.amber} strokeWidth={STROKE} fill="none"
+          strokeLinecap="round" strokeDasharray={cOuter}
+          strokeDashoffset={cOuter * (1 - Math.min(100, timePct) / 100)}
+          transform={`rotate(-90 ${cx} ${cy})`} />
+        {/* Inner track + goal progress */}
+        <Circle cx={cx} cy={cy} r={rInner} stroke={track} strokeWidth={STROKE} fill="none" />
+        <Circle cx={cx} cy={cy} r={rInner} stroke={Colors.teal} strokeWidth={STROKE} fill="none"
+          strokeLinecap="round" strokeDasharray={cInner}
+          strokeDashoffset={cInner * (1 - Math.min(100, goalPct) / 100)}
+          transform={`rotate(-90 ${cx} ${cy})`} />
+      </Svg>
+      <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+        <Text style={{ fontSize: 16, fontWeight: '800', color: Colors.teal }}>{goalPct}%</Text>
+        <Text style={{ fontSize: 7, color: Colors.text3, textTransform: 'uppercase' }}>goal</Text>
+        <Text style={{ fontSize: 12, fontWeight: '700', color: Colors.amber, marginTop: 1 }}>{timePct}%</Text>
+        <Text style={{ fontSize: 7, color: Colors.text3, textTransform: 'uppercase' }}>time</Text>
       </View>
     </View>
   );
@@ -117,18 +153,7 @@ function GoalCard({ goal: g }: { goal: any }) {
         {g.emoji} {g.name}
       </Text>
       <View style={{ flexDirection:'row', alignItems:'center', gap:12, marginBottom:14 }}>
-        <View style={{ width:100, height:100, alignItems:'center', justifyContent:'center',
-          position:'relative' }}>
-          <View style={{ width:100, height:100, borderRadius:50, borderWidth:6,
-            borderColor:'rgba(255,255,255,0.07)', position:'absolute' }} />
-          <View style={{ position:'absolute', alignItems:'center', justifyContent:'center',
-            inset:0 }}>
-            <Text style={{ fontSize:16, fontWeight:'800', color:Colors.teal }}>{gp}%</Text>
-            <Text style={{ fontSize:8, color:Colors.text3, textTransform:'uppercase' }}>goal</Text>
-            <Text style={{ fontSize:12, fontWeight:'700', color:Colors.amber }}>{tp}%</Text>
-            <Text style={{ fontSize:7, color:Colors.text3, textTransform:'uppercase' }}>time</Text>
-          </View>
-        </View>
+        <DualRing goalPct={gp} timePct={tp} />
         <View style={{ flex:1, gap:6 }}>
           <View style={{ backgroundColor:'rgba(255,255,255,0.05)', borderRadius:12, padding:9 }}>
             <Text style={{ fontSize:20, fontWeight:'800', color:Colors.teal,
