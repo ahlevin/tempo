@@ -39,7 +39,7 @@ function Bridge({ text, color }: { text: string; color: string }) {
       marginTop: 12, paddingVertical: 9, paddingHorizontal: 12, borderRadius: 12,
       backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1, borderColor: Colors.border,
     }}>
-      <Text style={{ fontSize: 12, fontWeight: '600', color }}>{text}</Text>
+      <Text style={{ fontSize: 12, fontWeight: '600', color, paddingRight: 56 }}>{text}</Text>
     </View>
   );
 }
