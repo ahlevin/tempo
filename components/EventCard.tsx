@@ -1,9 +1,10 @@
-import { Alert, DimensionValue, Text, TouchableOpacity, View } from 'react-native';
+import { DimensionValue, GestureResponderEvent, Text, TouchableOpacity, View } from 'react-native';
 import { router } from 'expo-router';
 import { Colors, CatBg } from '../constants/colors';
 import { useStore } from '../store/useStore';
 import { Event } from '../store/types';
 import { useToast } from './Toast';
+import { SwipeableRow } from './SwipeableRow';
 import { nextOccurrence, daysUntil, pctElapsed, urgencyColor, recurLabel, fmtDateTime } from '../utils/dates';
 
 const CAT_ACCENT: Record<string, string> = {
@@ -28,28 +29,18 @@ export function EventCard({ event: e }: { event: Event }) {
   const rl     = recurLabel(e);
   const dstr   = fmtDateTime(nd, e.allDay);
 
-  function openActions() {
-    Alert.alert(`${e.emoji} ${e.name}`, undefined, [
-      { text: 'Edit Event', onPress: () => router.push({ pathname: '/modals/edit-event', params: { id: e.id } }) },
-      { text: e.fav ? 'Remove from Hero' : 'Add to Hero', onPress: () => toggleFav(e.id) },
-      {
-        text: 'Delete Event', style: 'destructive',
-        onPress: () => Alert.alert('Delete Event', `Delete "${e.name}"? This can't be undone.`, [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Delete', style: 'destructive', onPress: () => deleteEvent(e.id) },
-        ]),
-      },
-      { text: 'Cancel', style: 'cancel' },
-    ]);
-  }
+  const edit = () => router.push({ pathname: '/modals/edit-event', params: { id: e.id } });
 
-  function previewAlert() {
+  function previewAlert(ev: GestureResponderEvent) {
+    ev.stopPropagation();
     if (!e.alerts.length) return;
     showToast('🔔', `${e.name} reminder`, alertText(e.alerts[0]));
   }
 
   return (
-    <TouchableOpacity activeOpacity={0.8} onPress={openActions}
+    <SwipeableRow onDelete={() => deleteEvent(e.id)}
+      confirmTitle="Delete Event" confirmMessage={`Delete "${e.name}"? This can't be undone.`}>
+    <TouchableOpacity activeOpacity={0.8} onPress={edit}
       style={{
         backgroundColor: Colors.surf, borderRadius: 18, borderWidth: 1,
         borderColor: Colors.border, padding: 14, paddingLeft: 16,
@@ -92,10 +83,12 @@ export function EventCard({ event: e }: { event: Event }) {
           <Text style={{ fontSize: 20, fontWeight: '800', color: uc }}>{d}</Text>
           <Text style={{ fontSize: 9, color: Colors.text3, textTransform: 'uppercase' }}>{d === 1 ? 'day' : 'days'}</Text>
         </View>
-        <TouchableOpacity onPress={() => toggleFav(e.id)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+        <TouchableOpacity hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          onPress={(ev) => { ev.stopPropagation(); toggleFav(e.id); }}>
           <Text style={{ fontSize: 16 }}>{e.fav ? '⭐' : '☆'}</Text>
         </TouchableOpacity>
       </View>
     </TouchableOpacity>
+    </SwipeableRow>
   );
 }

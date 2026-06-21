@@ -1,7 +1,9 @@
 import { ScrollView, View, Text, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { router } from 'expo-router';
 import { Colors } from '../../constants/colors';
 import { useStore } from '../../store/useStore';
+import { SwipeableRow } from '../../components/SwipeableRow';
 import { nextOccurrence, daysUntil, urgencyColor, fmtDateTime } from '../../utils/dates';
 
 export default function FavoritesScreen() {
@@ -9,6 +11,8 @@ export default function FavoritesScreen() {
   const goals  = useStore(s => s.goals);
   const toggleEventFav = useStore(s => s.toggleEventFav);
   const toggleGoalFav  = useStore(s => s.toggleGoalFav);
+  const deleteEvent    = useStore(s => s.deleteEvent);
+  const deleteGoal     = useStore(s => s.deleteGoal);
 
   const favEvents = events.filter(e => e.fav)
     .sort((a,b) => daysUntil(nextOccurrence(a)) - daysUntil(nextOccurrence(b)));
@@ -38,7 +42,11 @@ export default function FavoritesScreen() {
               const d  = daysUntil(nd);
               const uc = urgencyColor(d);
               return (
-                <View key={e.id} style={{ backgroundColor:Colors.surf, borderRadius:18,
+                <SwipeableRow key={e.id} onDelete={() => deleteEvent(e.id)}
+                  confirmTitle="Delete Event" confirmMessage={`Delete "${e.name}"? This can't be undone.`}>
+                <TouchableOpacity activeOpacity={0.8}
+                  onPress={() => router.push({ pathname:'/modals/edit-event', params:{ id:e.id } })}
+                  style={{ backgroundColor:Colors.surf, borderRadius:18,
                   borderWidth:1, borderColor:Colors.border, padding:14,
                   marginBottom:8, flexDirection:'row', alignItems:'center', gap:12 }}>
                   <Text style={{ fontSize:22 }}>{e.emoji}</Text>
@@ -53,11 +61,13 @@ export default function FavoritesScreen() {
                     <Text style={{ fontSize:9, color:Colors.text3, textTransform:'uppercase' }}>
                       {d===1?'day':'days'}
                     </Text>
-                    <TouchableOpacity onPress={() => toggleEventFav(e.id)}>
+                    <TouchableOpacity hitSlop={{ top:8, bottom:8, left:8, right:8 }}
+                      onPress={(ev) => { ev.stopPropagation(); toggleEventFav(e.id); }}>
                       <Text style={{ fontSize:16 }}>⭐</Text>
                     </TouchableOpacity>
                   </View>
-                </View>
+                </TouchableOpacity>
+                </SwipeableRow>
               );
             })}
           </View>
@@ -68,7 +78,11 @@ export default function FavoritesScreen() {
             {favGoals.map(g => {
               const pct = Math.round(Math.min(100,(g.current/g.target)*100));
               return (
-                <View key={g.id} style={{ backgroundColor:Colors.surf, borderRadius:18,
+                <SwipeableRow key={g.id} onDelete={() => deleteGoal(g.id)}
+                  confirmTitle="Delete Goal" confirmMessage={`Delete "${g.name}"? This can't be undone.`}>
+                <TouchableOpacity activeOpacity={0.8}
+                  onPress={() => router.push({ pathname:'/modals/edit-goal', params:{ id:g.id } })}
+                  style={{ backgroundColor:Colors.surf, borderRadius:18,
                   borderWidth:1, borderColor:'rgba(62,207,178,0.2)',
                   padding:14, marginBottom:8 }}>
                   <View style={{ flexDirection:'row', alignItems:'center', gap:12, marginBottom:8 }}>
@@ -76,7 +90,8 @@ export default function FavoritesScreen() {
                     <View style={{ flex:1 }}>
                       <Text style={{ fontSize:14, fontWeight:'600', color:Colors.text1 }}>{g.name}</Text>
                     </View>
-                    <TouchableOpacity onPress={() => toggleGoalFav(g.id)}>
+                    <TouchableOpacity hitSlop={{ top:8, bottom:8, left:8, right:8 }}
+                      onPress={(ev) => { ev.stopPropagation(); toggleGoalFav(g.id); }}>
                       <Text style={{ fontSize:16 }}>⭐</Text>
                     </TouchableOpacity>
                   </View>
@@ -88,7 +103,8 @@ export default function FavoritesScreen() {
                   <Text style={{ fontSize:12, color:Colors.teal, marginTop:5, fontWeight:'600' }}>
                     {g.current.toLocaleString()} / {g.target.toLocaleString()} {g.unit} · {pct}%
                   </Text>
-                </View>
+                </TouchableOpacity>
+                </SwipeableRow>
               );
             })}
           </View>

@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Alert, Text, TouchableOpacity, View } from 'react-native';
+import { GestureResponderEvent, Text, TouchableOpacity, View } from 'react-native';
 import { router } from 'expo-router';
 import { Colors } from '../constants/colors';
 import { useStore } from '../store/useStore';
 import { Memory } from '../store/types';
+import { SwipeableRow } from './SwipeableRow';
 import {
   yearsMonthsDays, nextAnnual, daysSince, daysUntil, daysBetween,
   ordinal, fmtShort, fmtFull,
@@ -52,32 +53,18 @@ export function MemoryCard({ memory: m }: { memory: Memory }) {
   const border = TYPE_BORDER[m.type];
   const bg     = TYPE_BG[m.type];
   const r      = yearsMonthsDays(m.originDate);
-
-  function openActions() {
-    const buttons: { text: string; style?: 'cancel' | 'destructive'; onPress?: () => void }[] = [
-      { text: 'Edit Memory', onPress: () => router.push({ pathname: '/modals/edit-memory', params: { id: m.id } }) },
-    ];
-    if (m.type === 'lifelog') {
-      buttons.push({ text: 'Log New Entry', onPress: () => router.push({ pathname: '/modals/log-entry', params: { id: m.id, past: '0' } }) });
-    }
-    buttons.push({
-      text: 'Delete Memory', style: 'destructive',
-      onPress: () => Alert.alert('Delete Memory', `Delete "${m.name}"? This can't be undone.`, [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: () => deleteMemory(m.id) },
-      ]),
-    });
-    buttons.push({ text: 'Cancel', style: 'cancel' });
-    Alert.alert(`${m.emoji} ${m.name}`, undefined, buttons);
-  }
+  const edit = () => router.push({ pathname: '/modals/edit-memory', params: { id: m.id } });
 
   return (
+    <SwipeableRow onDelete={() => deleteMemory(m.id)} marginBottom={10}
+      confirmTitle="Delete Memory" confirmMessage={`Delete "${m.name}"? This can't be undone.`}>
     <View style={{
       backgroundColor: Colors.surf, borderRadius: 18, borderWidth: 1,
       borderColor: border, marginBottom: 10, overflow: 'hidden',
     }}>
       <View style={{ height: 3, backgroundColor: color }} />
-      <View style={{ padding: 16 }}>
+      {/* Tap anywhere on the card to edit; inner controls stop propagation. */}
+      <TouchableOpacity activeOpacity={0.85} onPress={edit} style={{ padding: 16 }}>
         {/* Header */}
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
           <View style={{ width: 44, height: 44, borderRadius: 13, backgroundColor: bg, alignItems: 'center', justifyContent: 'center' }}>
@@ -87,10 +74,6 @@ export function MemoryCard({ memory: m }: { memory: Memory }) {
             <Text style={{ fontSize: 15, fontWeight: '700', color: Colors.text1 }} numberOfLines={1}>{m.name}</Text>
             <Text style={{ fontSize: 11, color: Colors.text3, marginTop: 2 }}>{fmtShort(m.originDate)}</Text>
           </View>
-          <TouchableOpacity onPress={openActions} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            style={{ width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' }}>
-            <Text style={{ fontSize: 20, color: Colors.text3, marginTop: -6 }}>⋯</Text>
-          </TouchableOpacity>
         </View>
 
         {m.type === 'birthday'    && <BirthdayBody m={m} r={r} color={color} />}
@@ -99,8 +82,9 @@ export function MemoryCard({ memory: m }: { memory: Memory }) {
         {m.type === 'lifelog'     && (
           <LifelogBody m={m} color={color} showAll={showAll} onToggle={() => setShowAll(v => !v)} />
         )}
-      </View>
+      </TouchableOpacity>
     </View>
+    </SwipeableRow>
   );
 }
 
@@ -199,12 +183,12 @@ function LifelogBody({
       {/* Log buttons */}
       <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
         <TouchableOpacity
-          onPress={() => router.push({ pathname: '/modals/log-entry', params: { id: m.id, past: '0' } })}
+          onPress={(ev) => { ev.stopPropagation(); router.push({ pathname: '/modals/log-entry', params: { id: m.id, past: '0' } }); }}
           style={{ flex: 1, paddingVertical: 11, borderRadius: 12, backgroundColor: 'rgba(62,207,178,0.16)', alignItems: 'center' }}>
           <Text style={{ fontSize: 13, fontWeight: '700', color: Colors.teal }}>+ Log today</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          onPress={() => router.push({ pathname: '/modals/log-entry', params: { id: m.id, past: '1' } })}
+          onPress={(ev) => { ev.stopPropagation(); router.push({ pathname: '/modals/log-entry', params: { id: m.id, past: '1' } }); }}
           style={{ flex: 1, paddingVertical: 11, borderRadius: 12, backgroundColor: Colors.glass, borderWidth: 1, borderColor: Colors.border, alignItems: 'center' }}>
           <Text style={{ fontSize: 13, fontWeight: '600', color: Colors.text2 }}>Past date</Text>
         </TouchableOpacity>
@@ -235,7 +219,7 @@ function LifelogBody({
             </View>
           ))}
           {rows.length > 3 && (
-            <TouchableOpacity onPress={onToggle} style={{ alignSelf: 'flex-start', paddingVertical: 4 }}>
+            <TouchableOpacity onPress={(ev) => { ev.stopPropagation(); onToggle(); }} style={{ alignSelf: 'flex-start', paddingVertical: 4 }}>
               <Text style={{ fontSize: 12, fontWeight: '600', color }}>
                 {showAll ? 'Show less' : `Show all ${rows.length}`}
               </Text>

@@ -6,10 +6,13 @@ import { useStore } from '../store/useStore';
 import { Goal } from '../store/types';
 import { daysUntil } from '../utils/dates';
 import { Confetti } from './Confetti';
+import { SwipeableRow } from './SwipeableRow';
 
 export function GoalCard({ goal: g }: { goal: Goal }) {
-  const toggleFav = useStore(s => s.toggleGoalFav);
-  const nudgeGoal = useStore(s => s.nudgeGoal);
+  const toggleFav  = useStore(s => s.toggleGoalFav);
+  const nudgeGoal  = useStore(s => s.nudgeGoal);
+  const deleteGoal = useStore(s => s.deleteGoal);
+  const edit = () => router.push({ pathname: '/modals/edit-goal', params: { id: g.id } });
 
   const gp   = Math.round(Math.min(100, (g.current / g.target) * 100));
   const d    = daysUntil(g.date);
@@ -28,6 +31,8 @@ export function GoalCard({ goal: g }: { goal: Goal }) {
     { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
 
   return (
+    <SwipeableRow onDelete={() => deleteGoal(g.id)}
+      confirmTitle="Delete Goal" confirmMessage={`Delete "${g.name}"? This can't be undone.`}>
     <View style={{
       backgroundColor: Colors.surf, borderRadius: 18, borderWidth: 1,
       borderColor: 'rgba(62,207,178,0.2)', padding: 14, paddingLeft: 16, marginBottom: 8,
@@ -35,7 +40,9 @@ export function GoalCard({ goal: g }: { goal: Goal }) {
     }}>
       <Confetti fire={burst} height={180} onDone={() => setBurst(0)} />
       <View style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, backgroundColor: Colors.teal, borderRadius: 2 }} />
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 10 }}>
+      {/* Tap the header to edit; the progress row below owns its own controls. */}
+      <TouchableOpacity activeOpacity={0.7} onPress={edit}
+        style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 10 }}>
         <View style={{ width: 42, height: 42, borderRadius: 12, backgroundColor: 'rgba(62,207,178,0.11)', alignItems: 'center', justifyContent: 'center' }}>
           <Text style={{ fontSize: 20 }}>{g.emoji}</Text>
         </View>
@@ -53,16 +60,12 @@ export function GoalCard({ goal: g }: { goal: Goal }) {
         <View style={{ alignItems: 'flex-end', gap: 4 }}>
           <Text style={{ fontSize: 18, fontWeight: '800', color: Colors.teal }}>{d}</Text>
           <Text style={{ fontSize: 9, color: Colors.text3, textTransform: 'uppercase' }}>days</Text>
-          <View style={{ flexDirection: 'row', gap: 6 }}>
-            <TouchableOpacity onPress={() => toggleFav(g.id)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <Text style={{ fontSize: 15 }}>{g.fav ? '⭐' : '☆'}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => router.push({ pathname: '/modals/edit-goal', params: { id: g.id } })} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <Text style={{ fontSize: 15, color: Colors.text3 }}>✏️</Text>
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            onPress={(ev) => { ev.stopPropagation(); toggleFav(g.id); }}>
+            <Text style={{ fontSize: 15 }}>{g.fav ? '⭐' : '☆'}</Text>
+          </TouchableOpacity>
         </View>
-      </View>
+      </TouchableOpacity>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
         <View style={{ flex: 1 }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
@@ -92,5 +95,6 @@ export function GoalCard({ goal: g }: { goal: Goal }) {
         )}
       </View>
     </View>
+    </SwipeableRow>
   );
 }
