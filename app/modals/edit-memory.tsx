@@ -6,12 +6,14 @@ import { Colors } from '../../constants/colors';
 import { MEM_EMOJIS } from '../../constants/data';
 import { useStore } from '../../store/useStore';
 import { DateTimeField } from '../../components/DateTimeField';
+import { useConfirm } from '../../components/ConfirmDialog';
 
 export default function EditMemoryModal() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const memories     = useStore(s => s.memories);
   const updateMemory = useStore(s => s.updateMemory);
   const deleteMemory = useStore(s => s.deleteMemory);
+  const confirm      = useConfirm();
   const m = memories.find(x => x.id === id);
 
   const [name,  setName]  = useState(m?.name       || '');
@@ -36,11 +38,9 @@ export default function EditMemoryModal() {
     router.back();
   }
 
-  function del() {
-    Alert.alert('Delete "'+m!.name+'"?','All entries will be lost.',[
-      { text:'Cancel', style:'cancel' },
-      { text:'Delete', style:'destructive', onPress:() => { deleteMemory(id); router.back(); } },
-    ]);
+  async function del() {
+    const ok = await confirm({ title:`Delete "${m!.name}"?`, message:'All entries will be lost.', confirmLabel:'Delete', destructive:true });
+    if (ok) { deleteMemory(id); router.back(); }
   }
 
   return (

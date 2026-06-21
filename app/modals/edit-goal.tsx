@@ -6,12 +6,14 @@ import { Colors } from '../../constants/colors';
 import { GOAL_EMOJIS } from '../../constants/data';
 import { useStore } from '../../store/useStore';
 import { DateTimeField } from '../../components/DateTimeField';
+import { useConfirm } from '../../components/ConfirmDialog';
 
 export default function EditGoalModal() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const goals      = useStore(s => s.goals);
   const updateGoal = useStore(s => s.updateGoal);
   const deleteGoal = useStore(s => s.deleteGoal);
+  const confirm    = useConfirm();
   const g = goals.find(x => x.id === id);
 
   const [name,   setName]   = useState(g?.name   || '');
@@ -34,11 +36,9 @@ export default function EditGoalModal() {
     router.back();
   }
 
-  function del() {
-    Alert.alert('Delete "'+g!.name+'"?','This cannot be undone.',[
-      { text:'Cancel', style:'cancel' },
-      { text:'Delete', style:'destructive', onPress:() => { deleteGoal(id); router.back(); } },
-    ]);
+  async function del() {
+    const ok = await confirm({ title:`Delete "${g!.name}"?`, message:'This cannot be undone.', confirmLabel:'Delete', destructive:true });
+    if (ok) { deleteGoal(id); router.back(); }
   }
 
   return (

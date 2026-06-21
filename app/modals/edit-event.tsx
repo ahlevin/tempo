@@ -7,6 +7,7 @@ import { Colors } from '../../constants/colors';
 import { EMOJIS, CATEGORIES } from '../../constants/data';
 import { useStore } from '../../store/useStore';
 import { DateTimeField } from '../../components/DateTimeField';
+import { useConfirm } from '../../components/ConfirmDialog';
 import { toDate } from '../../utils/dates';
 
 export default function EditEventModal() {
@@ -14,6 +15,7 @@ export default function EditEventModal() {
   const events      = useStore(s => s.events);
   const updateEvent = useStore(s => s.updateEvent);
   const deleteEvent = useStore(s => s.deleteEvent);
+  const confirm     = useConfirm();
   const event = events.find(e => e.id === id);
 
   const initStart = event?.start || `${event?.date || format(new Date(), 'yyyy-MM-dd')}T00:00:00`;
@@ -40,11 +42,9 @@ export default function EditEventModal() {
     router.back();
   }
 
-  function del() {
-    Alert.alert('Delete "'+event!.name+'"?','This cannot be undone.',[
-      { text:'Cancel', style:'cancel' },
-      { text:'Delete', style:'destructive', onPress:() => { deleteEvent(id); router.back(); } },
-    ]);
+  async function del() {
+    const ok = await confirm({ title:`Delete "${event!.name}"?`, message:'This cannot be undone.', confirmLabel:'Delete', destructive:true });
+    if (ok) { deleteEvent(id); router.back(); }
   }
 
   return (

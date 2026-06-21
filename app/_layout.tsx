@@ -5,6 +5,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useStore } from '../store/useStore';
 import { ToastProvider } from '../components/Toast';
+import { ConfirmProvider } from '../components/ConfirmDialog';
 
 export default function RootLayout() {
   const seed = useStore(s => s.seed);
@@ -18,6 +19,7 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <StatusBar style="light" />
         <ToastProvider>
+          <ConfirmProvider>
           <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#0A0A0F' } }}>
             <Stack.Screen name="tabs" />
             <Stack.Screen name="modals/add-event"   options={{ presentation: 'modal' }} />
@@ -29,6 +31,7 @@ export default function RootLayout() {
             <Stack.Screen name="modals/log-entry"   options={{ presentation: 'modal' }} />
             <Stack.Screen name="modals/exact-edit"  options={{ presentation: 'modal' }} />
           </Stack>
+          </ConfirmProvider>
         </ToastProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

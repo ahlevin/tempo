@@ -1,7 +1,8 @@
 import { useRef } from 'react';
-import { Alert, Animated, Platform, Pressable, Text, View } from 'react-native';
+import { Animated, Platform, Pressable, Text, View } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
 import { Colors } from '../constants/colors';
+import { useConfirm } from './ConfirmDialog';
 
 interface Props {
   children: React.ReactNode;
@@ -30,13 +31,12 @@ export function SwipeableRow({
   marginBottom = 8,
 }: Props) {
   const ref = useRef<Swipeable>(null);
+  const confirm = useConfirm();
 
-  function confirmDelete() {
+  async function confirmDelete() {
     ref.current?.close();
-    Alert.alert(confirmTitle, confirmMessage, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: onDelete },
-    ]);
+    const ok = await confirm({ title: confirmTitle, message: confirmMessage, confirmLabel: 'Delete', destructive: true });
+    if (ok) onDelete();
   }
 
   function renderRightActions(_progress: any, dragX: any) {
