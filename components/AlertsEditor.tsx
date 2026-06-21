@@ -1,0 +1,77 @@
+import { useEffect, useState } from 'react';
+import { Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Colors } from '../constants/colors';
+import { Alert as AlertType } from '../store/types';
+import { Toggle } from './FormControls';
+
+const UNITS: AlertType['unit'][] = ['minutes','hours','days','weeks','months'];
+
+type Row = { value: string; unit: AlertType['unit'] };
+
+/**
+ * Alerts/reminders editor shared by add-event and edit-event. Seeds its state
+ * once from `value` (the event's existing alerts) and emits the parsed Alert[]
+ * — or [] when off — back to the parent via onChange.
+ */
+export function AlertsEditor({
+  value, onChange,
+}: { value: AlertType[]; onChange: (a: AlertType[]) => void }) {
+  const [alertOn, setAlertOn] = useState(value.length > 0);
+  const [alerts,  setAlerts]  = useState<Row[]>(
+    value.length ? value.map(a => ({ value: String(a.value), unit: a.unit })) : [{ value: '1', unit: 'days' }]
+  );
+
+  useEffect(() => {
+    onChange(alertOn ? alerts.map(a => ({ value: parseInt(a.value) || 1, unit: a.unit })) : []);
+    // onChange is a stable setState; re-run only when the inputs change.
+  }, [alertOn, alerts]);
+
+  return (
+    <>
+      <Toggle label="🔔 Alerts & Reminders" value={alertOn} onChange={setAlertOn} />
+      {alertOn && (
+        <View style={{ marginBottom:14 }}>
+          {alerts.map((a,i) => (
+            <View key={i} style={{ flexDirection:'row', alignItems:'center', gap:7,
+              backgroundColor:'rgba(255,255,255,0.04)', borderWidth:1,
+              borderColor:'rgba(255,255,255,0.07)', borderRadius:10,
+              padding:9, marginBottom:7 }}>
+              <Text>🔔</Text>
+              <TextInput value={a.value}
+                onChangeText={v => setAlerts(prev => prev.map((x,j) => j===i?{...x,value:v}:x))}
+                keyboardType="number-pad"
+                style={{ width:48, backgroundColor:'rgba(255,255,255,0.07)',
+                  borderRadius:7, padding:5, color:Colors.text1, fontSize:13,
+                  fontWeight:'700', textAlign:'center', borderWidth:1,
+                  borderColor:'rgba(255,255,255,0.12)' }} />
+              <View style={{ flex:1 }}>
+                {UNITS.map(u => (
+                  <TouchableOpacity key={u}
+                    onPress={() => setAlerts(prev => prev.map((x,j) => j===i?{...x,unit:u}:x))}
+                    style={{ padding:5, borderRadius:6,
+                      backgroundColor: a.unit===u ? 'rgba(124,106,245,0.2)' : 'transparent' }}>
+                    <Text style={{ fontSize:12,
+                      color: a.unit===u ? Colors.accent : Colors.text2 }}>{u} before</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <TouchableOpacity
+                onPress={() => setAlerts(prev => prev.filter((_,j) => j!==i))}
+                style={{ width:24, height:24, borderRadius:12,
+                  backgroundColor:'rgba(232,80,122,0.12)',
+                  alignItems:'center', justifyContent:'center' }}>
+                <Text style={{ color:Colors.rose, fontSize:13 }}>✕</Text>
+              </TouchableOpacity>
+            </View>
+          ))}
+          <TouchableOpacity
+            onPress={() => setAlerts(prev => [...prev, { value:'1', unit:'hours' }])}
+            style={{ padding:8, borderRadius:9, borderWidth:1.5,
+              borderColor:'rgba(124,106,245,0.3)', borderStyle:'dashed', alignItems:'center' }}>
+            <Text style={{ fontSize:12, fontWeight:'600', color:Colors.accent }}>+ Add Alert</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+    </>
+  );
+}

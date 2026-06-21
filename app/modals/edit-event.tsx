@@ -6,7 +6,10 @@ import { format, addHours } from 'date-fns';
 import { Colors } from '../../constants/colors';
 import { EMOJIS, CATEGORIES } from '../../constants/data';
 import { useStore } from '../../store/useStore';
+import { Recurrence, Alert as AlertType } from '../../store/types';
 import { DateTimeField } from '../../components/DateTimeField';
+import { RecurrenceEditor } from '../../components/RecurrenceEditor';
+import { AlertsEditor } from '../../components/AlertsEditor';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { toDate } from '../../utils/dates';
 
@@ -27,6 +30,8 @@ export default function EditEventModal() {
   const [end,    setEnd]    = useState(initEnd);
   const [emoji,  setEmoji]  = useState(event?.emoji  || '🎉');
   const [cat,    setCat]    = useState(event?.cat    || 'celebration');
+  const [recur,  setRecur]  = useState<Recurrence | null>(event?.recur ?? null);
+  const [alerts, setAlerts] = useState<AlertType[]>(event?.alerts ?? []);
 
   const fi = { backgroundColor:'rgba(255,255,255,0.06)', borderWidth:1,
     borderColor:'rgba(255,255,255,0.1)', borderRadius:12, padding:12,
@@ -38,7 +43,8 @@ export default function EditEventModal() {
     if (!name.trim()) { Alert.alert('Please enter a name.'); return; }
     const startIso = allDay ? `${start.slice(0, 10)}T00:00:00` : start;
     updateEvent(id, { name:name.trim(), emoji, cat:cat as any,
-      allDay, start:startIso, end: allDay ? null : end, date: startIso.slice(0, 10) });
+      allDay, start:startIso, end: allDay ? null : end, date: startIso.slice(0, 10),
+      recur, alerts });
     router.back();
   }
 
@@ -97,6 +103,11 @@ export default function EditEventModal() {
               </TouchableOpacity>
             ))}
           </View>
+
+          <RecurrenceEditor value={recur} onChange={setRecur} />
+
+          <AlertsEditor value={alerts} onChange={setAlerts} />
+
           <TouchableOpacity onPress={save}
             style={{ backgroundColor:Colors.accent, borderRadius:14, padding:15, alignItems:'center', marginBottom:12 }}>
             <Text style={{ color:'#fff', fontSize:15, fontWeight:'700' }}>Save Changes →</Text>
