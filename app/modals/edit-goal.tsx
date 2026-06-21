@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { ScrollView, View, Text, TextInput, TouchableOpacity, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { ScrollView, View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
+import { useToast } from '../../components/Toast';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Colors } from '../../constants/colors';
@@ -14,6 +15,7 @@ export default function EditGoalModal() {
   const updateGoal = useStore(s => s.updateGoal);
   const deleteGoal = useStore(s => s.deleteGoal);
   const confirm    = useConfirm();
+  const { showToast } = useToast();
   const g = goals.find(x => x.id === id);
 
   const [name,   setName]   = useState(g?.name   || '');
@@ -30,7 +32,7 @@ export default function EditGoalModal() {
   if (!g) { router.back(); return null; }
 
   function save() {
-    if (!name.trim()||!target||!date) { Alert.alert('Please fill in all fields.'); return; }
+    if (!name.trim()||!target||!date) { showToast('⚠️', 'Missing info', 'Please fill in all fields.'); return; }
     updateGoal(id, { name:name.trim(), target:parseFloat(target),
       unit:unit.trim()||'units', step:parseFloat(step)||1, date, emoji });
     router.back();

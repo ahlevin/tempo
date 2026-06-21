@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { ScrollView, View, Text, TextInput, TouchableOpacity, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { ScrollView, View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
+import { useToast } from '../../components/Toast';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { format, subDays } from 'date-fns';
@@ -10,6 +11,7 @@ import { DateTimeField } from '../../components/DateTimeField';
 
 export default function AddMemoryModal() {
   const addMemory = useStore(s => s.addMemory);
+  const { showToast } = useToast();
   const [type,  setType]  = useState('milestone');
   const [name,  setName]  = useState('');
   const [date,  setDate]  = useState(format(subDays(new Date(), 1), 'yyyy-MM-dd'));
@@ -31,7 +33,7 @@ export default function AddMemoryModal() {
   function pickType(t: string) { setType(t); setEmoji(DEF_EMOJIS[t]||'⭐'); }
 
   function submit() {
-    if (!name.trim()||!date) { Alert.alert('Please enter a name and date.'); return; }
+    if (!name.trim()||!date) { showToast('⚠️', 'Missing info', 'Please enter a name and date.'); return; }
     addMemory({
       type:type as any, name:name.trim(), emoji, originDate:date,
       entries: type==='lifelog' ? [{date,note:note.trim()}] : [],

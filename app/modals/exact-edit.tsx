@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity } from 'react-native';
+import { useToast } from '../../components/Toast';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Colors } from '../../constants/colors';
@@ -9,6 +10,7 @@ export default function ExactEditModal() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const goals           = useStore(s => s.goals);
   const setGoalProgress = useStore(s => s.setGoalProgress);
+  const { showToast } = useToast();
   const g = goals.find(x => x.id === id);
   const [value, setValue] = useState(String(g?.current || 0));
 
@@ -16,7 +18,7 @@ export default function ExactEditModal() {
 
   function submit() {
     const v = parseFloat(value);
-    if (isNaN(v)||v<0) { Alert.alert('Please enter a valid number.'); return; }
+    if (isNaN(v)||v<0) { showToast('⚠️', 'Missing info', 'Please enter a valid number.'); return; }
     setGoalProgress(id, v);
     router.back();
   }

@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { ScrollView, View, Text, TextInput, TouchableOpacity, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { ScrollView, View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
+import { useToast } from '../../components/Toast';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { format, addDays } from 'date-fns';
@@ -10,6 +11,7 @@ import { DateTimeField } from '../../components/DateTimeField';
 
 export default function AddGoalModal() {
   const addGoal = useStore(s => s.addGoal);
+  const { showToast } = useToast();
   const [name,   setName]   = useState('');
   const [target, setTarget] = useState('');
   const [unit,   setUnit]   = useState('');
@@ -22,7 +24,7 @@ export default function AddGoalModal() {
     color:Colors.text1, fontSize:15, marginBottom:14 };
 
   function submit() {
-    if (!name.trim() || !target || !date) { Alert.alert('Please fill in all fields.'); return; }
+    if (!name.trim() || !target || !date) { showToast('⚠️', 'Missing info', 'Please fill in all fields.'); return; }
     addGoal({ name:name.trim(), emoji, target:parseFloat(target),
       unit:unit.trim()||'units', step:parseFloat(step)||1, date, fav:true });
     router.back();

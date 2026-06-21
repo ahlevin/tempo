@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { ScrollView, View, Text, TextInput, TouchableOpacity, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { ScrollView, View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
+import { useToast } from '../../components/Toast';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { format, addHours } from 'date-fns';
@@ -19,6 +20,7 @@ export default function EditEventModal() {
   const updateEvent = useStore(s => s.updateEvent);
   const deleteEvent = useStore(s => s.deleteEvent);
   const confirm     = useConfirm();
+  const { showToast } = useToast();
   const event = events.find(e => e.id === id);
 
   const initStart = event?.start || `${event?.date || format(new Date(), 'yyyy-MM-dd')}T00:00:00`;
@@ -40,7 +42,7 @@ export default function EditEventModal() {
   if (!event) { router.back(); return null; }
 
   function save() {
-    if (!name.trim()) { Alert.alert('Please enter a name.'); return; }
+    if (!name.trim()) { showToast('⚠️', 'Missing info', 'Please enter a name.'); return; }
     const startIso = allDay ? `${start.slice(0, 10)}T00:00:00` : start;
     updateEvent(id, { name:name.trim(), emoji, cat:cat as any,
       allDay, start:startIso, end: allDay ? null : end, date: startIso.slice(0, 10),

@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { ScrollView, View, Text, TextInput, TouchableOpacity, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { ScrollView, View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
+import { useToast } from '../../components/Toast';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { format, addDays } from 'date-fns';
@@ -13,6 +14,7 @@ import { AlertsEditor } from '../../components/AlertsEditor';
 
 export default function AddEventModal() {
   const addEvent = useStore(s => s.addEvent);
+  const { showToast } = useToast();
   const defaultDay = format(addDays(new Date(), 30), 'yyyy-MM-dd');
   const [name,    setName]    = useState('');
   const [allDay,  setAllDay]  = useState(true);
@@ -24,7 +26,7 @@ export default function AddEventModal() {
   const [alerts, setAlerts] = useState<AlertType[]>([]);
 
   function submit() {
-    if (!name.trim()) { Alert.alert('Please enter a name.'); return; }
+    if (!name.trim()) { showToast('⚠️', 'Missing info', 'Please enter a name.'); return; }
     const startIso = allDay ? `${start.slice(0, 10)}T00:00:00` : start;
     addEvent({
       name: name.trim(), emoji, cat: cat as any,

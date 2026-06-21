@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { ScrollView, View, Text, TextInput, TouchableOpacity, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { ScrollView, View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
+import { useToast } from '../../components/Toast';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Colors } from '../../constants/colors';
@@ -14,6 +15,7 @@ export default function EditMemoryModal() {
   const updateMemory = useStore(s => s.updateMemory);
   const deleteMemory = useStore(s => s.deleteMemory);
   const confirm      = useConfirm();
+  const { showToast } = useToast();
   const m = memories.find(x => x.id === id);
 
   const [name,  setName]  = useState(m?.name       || '');
@@ -33,7 +35,7 @@ export default function EditMemoryModal() {
   if (!m) { router.back(); return null; }
 
   function save() {
-    if (!name.trim()||!date) { Alert.alert('Please fill in all fields.'); return; }
+    if (!name.trim()||!date) { showToast('⚠️', 'Missing info', 'Please fill in all fields.'); return; }
     updateMemory(id, { name:name.trim(), originDate:date, emoji, note:note.trim() });
     router.back();
   }
