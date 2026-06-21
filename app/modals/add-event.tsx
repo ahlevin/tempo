@@ -6,11 +6,15 @@ import { format, addDays } from 'date-fns';
 import { Colors } from '../../constants/colors';
 import { EMOJIS, CATEGORIES } from '../../constants/data';
 import { useStore } from '../../store/useStore';
+import { DateTimeField } from '../../components/DateTimeField';
 
 export default function AddEventModal() {
   const addEvent = useStore(s => s.addEvent);
+  const defaultDay = format(addDays(new Date(), 30), 'yyyy-MM-dd');
   const [name,    setName]    = useState('');
-  const [date,    setDate]    = useState(format(addDays(new Date(), 30), 'yyyy-MM-dd'));
+  const [allDay,  setAllDay]  = useState(true);
+  const [start,   setStart]   = useState(`${defaultDay}T09:00:00`);
+  const [end,     setEnd]     = useState(`${defaultDay}T10:00:00`);
   const [emoji,   setEmoji]   = useState('🎉');
   const [cat,     setCat]     = useState('celebration');
   const [recurOn, setRecurOn] = useState(false);
@@ -29,9 +33,11 @@ export default function AddEventModal() {
   }
 
   function submit() {
-    if (!name.trim() || !date) { Alert.alert('Please enter a name and date.'); return; }
+    if (!name.trim()) { Alert.alert('Please enter a name.'); return; }
+    const startIso = allDay ? `${start.slice(0, 10)}T00:00:00` : start;
     addEvent({
-      name: name.trim(), emoji, cat: cat as any, date, fav: true,
+      name: name.trim(), emoji, cat: cat as any,
+      allDay, start: startIso, end: allDay ? null : end, date: startIso.slice(0, 10), fav: true,
       recur: recurOn ? { freq: freq as any, dow: freq === 'weekly' ? dow : [], endType: 'never' } : null,
       alerts: alertOn ? alerts.map(a => ({ value: parseInt(a.value) || 1, unit: a.unit as any })) : [],
     });
@@ -61,10 +67,16 @@ export default function AddEventModal() {
           <TextInput value={name} onChangeText={setName}
             placeholder="e.g. Summer vacation…" placeholderTextColor={Colors.text3} style={fi} />
 
-          <FL label="Date (YYYY-MM-DD)" />
-          <TextInput value={date} onChangeText={setDate}
-            placeholder="YYYY-MM-DD" placeholderTextColor={Colors.text3}
-            keyboardType="numbers-and-punctuation" style={fi} />
+          <Toggle label="📅 All-day" value={allDay} onChange={setAllDay} />
+          {allDay ? (
+            <DateTimeField mode="date" label="Date" value={start}
+              onChange={d => setStart(`${d}T00:00:00`)} />
+          ) : (
+            <>
+              <DateTimeField mode="datetime" label="Starts" value={start} onChange={setStart} />
+              <DateTimeField mode="datetime" label="Ends"   value={end}   onChange={setEnd} />
+            </>
+          )}
 
           <FL label="Icon" />
           <View style={{ flexDirection:'row', flexWrap:'wrap', gap:6, marginBottom:14 }}>

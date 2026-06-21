@@ -16,7 +16,11 @@ export interface Event {
   name: string;
   emoji: string;
   cat: 'travel' | 'celebration' | 'work' | 'personal';
-  date: string;
+  allDay: boolean;
+  start: string;       // ISO datetime, e.g. "2026-06-26T19:00:00"
+  end: string | null;  // ISO datetime, or null when there is no end
+  /** @deprecated Pre-v1 date-only field. Retained for migration; new code uses `start`/`allDay`. */
+  date: string;        // "YYYY-MM-DD"
   created: string;
   fav: boolean;
   recur: Recurrence | null;

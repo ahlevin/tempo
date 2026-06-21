@@ -3,7 +3,7 @@ import { View, Text, ScrollView, Dimensions, TouchableOpacity } from 'react-nati
 import Svg, { Circle } from 'react-native-svg';
 import { Colors, CatColors } from '../constants/colors';
 import { useStore } from '../store/useStore';
-import { nextOccurrence, daysUntil, pctElapsed, recurLabel, nextAnnual, yearsMonthsDays, ordinal } from '../utils/dates';
+import { nextOccurrence, daysUntil, msUntil, pctElapsed, recurLabel, nextAnnual, yearsMonthsDays, ordinal, fmtDateTimeFull } from '../utils/dates';
 
 const W = Dimensions.get('window').width - 32;
 const CIRC = 301.6;
@@ -71,7 +71,7 @@ function EventCard({ event: e }: { event: any }) {
   }, []);
 
   const nd     = nextOccurrence(e);
-  const ms     = new Date(nd + 'T00:00:00').getTime() - Date.now();
+  const ms     = msUntil(nd);
   const d      = ms > 0 ? Math.floor(ms / 86400000) : 0;
   const h      = ms > 0 ? Math.floor((ms % 86400000) / 3600000) : 0;
   const mi     = ms > 0 ? Math.floor((ms % 3600000) / 60000) : 0;
@@ -79,8 +79,7 @@ function EventCard({ event: e }: { event: any }) {
   const p      = pctElapsed(e.created, nd);
   const accent = CatColors[e.cat] || Colors.accent;
   const rl     = recurLabel(e);
-  const wday   = new Date(nd + 'T00:00:00').toLocaleDateString('en-US', { weekday:'long' });
-  const dstr   = new Date(nd + 'T00:00:00').toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' });
+  const whenStr = fmtDateTimeFull(nd, e.allDay);
   const pad    = (n: number) => String(n).padStart(2, '0');
 
   return (
@@ -119,10 +118,7 @@ function EventCard({ event: e }: { event: any }) {
         </View>
       </View>
       <View style={{ borderTopWidth:1, borderTopColor:'rgba(255,255,255,0.07)', paddingTop:10 }}>
-        <Text style={{ fontSize:12, color:Colors.text2 }}>
-          <Text style={{ color:Colors.text3 }}>{wday} · </Text>
-          <Text style={{ fontWeight:'600', color:Colors.text1 }}>{dstr}</Text>
-        </Text>
+        <Text style={{ fontSize:12, fontWeight:'600', color:Colors.text1 }}>{whenStr}</Text>
       </View>
     </View>
   );

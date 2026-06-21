@@ -2,7 +2,7 @@ import { ScrollView, View, Text, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors } from '../../constants/colors';
 import { useStore } from '../../store/useStore';
-import { nextOccurrence, daysUntil, urgencyColor } from '../../utils/dates';
+import { nextOccurrence, daysUntil, urgencyColor, fmtDateTime } from '../../utils/dates';
 
 export default function FavoritesScreen() {
   const events = useStore(s => s.events);
@@ -45,8 +45,7 @@ export default function FavoritesScreen() {
                   <View style={{ flex:1 }}>
                     <Text style={{ fontSize:14, fontWeight:'600', color:Colors.text1 }}>{e.name}</Text>
                     <Text style={{ fontSize:11, color:Colors.text3, marginTop:2 }}>
-                      {new Date(nd+'T00:00:00').toLocaleDateString('en-US',
-                        {weekday:'short',month:'short',day:'numeric',year:'numeric'})}
+                      {fmtDateTime(nd, e.allDay)}
                     </Text>
                   </View>
                   <View style={{ alignItems:'flex-end', gap:4 }}>

@@ -5,6 +5,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { Colors } from '../../constants/colors';
 import { MEM_EMOJIS } from '../../constants/data';
 import { useStore } from '../../store/useStore';
+import { DateTimeField } from '../../components/DateTimeField';
 
 export default function EditMemoryModal() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -58,9 +59,7 @@ export default function EditMemoryModal() {
           showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
           <FL label="Name" />
           <TextInput value={name} onChangeText={setName} placeholderTextColor={Colors.text3} style={fi} />
-          <FL label={DATE_LABELS[m.type]||'Date'} />
-          <TextInput value={date} onChangeText={setDate}
-            keyboardType="numbers-and-punctuation" placeholderTextColor={Colors.text3} style={fi} />
+          <DateTimeField mode="date" label={DATE_LABELS[m.type]||'Date'} value={date} onChange={setDate} />
           <FL label="Icon" />
           <View style={{ flexDirection:'row', flexWrap:'wrap', gap:6, marginBottom:14 }}>
             {MEM_EMOJIS.map(em => (

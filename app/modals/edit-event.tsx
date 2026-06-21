@@ -2,9 +2,12 @@ import { useState } from 'react';
 import { ScrollView, View, Text, TextInput, TouchableOpacity, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
+import { format, addHours } from 'date-fns';
 import { Colors } from '../../constants/colors';
 import { EMOJIS, CATEGORIES } from '../../constants/data';
 import { useStore } from '../../store/useStore';
+import { DateTimeField } from '../../components/DateTimeField';
+import { toDate } from '../../utils/dates';
 
 export default function EditEventModal() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -13,10 +16,15 @@ export default function EditEventModal() {
   const deleteEvent = useStore(s => s.deleteEvent);
   const event = events.find(e => e.id === id);
 
-  const [name,  setName]  = useState(event?.name  || '');
-  const [date,  setDate]  = useState(event?.date  || '');
-  const [emoji, setEmoji] = useState(event?.emoji || '🎉');
-  const [cat,   setCat]   = useState(event?.cat   || 'celebration');
+  const initStart = event?.start || `${event?.date || format(new Date(), 'yyyy-MM-dd')}T00:00:00`;
+  const initEnd   = event?.end   || format(addHours(toDate(initStart), 1), "yyyy-MM-dd'T'HH:mm:ss");
+
+  const [name,   setName]   = useState(event?.name   || '');
+  const [allDay, setAllDay] = useState(event?.allDay ?? true);
+  const [start,  setStart]  = useState(initStart);
+  const [end,    setEnd]    = useState(initEnd);
+  const [emoji,  setEmoji]  = useState(event?.emoji  || '🎉');
+  const [cat,    setCat]    = useState(event?.cat    || 'celebration');
 
   const fi = { backgroundColor:'rgba(255,255,255,0.06)', borderWidth:1,
     borderColor:'rgba(255,255,255,0.1)', borderRadius:12, padding:12,
@@ -25,8 +33,10 @@ export default function EditEventModal() {
   if (!event) { router.back(); return null; }
 
   function save() {
-    if (!name.trim()||!date) { Alert.alert('Please fill in all fields.'); return; }
-    updateEvent(id, { name:name.trim(), date, emoji, cat:cat as any });
+    if (!name.trim()) { Alert.alert('Please enter a name.'); return; }
+    const startIso = allDay ? `${start.slice(0, 10)}T00:00:00` : start;
+    updateEvent(id, { name:name.trim(), emoji, cat:cat as any,
+      allDay, start:startIso, end: allDay ? null : end, date: startIso.slice(0, 10) });
     router.back();
   }
 
@@ -53,9 +63,16 @@ export default function EditEventModal() {
           showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
           <FL label="Event Name" />
           <TextInput value={name} onChangeText={setName} placeholderTextColor={Colors.text3} style={fi} />
-          <FL label="Date (YYYY-MM-DD)" />
-          <TextInput value={date} onChangeText={setDate}
-            keyboardType="numbers-and-punctuation" placeholderTextColor={Colors.text3} style={fi} />
+          <Toggle label="📅 All-day" value={allDay} onChange={setAllDay} />
+          {allDay ? (
+            <DateTimeField mode="date" label="Date" value={start}
+              onChange={d => setStart(`${d}T00:00:00`)} />
+          ) : (
+            <>
+              <DateTimeField mode="datetime" label="Starts" value={start} onChange={setStart} />
+              <DateTimeField mode="datetime" label="Ends"   value={end}   onChange={setEnd} />
+            </>
+          )}
           <FL label="Icon" />
           <View style={{ flexDirection:'row', flexWrap:'wrap', gap:6, marginBottom:14 }}>
             {EMOJIS.map(em => (
@@ -99,4 +116,21 @@ export default function EditEventModal() {
 function FL({ label }: { label: string }) {
   return <Text style={{ fontSize:11, fontWeight:'600', color:Colors.text3,
     textTransform:'uppercase', letterSpacing:0.5, marginBottom:6 }}>{label}</Text>;
+}
+
+function Toggle({ label, value, onChange }: { label:string; value:boolean; onChange:(v:boolean)=>void }) {
+  return (
+    <TouchableOpacity onPress={() => onChange(!value)}
+      style={{ flexDirection:'row', alignItems:'center', justifyContent:'space-between',
+        backgroundColor:'rgba(255,255,255,0.04)', borderWidth:1,
+        borderColor:'rgba(255,255,255,0.08)', borderRadius:11, padding:12, marginBottom:12 }}>
+      <Text style={{ fontSize:14, fontWeight:'600', color:Colors.text1 }}>{label}</Text>
+      <View style={{ width:40, height:22, borderRadius:11,
+        backgroundColor: value ? Colors.accent : 'rgba(255,255,255,0.1)',
+        justifyContent:'center', paddingHorizontal:2 }}>
+        <View style={{ width:18, height:18, borderRadius:9, backgroundColor:'#fff',
+          alignSelf: value ? 'flex-end' : 'flex-start' }} />
+      </View>
+    </TouchableOpacity>
+  );
 }

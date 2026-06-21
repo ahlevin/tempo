@@ -6,6 +6,7 @@ import { format, subDays } from 'date-fns';
 import { Colors } from '../../constants/colors';
 import { MEM_EMOJIS, MEMORY_TYPES } from '../../constants/data';
 import { useStore } from '../../store/useStore';
+import { DateTimeField } from '../../components/DateTimeField';
 
 export default function AddMemoryModal() {
   const addMemory = useStore(s => s.addMemory);
@@ -73,10 +74,7 @@ export default function AddMemoryModal() {
           <FL label="Name" />
           <TextInput value={name} onChangeText={setName}
             placeholder="e.g. First Half Dome Hike…" placeholderTextColor={Colors.text3} style={fi} />
-          <FL label={DATE_LABELS[type]||'Date'} />
-          <TextInput value={date} onChangeText={setDate}
-            placeholder="YYYY-MM-DD" placeholderTextColor={Colors.text3}
-            keyboardType="numbers-and-punctuation" style={fi} />
+          <DateTimeField mode="date" label={DATE_LABELS[type]||'Date'} value={date} onChange={setDate} />
           <FL label="Icon" />
           <View style={{ flexDirection:'row', flexWrap:'wrap', gap:6, marginBottom:14 }}>
             {MEM_EMOJIS.map(em => (

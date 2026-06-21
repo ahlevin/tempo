@@ -4,18 +4,24 @@ import { Event } from '../store/types';
 export const fmt = (d: Date) => format(d, 'yyyy-MM-dd');
 export const today = () => fmt(new Date());
 
+// Accepts either a date-only string ("YYYY-MM-DD") or a full ISO datetime
+// ("YYYY-MM-DDTHH:mm:ss"). Date-only strings are anchored to local midnight.
+export function toDate(s: string): Date {
+  return parseISO(s.includes('T') ? s : s + 'T00:00:00');
+}
+
 export function daysUntil(dateStr: string): number {
   const now = new Date(); now.setHours(0,0,0,0);
-  return differenceInCalendarDays(parseISO(dateStr + 'T00:00:00'), now);
+  return differenceInCalendarDays(toDate(dateStr), now);
 }
 
 export function msUntil(dateStr: string): number {
-  return parseISO(dateStr + 'T00:00:00').getTime() - Date.now();
+  return toDate(dateStr).getTime() - Date.now();
 }
 
 export function pctElapsed(created: string, target: string): number {
-  const s = parseISO(created).getTime();
-  const e = parseISO(target + 'T00:00:00').getTime();
+  const s = toDate(created).getTime();
+  const e = toDate(target).getTime();
   const n = Date.now();
   return Math.round(Math.min(100, Math.max(0, ((n - s) / (e - s)) * 100)));
 }
@@ -26,18 +32,28 @@ export function urgencyColor(days: number): string {
   return '#3ECFB2';
 }
 
+const datePart = (iso: string) => iso.slice(0, 10);
+const timePart = (iso: string) => (iso.length >= 19 ? iso.slice(11, 19) : '00:00:00');
+
+// Returns the next occurrence as an ISO datetime. All-day events resolve to
+// midnight; timed events keep their original time-of-day. Recurrence is advanced
+// at calendar-date granularity (matching the prior behaviour), then the
+// time-of-day is re-attached.
 export function nextOccurrence(event: Event): string {
-  if (!event.recur) return event.date;
-  const now = new Date(); now.setHours(0,0,0,0);
+  const base = datePart(event.start);
+  const time = event.allDay ? '00:00:00' : timePart(event.start);
+  if (!event.recur) return `${base}T${time}`;
+
+  const now = new Date(); now.setHours(0, 0, 0, 0);
   const { freq, dow } = event.recur;
   if (freq === 'weekly' && dow.length > 0) {
     for (let i = 1; i <= 8; i++) {
       const d = addDays(now, i);
-      if (dow.includes(d.getDay())) return fmt(d);
+      if (dow.includes(d.getDay())) return `${fmt(d)}T${time}`;
     }
-    return event.date;
+    return `${base}T${time}`;
   }
-  let cur = parseISO(event.date + 'T00:00:00');
+  let cur = parseISO(base + 'T00:00:00');
   let itr = 0;
   while (cur <= now && itr < 3650) {
     itr++;
@@ -46,7 +62,7 @@ export function nextOccurrence(event: Event): string {
     else if (freq === 'yearly')  cur = addYears(cur, 1);
     else break;
   }
-  return fmt(cur);
+  return `${fmt(cur)}T${time}`;
 }
 
 export function recurLabel(event: Event): string {
@@ -108,7 +124,30 @@ export function fmtFull(dateStr: string): string {
 }
 
 export function fmtShort(dateStr: string): string {
-  return format(parseISO(dateStr + 'T00:00:00'), 'MMM d, yyyy');
+  return format(toDate(dateStr), 'MMM d, yyyy');
+}
+
+// Event-aware display: timed events append the time, all-day events show date only.
+// Compact, e.g. "Fri, Jun 26 · 7:00 PM" or "Fri, Jun 26".
+export function fmtDateTime(iso: string, allDay: boolean): string {
+  const d = toDate(iso);
+  const day = format(d, 'EEE, MMM d');
+  return allDay ? day : `${day} · ${format(d, 'h:mm a')}`;
+}
+
+// Long form, e.g. "Friday, June 26, 2026 · 7:00 PM" or "Friday, June 26, 2026".
+export function fmtDateTimeFull(iso: string, allDay: boolean): string {
+  const d = toDate(iso);
+  const day = format(d, 'EEEE, MMMM d, yyyy');
+  return allDay ? day : `${day} · ${format(d, 'h:mm a')}`;
+}
+
+// Convenience wrappers operating on an event's next occurrence.
+export function eventWhen(event: Event): string {
+  return fmtDateTime(nextOccurrence(event), event.allDay);
+}
+export function eventWhenFull(event: Event): string {
+  return fmtDateTimeFull(nextOccurrence(event), event.allDay);
 }
 
 export function dailyQuote<T>(quotes: T[]): T {

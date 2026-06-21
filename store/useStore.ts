@@ -5,16 +5,18 @@ import { Event, Goal, Memory, UserPrefs } from './types';
 import { format, addDays } from 'date-fns';
 
 const fd = (n: number) => format(addDays(new Date(), n), 'yyyy-MM-dd');
+const fdt = (n: number, time: string) => `${fd(n)}T${time}`;
 const today = () => format(new Date(), 'yyyy-MM-dd');
 
+// allDay events carry start at midnight + end:null; timed events carry an explicit time + end.
 const SEED_EVENTS: Event[] = [
-  { id:'1', name:'Hawaii Trip',         emoji:'🏖️', cat:'travel',      date:fd(34),  created:fd(-14), fav:true,  recur:null,                                          alerts:[{value:1,unit:'months'},{value:1,unit:'weeks'},{value:1,unit:'days'}] },
-  { id:'2', name:"Mom's Birthday",      emoji:'🎂', cat:'celebration', date:fd(8),   created:fd(-5),  fav:true,  recur:{freq:'yearly',dow:[],endType:'never'},         alerts:[{value:1,unit:'weeks'},{value:1,unit:'days'}] },
-  { id:'3', name:'Product Launch',      emoji:'🚀', cat:'work',        date:fd(61),  created:fd(-30), fav:false, recur:null,                                          alerts:[{value:2,unit:'weeks'}] },
-  { id:'4', name:'Wedding Anniversary', emoji:'💍', cat:'personal',    date:fd(120), created:fd(-10), fav:true,  recur:{freq:'yearly',dow:[],endType:'never'},         alerts:[{value:1,unit:'months'},{value:1,unit:'weeks'}] },
-  { id:'5', name:'Skiing Weekend',      emoji:'⛷️', cat:'travel',      date:fd(19),  created:fd(-2),  fav:false, recur:null,                                          alerts:[] },
-  { id:'6', name:'Team Standup',        emoji:'💼', cat:'work',        date:fd(1),   created:fd(-60), fav:false, recur:{freq:'weekly',dow:[1,2,3,4,5],endType:'never'},alerts:[{value:30,unit:'minutes'}] },
-  { id:'7', name:'Date Night',          emoji:'❤️', cat:'personal',    date:fd(5),   created:fd(-30), fav:true,  recur:{freq:'weekly',dow:[5],endType:'never'},        alerts:[{value:2,unit:'hours'},{value:1,unit:'days'}] },
+  { id:'1', name:'Hawaii Trip',         emoji:'🏖️', cat:'travel',      allDay:true,  start:fdt(34,'00:00:00'),  end:null,                  date:fd(34),  created:fd(-14), fav:true,  recur:null,                                          alerts:[{value:1,unit:'months'},{value:1,unit:'weeks'},{value:1,unit:'days'}] },
+  { id:'2', name:"Mom's Birthday",      emoji:'🎂', cat:'celebration', allDay:true,  start:fdt(8,'00:00:00'),   end:null,                  date:fd(8),   created:fd(-5),  fav:true,  recur:{freq:'yearly',dow:[],endType:'never'},         alerts:[{value:1,unit:'weeks'},{value:1,unit:'days'}] },
+  { id:'3', name:'Product Launch',      emoji:'🚀', cat:'work',        allDay:false, start:fdt(61,'09:00:00'),  end:fdt(61,'17:00:00'),    date:fd(61),  created:fd(-30), fav:false, recur:null,                                          alerts:[{value:2,unit:'weeks'}] },
+  { id:'4', name:'Wedding Anniversary', emoji:'💍', cat:'personal',    allDay:true,  start:fdt(120,'00:00:00'), end:null,                  date:fd(120), created:fd(-10), fav:true,  recur:{freq:'yearly',dow:[],endType:'never'},         alerts:[{value:1,unit:'months'},{value:1,unit:'weeks'}] },
+  { id:'5', name:'Skiing Weekend',      emoji:'⛷️', cat:'travel',      allDay:true,  start:fdt(19,'00:00:00'),  end:null,                  date:fd(19),  created:fd(-2),  fav:false, recur:null,                                          alerts:[] },
+  { id:'6', name:'Team Standup',        emoji:'💼', cat:'work',        allDay:false, start:fdt(1,'09:30:00'),   end:fdt(1,'09:45:00'),     date:fd(1),   created:fd(-60), fav:false, recur:{freq:'weekly',dow:[1,2,3,4,5],endType:'never'},alerts:[{value:30,unit:'minutes'}] },
+  { id:'7', name:'Date Night',          emoji:'❤️', cat:'personal',    allDay:false, start:fdt(5,'19:00:00'),   end:fdt(5,'22:00:00'),     date:fd(5),   created:fd(-30), fav:true,  recur:{freq:'weekly',dow:[5],endType:'never'},        alerts:[{value:2,unit:'hours'},{value:1,unit:'days'}] },
 ];
 
 const SEED_GOALS: Goal[] = [
@@ -85,6 +87,22 @@ export const useStore = create<TempoStore>()(
       addLogEntry: (memId,entry) => set(s => ({memories:s.memories.map(m => m.id===memId?{...m,entries:[...m.entries,entry]}:m)})),
       updatePrefs: (patch) => set(s => ({prefs:{...s.prefs,...patch}})),
     }),
-    { name:'tempo-storage', storage:createJSONStorage(()=>AsyncStorage) }
+    {
+      name:'tempo-storage',
+      storage:createJSONStorage(()=>AsyncStorage),
+      version: 1,
+      // v0 → v1: events were date-only. Give each an all-day start at midnight,
+      // no end, preserving every other field so existing data survives.
+      migrate: (persisted: any, _fromVersion: number) => {
+        if (persisted && Array.isArray(persisted.events)) {
+          persisted.events = persisted.events.map((e: any) => {
+            if (e.start) return e;
+            const d = e.date || today();
+            return { ...e, allDay: e.allDay ?? true, start: `${d}T00:00:00`, end: e.end ?? null };
+          });
+        }
+        return persisted;
+      },
+    }
   )
 );

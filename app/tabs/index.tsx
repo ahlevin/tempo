@@ -34,7 +34,7 @@ export default function HomeScreen() {
       .sort((a,b) => daysUntil(nextOccurrence(a)) - daysUntil(nextOccurrence(b)));
 
   const showGoals = filter === 'all' || filter === 'goal';
-  const soonest = [...events].sort((a,b) => daysUntil(a.date) - daysUntil(b.date))[0];
+  const soonest = [...events].sort((a,b) => daysUntil(a.start) - daysUntil(b.start))[0];
 
   return (
     <SafeAreaView style={{ flex:1, backgroundColor:Colors.bg }} edges={['top']}>
@@ -91,7 +91,7 @@ export default function HomeScreen() {
         {/* Milestones */}
         <SectionHeader title="Milestones" />
         {soonest ? (() => {
-          const days = daysUntil(soonest.date);
+          const days = daysUntil(soonest.start);
           return (
             <View style={{ gap:8 }}>
               {[

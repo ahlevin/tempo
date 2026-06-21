@@ -6,6 +6,7 @@ import { format, addDays } from 'date-fns';
 import { Colors } from '../../constants/colors';
 import { GOAL_EMOJIS } from '../../constants/data';
 import { useStore } from '../../store/useStore';
+import { DateTimeField } from '../../components/DateTimeField';
 
 export default function AddGoalModal() {
   const addGoal = useStore(s => s.addGoal);
@@ -55,10 +56,7 @@ export default function AddGoalModal() {
           <TextInput value={step} onChangeText={setStep}
             placeholder="1" placeholderTextColor={Colors.text3}
             keyboardType="numeric" style={fi} />
-          <FL label="Deadline (YYYY-MM-DD)" />
-          <TextInput value={date} onChangeText={setDate}
-            placeholder="YYYY-MM-DD" placeholderTextColor={Colors.text3}
-            keyboardType="numbers-and-punctuation" style={fi} />
+          <DateTimeField mode="date" label="Deadline" value={date} onChange={setDate} />
           <FL label="Icon" />
           <View style={{ flexDirection:'row', flexWrap:'wrap', gap:6, marginBottom:20 }}>
             {GOAL_EMOJIS.map(em => (

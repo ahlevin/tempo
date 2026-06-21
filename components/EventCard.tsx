@@ -4,7 +4,7 @@ import { Colors, CatBg } from '../constants/colors';
 import { useStore } from '../store/useStore';
 import { Event } from '../store/types';
 import { useToast } from './Toast';
-import { nextOccurrence, daysUntil, pctElapsed, urgencyColor, recurLabel } from '../utils/dates';
+import { nextOccurrence, daysUntil, pctElapsed, urgencyColor, recurLabel, fmtDateTime } from '../utils/dates';
 
 const CAT_ACCENT: Record<string, string> = {
   travel: '#3ECFB2', celebration: '#7C6AF5', work: '#F0A04B', personal: '#E8507A',
@@ -26,8 +26,7 @@ export function EventCard({ event: e }: { event: Event }) {
   const uc     = urgencyColor(d);
   const accent = CAT_ACCENT[e.cat] || Colors.accent;
   const rl     = recurLabel(e);
-  const dstr   = new Date(nd + 'T00:00:00').toLocaleDateString('en-US',
-    { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+  const dstr   = fmtDateTime(nd, e.allDay);
 
   function openActions() {
     Alert.alert(`${e.emoji} ${e.name}`, undefined, [
