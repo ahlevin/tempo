@@ -40,7 +40,10 @@ export default function HomeScreen() {
     <SafeAreaView style={{ flex:1, backgroundColor:Colors.bg }} edges={['top']}>
       <View style={{ paddingHorizontal:20, paddingBottom:10 }}>
         <Text style={{ fontSize:24, fontWeight:'700', color:Colors.text1, letterSpacing:-0.5 }}>
-          Tempo<Text style={{ color:Colors.accent }}>.</Text>
+          sayZay<Text style={{ color:Colors.accent }}>.</Text>
+        </Text>
+        <Text style={{ fontSize:12, color:Colors.text3, marginTop:2 }}>
+          Countdowns &amp; Memories
         </Text>
       </View>
 
