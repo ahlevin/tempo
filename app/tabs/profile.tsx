@@ -3,6 +3,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState } from 'react';
 import { Colors } from '../../constants/colors';
 import { useStore } from '../../store/useStore';
+import { useAuth } from '../../contexts/AuthContext';
 import { TIMEZONES, QUOTES } from '../../constants/data';
 
 type QuoteType = 'bible' | 'motivational' | 'jokes' | 'off';
@@ -16,6 +17,7 @@ const QUOTE_OPTS: { id: QuoteType; icon: string; label: string; desc: string }[]
 export default function ProfileScreen() {
   const prefs = useStore(s => s.prefs);
   const updatePrefs = useStore(s => s.updatePrefs);
+  const { user, signOut } = useAuth();
   const [locOpen, setLocOpen] = useState(false);
   const [tzOpen,  setTzOpen]  = useState(false);
   const [locVal,  setLocVal]  = useState(prefs.location || '');
@@ -29,8 +31,12 @@ export default function ProfileScreen() {
             alignItems:'center', justifyContent:'center', marginBottom:12 }}>
             <Text style={{ fontSize:34 }}>👤</Text>
           </View>
-          <Text style={{ fontSize:20, fontWeight:'700', color:Colors.text1 }}>Your Name</Text>
-          <Text style={{ fontSize:13, color:Colors.text3, marginTop:4 }}>yourname@email.com</Text>
+          <Text style={{ fontSize:20, fontWeight:'700', color:Colors.text1 }}>
+            {user?.email ? user.email.split('@')[0] : 'Your Account'}
+          </Text>
+          <Text style={{ fontSize:13, color:Colors.text3, marginTop:4 }}>
+            {user?.email || 'Not signed in'}
+          </Text>
         </View>
 
         <SLabel label="Daily Quote" />
@@ -127,6 +133,21 @@ export default function ProfileScreen() {
             </View>
           )}
         </View>
+
+        <SLabel label="Account" />
+        <TouchableOpacity onPress={() => signOut()}
+          style={{ flexDirection:'row', alignItems:'center', gap:14, padding:14,
+            borderRadius:14, borderWidth:1, borderColor:'rgba(232,80,122,0.3)',
+            backgroundColor:'rgba(232,80,122,0.1)', marginBottom:28 }}>
+          <View style={{ width:44, height:44, borderRadius:13,
+            backgroundColor:'rgba(232,80,122,0.15)', alignItems:'center', justifyContent:'center' }}>
+            <Text style={{ fontSize:20 }}>🚪</Text>
+          </View>
+          <View style={{ flex:1 }}>
+            <Text style={{ fontSize:15, fontWeight:'600', color:Colors.rose }}>Sign Out</Text>
+            <Text style={{ fontSize:12, color:Colors.text3, marginTop:2 }}>Return to the login screen</Text>
+          </View>
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
