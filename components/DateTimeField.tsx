@@ -2,7 +2,7 @@ import { createElement, useRef, useState } from 'react';
 import { Platform, Pressable, Text, View } from 'react-native';
 import { format } from 'date-fns';
 import { Colors } from '../constants/colors';
-import { fmt, toDate, fmtDateTime } from '../utils/dates';
+import { fmt, toDate, fmtDateTime, isValidDate } from '../utils/dates';
 
 // Native module only — never loaded on web (it has no web implementation).
 const DateTimePicker: any =
@@ -23,10 +23,15 @@ export function DateTimeField({ value, onChange, mode = 'date', label }: Props) 
   const [androidStep, setAndroidStep] = useState<'date' | 'time'>('date');
   const partial = useRef<Date | null>(null);
 
-  const current = toDate(value);
-  const display = mode === 'date' ? format(current, 'EEE, MMM d, yyyy') : fmtDateTime(value, false);
+  // Guard against a partial/invalid `value` (e.g. mid-typing "03032012") — never
+  // feed an Invalid Date into format(), which throws "Invalid time value".
+  const parsed = toDate(value);
+  const valid = isValidDate(parsed);
+  const current = valid ? parsed : new Date();
+  const display = !valid ? '' : (mode === 'date' ? format(current, 'EEE, MMM d, yyyy') : fmtDateTime(value, false));
 
   function emit(d: Date) {
+    if (!isValidDate(d)) return;
     onChange(mode === 'date' ? fmt(d) : `${fmt(d)}T${format(d, 'HH:mm:ss')}`);
   }
 
@@ -41,7 +46,10 @@ export function DateTimeField({ value, onChange, mode = 'date', label }: Props) 
           onChange: (e: any) => {
             const v: string = e.target.value;
             if (!v) return;
-            onChange(mode === 'date' ? v : v.length === 16 ? `${v}:00` : v);
+            // Only commit a value that actually parses to a valid date; while the
+            // user is mid-typing an incomplete/invalid date, hold the raw text.
+            const next = mode === 'date' ? v : v.length === 16 ? `${v}:00` : v;
+            if (isValidDate(toDate(next))) onChange(next);
           },
           style: {
             backgroundColor: 'rgba(255,255,255,0.06)',

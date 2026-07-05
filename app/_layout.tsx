@@ -8,11 +8,13 @@ import { Colors } from '../constants/colors';
 import { useStore } from '../store/useStore';
 import { ToastProvider } from '../components/Toast';
 import { ConfirmProvider } from '../components/ConfirmDialog';
+import { ErrorBoundary } from '../components/ErrorBoundary';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 
 export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
+      <ErrorBoundary>
       <SafeAreaProvider>
         <StatusBar style="light" />
         <AuthProvider>
@@ -23,6 +25,7 @@ export default function RootLayout() {
           </ToastProvider>
         </AuthProvider>
       </SafeAreaProvider>
+      </ErrorBoundary>
     </GestureHandlerRootView>
   );
 }

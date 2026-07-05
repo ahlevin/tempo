@@ -1,27 +1,40 @@
 import { format, differenceInCalendarDays, addDays, addMonths, addYears, parseISO } from 'date-fns';
 import { Event } from '../store/types';
 
-export const fmt = (d: Date) => format(d, 'yyyy-MM-dd');
-export const today = () => fmt(new Date());
+// True only for a real, finite Date. Used to guard every format()/getTime() call
+// so a partial or malformed user-typed value can never throw "Invalid time value".
+export function isValidDate(d: Date): boolean {
+  return d instanceof Date && !isNaN(d.getTime());
+}
+
+export const fmt = (d: Date) => (isValidDate(d) ? format(d, 'yyyy-MM-dd') : '');
+export const today = () => format(new Date(), 'yyyy-MM-dd');
 
 // Accepts either a date-only string ("YYYY-MM-DD") or a full ISO datetime
 // ("YYYY-MM-DDTHH:mm:ss"). Date-only strings are anchored to local midnight.
+// May return an Invalid Date for bad input — callers must guard with isValidDate.
 export function toDate(s: string): Date {
+  if (!s) return new Date(NaN);
   return parseISO(s.includes('T') ? s : s + 'T00:00:00');
 }
 
 export function daysUntil(dateStr: string): number {
+  const d = toDate(dateStr);
+  if (!isValidDate(d)) return 0;
   const now = new Date(); now.setHours(0,0,0,0);
-  return differenceInCalendarDays(toDate(dateStr), now);
+  return differenceInCalendarDays(d, now);
 }
 
 export function msUntil(dateStr: string): number {
-  return toDate(dateStr).getTime() - Date.now();
+  const d = toDate(dateStr);
+  return isValidDate(d) ? d.getTime() - Date.now() : 0;
 }
 
 export function pctElapsed(created: string, target: string): number {
-  const s = toDate(created).getTime();
-  const e = toDate(target).getTime();
+  const cs = toDate(created), ce = toDate(target);
+  if (!isValidDate(cs) || !isValidDate(ce)) return 0;
+  const s = cs.getTime(), e = ce.getTime();
+  if (e === s) return 0;
   const n = Date.now();
   return Math.round(Math.min(100, Math.max(0, ((n - s) / (e - s)) * 100)));
 }
@@ -54,6 +67,7 @@ export function nextOccurrence(event: Event): string {
     return `${base}T${time}`;
   }
   let cur = parseISO(base + 'T00:00:00');
+  if (!isValidDate(cur)) return `${base}T${time}`;
   let itr = 0;
   while (cur <= now && itr < 3650) {
     itr++;
@@ -81,7 +95,8 @@ export function recurLabel(event: Event): string {
 }
 
 export function nextAnnual(originDate: string): string {
-  const o = parseISO(originDate + 'T00:00:00');
+  const o = toDate(originDate);
+  if (!isValidDate(o)) return '';
   const now = new Date(); now.setHours(0,0,0,0);
   let next = new Date(now.getFullYear(), o.getMonth(), o.getDate());
   if (next <= now) next = new Date(now.getFullYear() + 1, o.getMonth(), o.getDate());
@@ -89,7 +104,8 @@ export function nextAnnual(originDate: string): string {
 }
 
 export function yearsMonthsDays(originDate: string) {
-  const o = parseISO(originDate + 'T00:00:00');
+  const o = toDate(originDate);
+  if (!isValidDate(o)) return { y: 0, mo: 0, d: 0 };
   const now = new Date();
   let y = now.getFullYear() - o.getFullYear();
   let mo = now.getMonth() - o.getMonth();
@@ -100,15 +116,17 @@ export function yearsMonthsDays(originDate: string) {
 }
 
 export function daysSince(dateStr: string): number {
+  const d = toDate(dateStr);
+  if (!isValidDate(d)) return 0;
   const now = new Date(); now.setHours(0,0,0,0);
-  return Math.floor((now.getTime() - parseISO(dateStr + 'T00:00:00').getTime()) / 86400000);
+  return Math.floor((now.getTime() - d.getTime()) / 86400000);
 }
 
 // Whole calendar days between two yyyy-MM-dd strings (toStr - fromStr).
 export function daysBetween(fromStr: string, toStr: string): number {
-  return Math.round(
-    (parseISO(toStr + 'T00:00:00').getTime() - parseISO(fromStr + 'T00:00:00').getTime()) / 86400000
-  );
+  const a = toDate(fromStr), b = toDate(toStr);
+  if (!isValidDate(a) || !isValidDate(b)) return 0;
+  return Math.round((b.getTime() - a.getTime()) / 86400000);
 }
 
 export function ordinal(n: number): string {
@@ -116,21 +134,25 @@ export function ordinal(n: number): string {
 }
 
 export function fmtDisplay(dateStr: string): string {
-  return format(parseISO(dateStr + 'T00:00:00'), 'EEE, MMM d, yyyy');
+  const d = toDate(dateStr);
+  return isValidDate(d) ? format(d, 'EEE, MMM d, yyyy') : '';
 }
 
 export function fmtFull(dateStr: string): string {
-  return format(parseISO(dateStr + 'T00:00:00'), 'EEEE, MMMM d, yyyy');
+  const d = toDate(dateStr);
+  return isValidDate(d) ? format(d, 'EEEE, MMMM d, yyyy') : '';
 }
 
 export function fmtShort(dateStr: string): string {
-  return format(toDate(dateStr), 'MMM d, yyyy');
+  const d = toDate(dateStr);
+  return isValidDate(d) ? format(d, 'MMM d, yyyy') : '';
 }
 
 // Event-aware display: timed events append the time, all-day events show date only.
 // Compact, e.g. "Fri, Jun 26 · 7:00 PM" or "Fri, Jun 26".
 export function fmtDateTime(iso: string, allDay: boolean): string {
   const d = toDate(iso);
+  if (!isValidDate(d)) return '';
   const day = format(d, 'EEE, MMM d');
   return allDay ? day : `${day} · ${format(d, 'h:mm a')}`;
 }
@@ -138,6 +160,7 @@ export function fmtDateTime(iso: string, allDay: boolean): string {
 // Long form, e.g. "Friday, June 26, 2026 · 7:00 PM" or "Friday, June 26, 2026".
 export function fmtDateTimeFull(iso: string, allDay: boolean): string {
   const d = toDate(iso);
+  if (!isValidDate(d)) return '';
   const day = format(d, 'EEEE, MMMM d, yyyy');
   return allDay ? day : `${day} · ${format(d, 'h:mm a')}`;
 }
