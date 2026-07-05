@@ -10,7 +10,15 @@ import { DateWeatherBar } from '../../components/DateWeatherBar';
 import { MemoryCard } from '../../components/MemoryCard';
 import { EventCard } from '../../components/EventCard';
 import { GoalCard } from '../../components/GoalCard';
-import { nextOccurrence, daysUntil } from '../../utils/dates';
+import { UpcomingMemoryRow } from '../../components/UpcomingMemoryRow';
+import { Event, Memory } from '../../store/types';
+import { nextOccurrence, nextAnnual, daysUntil } from '../../utils/dates';
+
+// A row in the "Upcoming" list: either an event or a recurring
+// birthday/anniversary memory. Sorted together by days-until-next-occurrence.
+type UpcomingItem = { kind: 'event'; data: Event } | { kind: 'memory'; data: Memory };
+const upcomingDays = (it: UpcomingItem) =>
+  it.kind === 'event' ? daysUntil(nextOccurrence(it.data)) : daysUntil(nextAnnual(it.data.originDate));
 
 export default function HomeScreen() {
   const events      = useStore(s => s.events);
@@ -28,10 +36,20 @@ export default function HomeScreen() {
     { id:'goal',        label:'🎯 Goals' },
   ];
 
-  const filteredEvents = filter === 'goal' ? [] :
+  // Upcoming = events (+ recurring birthday/anniversary memories when unfiltered),
+  // interleaved and sorted by soonest next occurrence.
+  const upcoming: UpcomingItem[] = [];
+  if (filter !== 'goal') {
     events
       .filter(e => filter === 'all' || e.cat === filter)
-      .sort((a,b) => daysUntil(nextOccurrence(a)) - daysUntil(nextOccurrence(b)));
+      .forEach(e => upcoming.push({ kind: 'event', data: e }));
+    if (filter === 'all') {
+      memories
+        .filter(m => m.type === 'birthday' || m.type === 'anniversary')
+        .forEach(m => upcoming.push({ kind: 'memory', data: m }));
+    }
+    upcoming.sort((a, b) => upcomingDays(a) - upcomingDays(b));
+  }
 
   const showGoals = filter === 'all' || filter === 'goal';
   const soonest = [...events].sort((a,b) => daysUntil(a.start) - daysUntil(b.start))[0];
@@ -76,10 +94,12 @@ export default function HomeScreen() {
 
         {/* Events */}
         <SectionHeader title="Upcoming" onAdd={() => router.push('/modals/add-event')} />
-        {filteredEvents.length === 0 && filter !== 'goal' ? (
+        {upcoming.length === 0 && filter !== 'goal' ? (
           <EmptyPrompt icon="⏳" text="No countdowns yet — tap to start counting down to something."
             onPress={() => router.push('/modals/add-event')} />
-        ) : filteredEvents.map(e => <EventCard key={e.id} event={e} />)}
+        ) : upcoming.map(it => it.kind === 'event'
+            ? <EventCard key={`e-${it.data.id}`} event={it.data} />
+            : <UpcomingMemoryRow key={`m-${it.data.id}`} memory={it.data} />)}
 
         {/* Goals */}
         {showGoals && <>

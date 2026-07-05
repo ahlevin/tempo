@@ -208,10 +208,14 @@ function MemoryCard({ memory: m, type }: { memory: any; type: 'bday' | 'anniv' }
         textTransform:'uppercase', color, marginBottom:5 }}>
         {isBday ? 'Birthday Countdown' : 'Anniversary Countdown'}
       </Text>
-      <Text style={{ fontSize:22, fontWeight:'700', color:Colors.text1, marginBottom:18 }}>
-        {m.emoji} {isBday ? 'Turning ' + num : ordinal(num) + ' Anniversary'}
+      <Text style={{ fontSize:22, fontWeight:'700', color:Colors.text1, marginBottom:4 }}
+        numberOfLines={1}>
+        {m.emoji} {m.name}
       </Text>
-      <View style={{ alignItems:'center', paddingVertical:14 }}>
+      <Text style={{ fontSize:14, fontWeight:'600', color, marginBottom:14 }}>
+        {isBday ? `Turning ${num}` : `${ordinal(num)} Anniversary`}
+      </Text>
+      <View style={{ alignItems:'center', paddingVertical:10 }}>
         <Text style={{ fontSize:64, fontWeight:'800', color,
           letterSpacing:-2, fontVariant:['tabular-nums'] }}>{days}</Text>
         <Text style={{ fontSize:11, color:Colors.text3,

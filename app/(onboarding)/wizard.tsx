@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { format, addDays } from 'date-fns';
+import { format, addDays, subYears } from 'date-fns';
 import { Colors } from '../../constants/colors';
 import { TIMEZONES } from '../../constants/data';
 import { useStore } from '../../store/useStore';
@@ -37,7 +37,20 @@ export default function OnboardingWizard() {
   const [itemType, setItemType] = useState<ItemType>('event');
   const [evName,   setEvName]   = useState('');
   const [evDate,   setEvDate]   = useState(format(addDays(new Date(), 30), 'yyyy-MM-dd'));
+  const [dateTouched, setDateTouched] = useState(false);
   const [quote,    setQuote]    = useState<UserPrefs['quotePref']>(prefs.quotePref);
+
+  // Events count forward (default ~a month out); birthdays/anniversaries count to
+  // the next annual occurrence, so a neutral past date is a better starting point
+  // than today+30. Only auto-swap the default while the user hasn't picked a date.
+  function pickType(t: ItemType) {
+    setItemType(t);
+    if (!dateTouched) {
+      setEvDate(t === 'event'
+        ? format(addDays(new Date(), 30), 'yyyy-MM-dd')
+        : format(subYears(new Date(), 30), 'yyyy-MM-dd'));
+    }
+  }
 
   function finish() {
     updatePrefs({ displayName: name.trim(), timezone: tz, quotePref: quote, onboarded: true });
@@ -130,7 +143,7 @@ export default function OnboardingWizard() {
                 {ITEM_TYPES.map(t => {
                   const sel = itemType === t.id;
                   return (
-                    <TouchableOpacity key={t.id} onPress={() => setItemType(t.id)}
+                    <TouchableOpacity key={t.id} onPress={() => pickType(t.id)}
                       style={{ flex: 1, paddingVertical: 12, borderRadius: 12, borderWidth: 1.5,
                         alignItems: 'center', gap: 3,
                         borderColor: sel ? Colors.accent : Colors.border,
@@ -145,11 +158,18 @@ export default function OnboardingWizard() {
               <FieldLabel label="Name" />
               <TextInput value={evName} onChangeText={setEvName}
                 placeholder={namePlaceholder} placeholderTextColor={Colors.text3} style={inputStyle} />
-              <DateTimeField mode="date" label={dateLabel} value={evDate} onChange={setEvDate} />
+              <DateTimeField mode="date" label={dateLabel} value={evDate}
+                onChange={(d) => { setEvDate(d); setDateTouched(true); }} />
               {itemType !== 'event' && (
-                <Text style={{ fontSize: 12, color: Colors.text3, marginTop: -6, marginBottom: 6 }}>
-                  Pick the original {itemType === 'birthday' ? 'birth' : 'anniversary'} year — we’ll count down to the next one.
-                </Text>
+                <View style={{ flexDirection: 'row', gap: 8, marginTop: -6, marginBottom: 8,
+                  padding: 12, borderRadius: 12, backgroundColor: 'rgba(124,106,245,0.08)',
+                  borderWidth: 1, borderColor: 'rgba(124,106,245,0.2)' }}>
+                  <Text style={{ fontSize: 15 }}>🔁</Text>
+                  <Text style={{ flex: 1, fontSize: 12, color: Colors.text2, lineHeight: 17 }}>
+                    Enter the original {itemType === 'birthday' ? 'birth date (e.g. the birth year)' : 'wedding date'}.
+                    sayZay counts down to the next one every year and shows the {itemType === 'birthday' ? 'age' : 'years'} automatically — no need to set recurrence.
+                  </Text>
+                </View>
               )}
               <TouchableOpacity onPress={() => setStep(step + 1)} style={{ alignSelf: 'center', paddingVertical: 10, marginTop: 4 }}>
                 <Text style={{ fontSize: 14, fontWeight: '700', color: Colors.text3 }}>Skip for now</Text>
