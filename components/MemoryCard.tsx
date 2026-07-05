@@ -6,6 +6,7 @@ import { useStore } from '../store/useStore';
 import { Memory } from '../store/types';
 import { SwipeableRow } from './SwipeableRow';
 import { FavStar } from './FavStar';
+import { AlertBadge } from './AlertBadge';
 import {
   yearsMonthsDays, nextAnnual, daysSince, daysUntil, daysBetween,
   ordinal, fmtShort, fmtFull,
@@ -75,7 +76,10 @@ export function MemoryCard({ memory: m }: { memory: Memory }) {
             <Text style={{ fontSize: 22 }}>{m.emoji}</Text>
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 15, fontWeight: '700', color: Colors.text1 }} numberOfLines={1}>{m.name}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+              <Text style={{ fontSize: 15, fontWeight: '700', color: Colors.text1, maxWidth: '80%' }} numberOfLines={1}>{m.name}</Text>
+              {(m.type === 'birthday' || m.type === 'anniversary') && <AlertBadge count={m.alerts?.length} />}
+            </View>
             <Text style={{ fontSize: 11, color: Colors.text3, marginTop: 2 }}>{fmtShort(m.originDate)}</Text>
           </View>
           <FavStar active={m.fav} onToggle={() => toggleMemoryFav(m.id)} />

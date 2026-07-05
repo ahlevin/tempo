@@ -8,6 +8,7 @@ import { daysUntil } from '../utils/dates';
 import { Confetti } from './Confetti';
 import { SwipeableRow } from './SwipeableRow';
 import { FavStar } from './FavStar';
+import { AlertBadge } from './AlertBadge';
 
 export function GoalCard({ goal: g }: { goal: Goal }) {
   const toggleFav  = useStore(s => s.toggleGoalFav);
@@ -48,13 +49,14 @@ export function GoalCard({ goal: g }: { goal: Goal }) {
           <Text style={{ fontSize: 20 }}>{g.emoji}</Text>
         </View>
         <View style={{ flex: 1 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <Text style={{ fontSize: 14, fontWeight: '600', color: Colors.text1 }} numberOfLines={1}>{g.name}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+            <Text style={{ fontSize: 14, fontWeight: '600', color: Colors.text1, maxWidth: '80%' }} numberOfLines={1}>{g.name}</Text>
             {done && (
               <View style={{ backgroundColor: 'rgba(62,207,178,0.18)', borderRadius: 8, paddingVertical: 2, paddingHorizontal: 7 }}>
                 <Text style={{ fontSize: 10, fontWeight: '800', color: Colors.teal }}>✓ Complete!</Text>
               </View>
             )}
+            <AlertBadge count={g.alerts?.length} />
           </View>
           <Text style={{ fontSize: 11, color: Colors.text3, marginTop: 2 }}>{dstr}</Text>
         </View>

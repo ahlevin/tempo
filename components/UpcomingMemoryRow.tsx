@@ -5,6 +5,7 @@ import { useStore } from '../store/useStore';
 import { Memory } from '../store/types';
 import { SwipeableRow } from './SwipeableRow';
 import { FavStar } from './FavStar';
+import { AlertBadge } from './AlertBadge';
 import { nextAnnual, daysUntil, yearsMonthsDays, ordinal } from '../utils/dates';
 
 // A compact "Upcoming" list row for a recurring birthday/anniversary memory.
@@ -38,7 +39,10 @@ export function UpcomingMemoryRow({ memory: m }: { memory: Memory }) {
           <Text style={{ fontSize: 20 }}>{m.emoji}</Text>
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 14, fontWeight: '600', color: Colors.text1 }} numberOfLines={1}>{m.name}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+            <Text style={{ fontSize: 14, fontWeight: '600', color: Colors.text1, maxWidth: '80%' }} numberOfLines={1}>{m.name}</Text>
+            <AlertBadge count={m.alerts?.length} />
+          </View>
           <Text style={{ fontSize: 11, color: Colors.text3, marginTop: 2 }}>
             <Text style={{ color, fontWeight: '700' }}>{context}</Text>
             <Text> · {dateStr}</Text>
