@@ -47,7 +47,7 @@ export interface LogEntry {
 
 export interface Memory {
   id: string;
-  type: 'birthday' | 'anniversary' | 'lifelog' | 'milestone';
+  type: 'birthday' | 'anniversary' | 'lifelog';
   name: string;
   emoji: string;
   originDate: string;

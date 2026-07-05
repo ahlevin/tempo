@@ -29,7 +29,7 @@ export default function EditMemoryModal() {
 
   const DATE_LABELS: Record<string,string> = {
     birthday:'Date of Birth', anniversary:'Anniversary Date',
-    lifelog:'First Occurrence', milestone:'Date of Milestone'
+    lifelog:'First Occurrence'
   };
 
   if (!m) { router.back(); return null; }

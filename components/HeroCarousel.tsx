@@ -229,36 +229,37 @@ function MemoryCard({ memory: m }: { memory: any }) {
     );
   }
 
-  // Life log → count of entries. Milestone → time since.
-  const isLog = m.type === 'lifelog';
-  const color = isLog ? Colors.teal : Colors.amber;
-  const ago = r.y > 0 ? { v:r.y, l:r.y===1?'year ago':'years ago' }
-            : r.mo > 0 ? { v:r.mo, l:r.mo===1?'month ago':'months ago' }
-            : { v:r.d, l:r.d===1?'day ago':'days ago' };
-  const bigVal   = isLog ? m.entries.length : ago.v;
-  const bigLabel = isLog ? (m.entries.length === 1 ? 'time' : 'times') : ago.l;
-  const dstr = new Date(m.originDate + 'T00:00:00').toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' });
-  return (
-    <View style={{ width:W, backgroundColor: isLog ? '#0F1E1A' : '#1E160A', borderRadius:24, padding:22,
-      borderWidth:1, borderColor: isLog ? 'rgba(62,207,178,0.28)' : 'rgba(240,160,75,0.28)' }}>
-      <Text style={{ fontSize:11, fontWeight:'600', letterSpacing:1.2, textTransform:'uppercase', color, marginBottom:5 }}>
-        {isLog ? 'Life Log' : 'Milestone'}
-      </Text>
-      <Text style={{ fontSize:22, fontWeight:'700', color:Colors.text1, marginBottom:14 }} numberOfLines={1}>
-        {m.emoji} {m.name}
-      </Text>
-      <View style={{ alignItems:'center', paddingVertical:10 }}>
-        <Text style={{ fontSize:64, fontWeight:'800', color, letterSpacing:-2, fontVariant:['tabular-nums'] }}>{bigVal}</Text>
-        <Text style={{ fontSize:11, color:Colors.text3, textTransform:'uppercase', letterSpacing:1, marginTop:4 }}>{bigLabel}</Text>
-      </View>
-      <View style={{ borderTopWidth:1, borderTopColor:'rgba(255,255,255,0.07)', paddingTop:10 }}>
-        <Text style={{ fontSize:12, color:Colors.text2 }}>
-          <Text style={{ color:Colors.text3 }}>Since </Text>
-          <Text style={{ fontWeight:'600', color:Colors.text1 }}>{dstr}</Text>
+  // Life log → count of entries.
+  if (m.type === 'lifelog') {
+    const color = Colors.teal;
+    const bigVal   = m.entries.length;
+    const bigLabel = m.entries.length === 1 ? 'time' : 'times';
+    const dstr = new Date(m.originDate + 'T00:00:00').toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' });
+    return (
+      <View style={{ width:W, backgroundColor:'#0F1E1A', borderRadius:24, padding:22,
+        borderWidth:1, borderColor:'rgba(62,207,178,0.28)' }}>
+        <Text style={{ fontSize:11, fontWeight:'600', letterSpacing:1.2, textTransform:'uppercase', color, marginBottom:5 }}>
+          Life Log
         </Text>
+        <Text style={{ fontSize:22, fontWeight:'700', color:Colors.text1, marginBottom:14 }} numberOfLines={1}>
+          {m.emoji} {m.name}
+        </Text>
+        <View style={{ alignItems:'center', paddingVertical:10 }}>
+          <Text style={{ fontSize:64, fontWeight:'800', color, letterSpacing:-2, fontVariant:['tabular-nums'] }}>{bigVal}</Text>
+          <Text style={{ fontSize:11, color:Colors.text3, textTransform:'uppercase', letterSpacing:1, marginTop:4 }}>{bigLabel}</Text>
+        </View>
+        <View style={{ borderTopWidth:1, borderTopColor:'rgba(255,255,255,0.07)', paddingTop:10 }}>
+          <Text style={{ fontSize:12, color:Colors.text2 }}>
+            <Text style={{ color:Colors.text3 }}>Since </Text>
+            <Text style={{ fontWeight:'600', color:Colors.text1 }}>{dstr}</Text>
+          </Text>
+        </View>
       </View>
-    </View>
-  );
+    );
+  }
+
+  // Unknown/legacy type (e.g. a removed 'milestone') → render nothing.
+  return null;
 }
 
 export function HeroCarousel() {
@@ -280,12 +281,14 @@ export function HeroCarousel() {
   const items: { kind: 'event' | 'goal' | 'memory'; data: any; days: number }[] = [];
   events.filter(e => e.fav).forEach(e => items.push({ kind:'event', data:e, days: daysUntil(nextOccurrence(e)) }));
   goals.filter(g => g.fav).forEach(g => items.push({ kind:'goal', data:g, days: daysUntil(g.date) }));
-  memories.filter(m => m.fav).forEach(m => {
-    // birthdays/anniversaries have a next-occurrence; lifelog/milestone don't, so they sort last.
-    const days = (m.type === 'birthday' || m.type === 'anniversary')
-      ? daysUntil(nextAnnual(m.originDate)) : Number.MAX_SAFE_INTEGER;
-    items.push({ kind:'memory', data:m, days });
-  });
+  memories
+    .filter(m => m.fav && (m.type === 'birthday' || m.type === 'anniversary' || m.type === 'lifelog'))
+    .forEach(m => {
+      // birthdays/anniversaries have a next-occurrence; life logs don't, so they sort last.
+      const days = (m.type === 'birthday' || m.type === 'anniversary')
+        ? daysUntil(nextAnnual(m.originDate)) : Number.MAX_SAFE_INTEGER;
+      items.push({ kind:'memory', data:m, days });
+    });
   items.sort((a, b) => a.days - b.days);
 
   if (!items.length) {

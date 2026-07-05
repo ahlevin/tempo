@@ -15,8 +15,6 @@ const CHOICES: Choice[] = [
     go: () => router.push('/modals/add-goal') },
   { icon: '🏔️', label: 'Life Log',    sub: 'Log every time it happens',         tint: 'rgba(62,207,178,0.14)',
     go: () => router.push({ pathname: '/modals/add-memory', params: { type: 'lifelog' } }) },
-  { icon: '⭐', label: 'Milestone',   sub: 'A memorable one-time date',         tint: 'rgba(240,160,75,0.14)',
-    go: () => router.push({ pathname: '/modals/add-memory', params: { type: 'milestone' } }) },
 ];
 
 export function AddChooser({ visible, onClose }: { visible: boolean; onClose: () => void }) {

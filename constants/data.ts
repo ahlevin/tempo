@@ -11,9 +11,8 @@ export const CATEGORIES = [
 
 export const MEMORY_TYPES = [
   { id:'birthday',    icon:'🎂', label:'Birthday',    desc:'Person or pet' },
-  { id:'anniversary', icon:'💑', label:'Anniversary', desc:'Any milestone date' },
+  { id:'anniversary', icon:'💑', label:'Anniversary', desc:'A date you celebrate yearly' },
   { id:'lifelog',     icon:'🏔️', label:'Life Log',    desc:'Track every time' },
-  { id:'milestone',   icon:'⭐', label:'Milestone',   desc:'One-time achievement' },
 ];
 
 export const ALERT_UNITS = [

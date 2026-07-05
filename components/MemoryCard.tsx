@@ -12,16 +12,13 @@ import {
 } from '../utils/dates';
 
 const TYPE_COLOR: Record<Memory['type'], string> = {
-  birthday: Colors.rose, anniversary: Colors.accent,
-  lifelog: Colors.teal, milestone: Colors.amber,
+  birthday: Colors.rose, anniversary: Colors.accent, lifelog: Colors.teal,
 };
 const TYPE_BORDER: Record<Memory['type'], string> = {
-  birthday: 'rgba(232,80,122,0.28)', anniversary: 'rgba(124,106,245,0.28)',
-  lifelog: 'rgba(62,207,178,0.28)', milestone: 'rgba(240,160,75,0.28)',
+  birthday: 'rgba(232,80,122,0.28)', anniversary: 'rgba(124,106,245,0.28)', lifelog: 'rgba(62,207,178,0.28)',
 };
 const TYPE_BG: Record<Memory['type'], string> = {
-  birthday: 'rgba(232,80,122,0.12)', anniversary: 'rgba(124,106,245,0.12)',
-  lifelog: 'rgba(62,207,178,0.11)', milestone: 'rgba(240,160,75,0.11)',
+  birthday: 'rgba(232,80,122,0.12)', anniversary: 'rgba(124,106,245,0.12)', lifelog: 'rgba(62,207,178,0.11)',
 };
 
 function Stat({ value, label, color }: { value: string | number; label: string; color: string }) {
@@ -46,10 +43,15 @@ function Bridge({ text, color }: { text: string; color: string }) {
   );
 }
 
+const KNOWN_TYPES = new Set(['birthday', 'anniversary', 'lifelog']);
+
 export function MemoryCard({ memory: m }: { memory: Memory }) {
   const deleteMemory    = useStore(s => s.deleteMemory);
   const toggleMemoryFav = useStore(s => s.toggleMemoryFav);
   const [showAll, setShowAll] = useState(false);
+
+  // Legacy/unknown types (e.g. a removed 'milestone' row) render nothing.
+  if (!KNOWN_TYPES.has(m.type)) return null;
 
   const color  = TYPE_COLOR[m.type];
   const border = TYPE_BORDER[m.type];
@@ -81,7 +83,6 @@ export function MemoryCard({ memory: m }: { memory: Memory }) {
 
         {m.type === 'birthday'    && <BirthdayBody m={m} r={r} color={color} />}
         {m.type === 'anniversary' && <AnniversaryBody m={m} r={r} color={color} />}
-        {m.type === 'milestone'   && <MilestoneBody m={m} r={r} color={color} />}
         {m.type === 'lifelog'     && (
           <LifelogBody m={m} color={color} showAll={showAll} onToggle={() => setShowAll(v => !v)} />
         )}
@@ -134,22 +135,6 @@ function AnniversaryBody({ m, r, color }: { m: Memory; r: YMD; color: string }) 
       </View>
       <Bridge color={color}
         text={`${ordinal(r.y + 1)} anniversary — ${fmtShort(nb)} · ${daysUntil(nb)} days away`} />
-    </>
-  );
-}
-
-function MilestoneBody({ m, r, color }: { m: Memory; r: YMD; color: string }) {
-  const ago = r.y > 0 ? { v: r.y, l: r.y === 1 ? 'year ago' : 'years ago' }
-            : r.mo > 0 ? { v: r.mo, l: r.mo === 1 ? 'month ago' : 'months ago' }
-            : { v: r.d, l: r.d === 1 ? 'day ago' : 'days ago' };
-  return (
-    <>
-      <BigNumber value={ago.v} label={ago.l} color={color} />
-      <View style={{ flexDirection: 'row', gap: 8 }}>
-        <Stat value={daysSince(m.originDate).toLocaleString()} label="days" color={color} />
-        <Stat value={r.y * 12 + r.mo} label="months" color={Colors.text1} />
-        <Stat value={r.y} label="years" color={Colors.text1} />
-      </View>
     </>
   );
 }

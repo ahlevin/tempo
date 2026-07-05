@@ -153,7 +153,7 @@ export default function HomeScreen() {
         {/* Memories */}
         <SectionHeader title="Memories & Life Log" onAdd={() => router.push('/modals/add-memory')} />
         {memories.length === 0
-          ? <EmptyPrompt icon="📸" text="No memories yet — tap to remember a birthday, milestone, or life log."
+          ? <EmptyPrompt icon="📸" text="No memories yet — tap to remember a birthday, anniversary, or life log."
               onPress={() => router.push('/modals/add-memory')} />
           : memories.map(m => <MemoryCard key={m.id} memory={m} />)}
 

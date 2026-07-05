@@ -11,19 +11,19 @@ import { DateTimeField } from '../../components/DateTimeField';
 
 const DATE_LABELS: Record<string,string> = {
   birthday:'Date of Birth', anniversary:'Anniversary Date',
-  lifelog:'First Occurrence', milestone:'Date of Milestone'
+  lifelog:'First Occurrence'
 };
 const DEF_EMOJIS: Record<string,string> = {
-  birthday:'🎂', anniversary:'💑', lifelog:'🏔️', milestone:'⭐'
+  birthday:'🎂', anniversary:'💑', lifelog:'🏔️'
 };
-const MEM_TYPE_IDS = ['birthday', 'anniversary', 'lifelog', 'milestone'];
+const MEM_TYPE_IDS = ['birthday', 'anniversary', 'lifelog'];
 
 export default function AddMemoryModal() {
   const addMemory = useStore(s => s.addMemory);
   const { showToast } = useToast();
   // Preselect the type when the add-chooser routes here with ?type=birthday etc.
   const { type: typeParam } = useLocalSearchParams<{ type?: string }>();
-  const initialType = typeParam && MEM_TYPE_IDS.includes(typeParam) ? typeParam : 'milestone';
+  const initialType = typeParam && MEM_TYPE_IDS.includes(typeParam) ? typeParam : 'birthday';
   const [type,  setType]  = useState(initialType);
   const [name,  setName]  = useState('');
   const [date,  setDate]  = useState(format(subDays(new Date(), 1), 'yyyy-MM-dd'));
