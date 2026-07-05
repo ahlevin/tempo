@@ -5,6 +5,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { format } from 'date-fns';
 import { Colors } from '../../constants/colors';
 import { useStore } from '../../store/useStore';
+import { DateTimeField } from '../../components/DateTimeField';
 
 export default function LogEntryModal() {
   const { id, past } = useLocalSearchParams<{ id: string; past: string }>();
@@ -58,9 +59,7 @@ export default function LogEntryModal() {
             ))}
           </View>
           {usePast && (
-            <TextInput value={date} onChangeText={setDate}
-              placeholder="YYYY-MM-DD" placeholderTextColor={Colors.text3}
-              keyboardType="numbers-and-punctuation" style={fi} />
+            <DateTimeField mode="date" value={date} onChange={setDate} />
           )}
           <Text style={{ fontSize:11, fontWeight:'600', color:Colors.text3,
             textTransform:'uppercase', letterSpacing:0.5, marginBottom:6 }}>

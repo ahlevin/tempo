@@ -9,7 +9,14 @@ import { useStore } from '../../store/useStore';
 import { UserPrefs } from '../../store/types';
 import { DateTimeField } from '../../components/DateTimeField';
 
-const STEPS = ['Your name', 'Time zone', 'First event', 'Daily quote'];
+const STEPS = ['Your name', 'Time zone', 'First countdown', 'Daily quote'];
+
+type ItemType = 'event' | 'birthday' | 'anniversary';
+const ITEM_TYPES: { id: ItemType; label: string; emoji: string }[] = [
+  { id: 'event',       label: 'Event',       emoji: '🎉' },
+  { id: 'birthday',    label: 'Birthday',    emoji: '🎂' },
+  { id: 'anniversary', label: 'Anniversary', emoji: '💍' },
+];
 
 const QUOTE_OPTS: { id: UserPrefs['quotePref']; icon: string; label: string; desc: string }[] = [
   { id: 'bible',        icon: '✝️', label: 'Bible Verse',    desc: 'Daily scripture for reflection' },
@@ -22,25 +29,43 @@ export default function OnboardingWizard() {
   const prefs       = useStore(s => s.prefs);
   const updatePrefs = useStore(s => s.updatePrefs);
   const addEvent    = useStore(s => s.addEvent);
+  const addMemory   = useStore(s => s.addMemory);
 
-  const [step,   setStep]   = useState(0);
-  const [name,   setName]   = useState(prefs.displayName || '');
-  const [tz,     setTz]     = useState(prefs.timezone);
-  const [evName, setEvName] = useState('');
-  const [evDate, setEvDate] = useState(format(addDays(new Date(), 30), 'yyyy-MM-dd'));
-  const [quote,  setQuote]  = useState<UserPrefs['quotePref']>(prefs.quotePref);
+  const [step,     setStep]     = useState(0);
+  const [name,     setName]     = useState(prefs.displayName || '');
+  const [tz,       setTz]       = useState(prefs.timezone);
+  const [itemType, setItemType] = useState<ItemType>('event');
+  const [evName,   setEvName]   = useState('');
+  const [evDate,   setEvDate]   = useState(format(addDays(new Date(), 30), 'yyyy-MM-dd'));
+  const [quote,    setQuote]    = useState<UserPrefs['quotePref']>(prefs.quotePref);
 
   function finish() {
     updatePrefs({ displayName: name.trim(), timezone: tz, quotePref: quote, onboarded: true });
     if (evName.trim()) {
-      addEvent({
-        name: evName.trim(), emoji: '🎉', cat: 'celebration',
-        allDay: true, start: `${evDate}T00:00:00`, end: null, date: evDate,
-        fav: true, recur: null, alerts: [],
-      });
+      if (itemType === 'event') {
+        // A plain one-time event, counting down to the chosen date.
+        addEvent({
+          name: evName.trim(), emoji: '🎉', cat: 'celebration',
+          allDay: true, start: `${evDate}T00:00:00`, end: null, date: evDate,
+          fav: true, recur: null, alerts: [],
+        });
+      } else {
+        // Birthday/anniversary: a recurring Memory. The origin year (e.g. 1974)
+        // is preserved for age/years; the countdown targets the next annual date.
+        addMemory({
+          type: itemType, name: evName.trim(),
+          emoji: itemType === 'birthday' ? '🎂' : '💍',
+          originDate: evDate, entries: [], note: '',
+        });
+      }
     }
     router.replace('/tabs');
   }
+
+  const dateLabel = itemType === 'event' ? 'Date'
+    : itemType === 'birthday' ? 'Date of birth' : 'Anniversary date';
+  const namePlaceholder = itemType === 'event' ? 'e.g. Summer vacation…'
+    : itemType === 'birthday' ? "e.g. Mom's birthday" : 'e.g. Our wedding';
 
   const isLast = step === STEPS.length - 1;
   const next = () => (isLast ? finish() : setStep(step + 1));
@@ -100,10 +125,32 @@ export default function OnboardingWizard() {
 
           {step === 2 && (
             <View>
-              <FieldLabel label="Event name" />
+              <FieldLabel label="Type" />
+              <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
+                {ITEM_TYPES.map(t => {
+                  const sel = itemType === t.id;
+                  return (
+                    <TouchableOpacity key={t.id} onPress={() => setItemType(t.id)}
+                      style={{ flex: 1, paddingVertical: 12, borderRadius: 12, borderWidth: 1.5,
+                        alignItems: 'center', gap: 3,
+                        borderColor: sel ? Colors.accent : Colors.border,
+                        backgroundColor: sel ? 'rgba(124,106,245,0.12)' : Colors.glass }}>
+                      <Text style={{ fontSize: 20 }}>{t.emoji}</Text>
+                      <Text style={{ fontSize: 12, fontWeight: '600',
+                        color: sel ? Colors.accent : Colors.text2 }}>{t.label}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+              <FieldLabel label="Name" />
               <TextInput value={evName} onChangeText={setEvName}
-                placeholder="e.g. Summer vacation…" placeholderTextColor={Colors.text3} style={inputStyle} />
-              <DateTimeField mode="date" label="Date" value={evDate} onChange={setEvDate} />
+                placeholder={namePlaceholder} placeholderTextColor={Colors.text3} style={inputStyle} />
+              <DateTimeField mode="date" label={dateLabel} value={evDate} onChange={setEvDate} />
+              {itemType !== 'event' && (
+                <Text style={{ fontSize: 12, color: Colors.text3, marginTop: -6, marginBottom: 6 }}>
+                  Pick the original {itemType === 'birthday' ? 'birth' : 'anniversary'} year — we’ll count down to the next one.
+                </Text>
+              )}
               <TouchableOpacity onPress={() => setStep(step + 1)} style={{ alignSelf: 'center', paddingVertical: 10, marginTop: 4 }}>
                 <Text style={{ fontSize: 14, fontWeight: '700', color: Colors.text3 }}>Skip for now</Text>
               </TouchableOpacity>
@@ -156,13 +203,13 @@ export default function OnboardingWizard() {
 }
 
 function stepTitle(step: number): string {
-  return ['What’s your name?', 'Pick your time zone', 'Add your first event', 'Choose a daily quote'][step];
+  return ['What’s your name?', 'Pick your time zone', 'Add something to count down to', 'Choose a daily quote'][step];
 }
 function stepSubtitle(step: number): string {
   return [
     'We’ll use this to personalize sayZay.',
     'So your countdowns land at the right time.',
-    'Start counting down to something — or skip and add it later.',
+    'An event, or a birthday/anniversary that repeats every year — or skip for now.',
     'A little something for your home screen each day.',
   ][step];
 }
