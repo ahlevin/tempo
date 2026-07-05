@@ -3,6 +3,7 @@ import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Colors } from '../constants/colors';
 import { Alert as AlertType } from '../store/types';
 import { Toggle } from './FormControls';
+import { requestNotificationPermission } from '../lib/notifications';
 
 const UNITS: AlertType['unit'][] = ['minutes','hours','days','weeks','months'];
 
@@ -26,9 +27,16 @@ export function AlertsEditor({
     // onChange is a stable setState; re-run only when the inputs change.
   }, [alertOn, alerts]);
 
+  // Ask for notification permission the first time a user turns reminders on
+  // (contextual prompt). No-op on web.
+  function toggleReminders(on: boolean) {
+    setAlertOn(on);
+    if (on) void requestNotificationPermission();
+  }
+
   return (
     <>
-      <Toggle label="🔔 Alerts & Reminders" value={alertOn} onChange={setAlertOn} />
+      <Toggle label="🔔 Alerts & Reminders" value={alertOn} onChange={toggleReminders} />
       {alertOn && (
         <View style={{ marginBottom:14 }}>
           {alerts.map((a,i) => (

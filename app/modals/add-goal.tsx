@@ -7,7 +7,9 @@ import { format, addDays } from 'date-fns';
 import { Colors } from '../../constants/colors';
 import { GOAL_EMOJIS } from '../../constants/data';
 import { useStore } from '../../store/useStore';
+import { Alert as AlertType } from '../../store/types';
 import { DateTimeField } from '../../components/DateTimeField';
+import { AlertsEditor } from '../../components/AlertsEditor';
 
 export default function AddGoalModal() {
   const addGoal = useStore(s => s.addGoal);
@@ -18,6 +20,7 @@ export default function AddGoalModal() {
   const [step,   setStep]   = useState('1');
   const [date,   setDate]   = useState(format(addDays(new Date(), 90), 'yyyy-MM-dd'));
   const [emoji,  setEmoji]  = useState('🎯');
+  const [alerts, setAlerts] = useState<AlertType[]>([]);
 
   const fi = { backgroundColor:'rgba(255,255,255,0.06)', borderWidth:1,
     borderColor:'rgba(255,255,255,0.1)', borderRadius:12, padding:12,
@@ -26,7 +29,7 @@ export default function AddGoalModal() {
   function submit() {
     if (!name.trim() || !target || !date) { showToast('⚠️', 'Missing info', 'Please fill in all fields.'); return; }
     addGoal({ name:name.trim(), emoji, target:parseFloat(target),
-      unit:unit.trim()||'units', step:parseFloat(step)||1, date, fav:false });
+      unit:unit.trim()||'units', step:parseFloat(step)||1, date, fav:false, alerts });
     router.back();
   }
 
@@ -71,6 +74,7 @@ export default function AddGoalModal() {
               </TouchableOpacity>
             ))}
           </View>
+          <AlertsEditor value={alerts} onChange={setAlerts} />
           <TouchableOpacity onPress={submit}
             style={{ backgroundColor:Colors.teal, borderRadius:14, padding:15, alignItems:'center' }}>
             <Text style={{ color:'#0A0A0F', fontSize:15, fontWeight:'700' }}>Set Goal →</Text>

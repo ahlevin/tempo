@@ -74,6 +74,7 @@ export function rowToGoal(r: any): Goal {
     date: datePart(r.target_date ?? ''),
     created: r.created_at ? datePart(r.created_at) : datePart(r.target_date ?? ''),
     fav: !!r.fav,
+    alerts: r.alerts ?? [],
   };
 }
 
@@ -89,6 +90,7 @@ export function goalToRow(g: Goal, userId: string) {
     step: g.step,
     target_date: `${g.date}T00:00:00Z`,
     fav: g.fav,
+    alerts: g.alerts,
     created_at: `${g.created}T00:00:00Z`,
   };
 }
@@ -104,6 +106,7 @@ export function rowToMemory(r: any): Memory {
     entries: (r.entries ?? []) as LogEntry[],
     note: r.note ?? '',
     fav: !!r.fav,
+    alerts: r.alerts ?? [],
   };
 }
 
@@ -117,6 +120,7 @@ export function memoryToRow(m: Memory, userId: string) {
     origin_date: m.originDate,
     note: m.note,
     entries: m.entries,
+    alerts: m.alerts,
     fav: m.fav,
   };
 }

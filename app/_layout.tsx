@@ -10,6 +10,7 @@ import { ToastProvider } from '../components/Toast';
 import { ConfirmProvider } from '../components/ConfirmDialog';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
+import { rescheduleAll } from '../lib/notifications';
 
 export default function RootLayout() {
   return (
@@ -38,6 +39,9 @@ function RootNavigator() {
   const storeReady      = useStore(s => s.ready);
   const prefsExists     = useStore(s => s.prefsExists);
   const onboarded       = useStore(s => s.prefs.onboarded);
+  const events          = useStore(s => s.events);
+  const goals           = useStore(s => s.goals);
+  const memories        = useStore(s => s.memories);
   const segments = useSegments();
   const router = useRouter();
 
@@ -46,6 +50,13 @@ function RootNavigator() {
     if (user) loadForUser(user.id);
     else clearForSignOut();
   }, [user?.id]);
+
+  // (Re)schedule native local notifications whenever items/alerts/dates change.
+  // No-op on web and without notification permission.
+  useEffect(() => {
+    if (!session) return;
+    rescheduleAll({ events, goals, memories });
+  }, [session, events, goals, memories]);
 
   // Re-push queued writes when the app/tab wakes or reconnects. AppState 'active'
   // is native-only and unreliable on web, so on web we listen to DOM online/focus/

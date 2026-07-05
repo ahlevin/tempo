@@ -75,7 +75,7 @@ export default function OnboardingWizard() {
         addMemory({
           type: itemType, name: evName.trim(),
           emoji: itemType === 'birthday' ? '🎂' : '💍',
-          originDate: evDate, entries: [], note: '', fav: false,
+          originDate: evDate, entries: [], note: '', fav: false, alerts: [],
         });
       }
     }

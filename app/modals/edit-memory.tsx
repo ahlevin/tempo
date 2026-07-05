@@ -6,7 +6,9 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { Colors } from '../../constants/colors';
 import { MEM_EMOJIS } from '../../constants/data';
 import { useStore } from '../../store/useStore';
+import { Alert as AlertType } from '../../store/types';
 import { DateTimeField } from '../../components/DateTimeField';
+import { AlertsEditor } from '../../components/AlertsEditor';
 import { useConfirm } from '../../components/ConfirmDialog';
 
 export default function EditMemoryModal() {
@@ -22,6 +24,7 @@ export default function EditMemoryModal() {
   const [date,  setDate]  = useState(m?.originDate  || '');
   const [emoji, setEmoji] = useState(m?.emoji       || '⭐');
   const [note,  setNote]  = useState(m?.note        || '');
+  const [alerts, setAlerts] = useState<AlertType[]>(m?.alerts ?? []);
 
   const fi = { backgroundColor:'rgba(255,255,255,0.06)', borderWidth:1,
     borderColor:'rgba(255,255,255,0.1)', borderRadius:12, padding:12,
@@ -36,7 +39,8 @@ export default function EditMemoryModal() {
 
   function save() {
     if (!name.trim()||!date) { showToast('⚠️', 'Missing info', 'Please fill in all fields.'); return; }
-    updateMemory(id, { name:name.trim(), originDate:date, emoji, note:note.trim() });
+    updateMemory(id, { name:name.trim(), originDate:date, emoji, note:note.trim(),
+      alerts: m!.type === 'lifelog' ? [] : alerts });
     router.back();
   }
 
@@ -76,6 +80,9 @@ export default function EditMemoryModal() {
           </View>
           <FL label="Note (optional)" />
           <TextInput value={note} onChangeText={setNote} placeholderTextColor={Colors.text3} style={fi} />
+          {(m.type === 'birthday' || m.type === 'anniversary') && (
+            <AlertsEditor value={alerts} onChange={setAlerts} />
+          )}
           <TouchableOpacity onPress={save}
             style={{ backgroundColor:Colors.rose, borderRadius:14, padding:15, alignItems:'center', marginBottom:12 }}>
             <Text style={{ color:'#fff', fontSize:15, fontWeight:'700' }}>Save Changes →</Text>

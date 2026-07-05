@@ -7,7 +7,9 @@ import { format, subDays } from 'date-fns';
 import { Colors } from '../../constants/colors';
 import { MEM_EMOJIS, MEMORY_TYPES } from '../../constants/data';
 import { useStore } from '../../store/useStore';
+import { Alert as AlertType } from '../../store/types';
 import { DateTimeField } from '../../components/DateTimeField';
+import { AlertsEditor } from '../../components/AlertsEditor';
 
 const DATE_LABELS: Record<string,string> = {
   birthday:'Date of Birth', anniversary:'Anniversary Date',
@@ -29,6 +31,7 @@ export default function AddMemoryModal() {
   const [date,  setDate]  = useState(format(subDays(new Date(), 1), 'yyyy-MM-dd'));
   const [emoji, setEmoji] = useState(DEF_EMOJIS[initialType] || '⭐');
   const [note,  setNote]  = useState('');
+  const [alerts, setAlerts] = useState<AlertType[]>([]);
 
   const fi = { backgroundColor:'rgba(255,255,255,0.06)', borderWidth:1,
     borderColor:'rgba(255,255,255,0.1)', borderRadius:12, padding:12,
@@ -42,7 +45,8 @@ export default function AddMemoryModal() {
       type:type as any, name:name.trim(), emoji, originDate:date,
       entries: type==='lifelog' ? [{date,note:note.trim()}] : [],
       note: type!=='lifelog' ? note.trim() : '',
-      fav: false,
+      // Reminders only apply to the recurring types (birthday/anniversary).
+      fav: false, alerts: type==='lifelog' ? [] : alerts,
     });
     router.back();
   }
@@ -97,6 +101,9 @@ export default function AddMemoryModal() {
           <FL label="Note (optional)" />
           <TextInput value={note} onChangeText={setNote}
             placeholder="Add a note…" placeholderTextColor={Colors.text3} style={fi} />
+          {(type === 'birthday' || type === 'anniversary') && (
+            <AlertsEditor value={alerts} onChange={setAlerts} />
+          )}
           <TouchableOpacity onPress={submit}
             style={{ backgroundColor:Colors.rose, borderRadius:14, padding:15, alignItems:'center' }}>
             <Text style={{ color:'#fff', fontSize:15, fontWeight:'700' }}>Save Memory →</Text>

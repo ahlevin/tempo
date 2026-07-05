@@ -38,6 +38,7 @@ export interface Goal {
   date: string;
   created: string;
   fav: boolean;
+  alerts: Alert[];
 }
 
 export interface LogEntry {
@@ -54,6 +55,7 @@ export interface Memory {
   entries: LogEntry[];
   note: string;
   fav: boolean;
+  alerts: Alert[];
 }
 
 export interface UserPrefs {
