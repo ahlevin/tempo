@@ -4,13 +4,15 @@ import { Colors } from '../constants/colors';
 import { useStore } from '../store/useStore';
 import { Memory } from '../store/types';
 import { SwipeableRow } from './SwipeableRow';
+import { FavStar } from './FavStar';
 import { nextAnnual, daysUntil, yearsMonthsDays, ordinal } from '../utils/dates';
 
 // A compact "Upcoming" list row for a recurring birthday/anniversary memory.
 // Leads with the person's name, shows the upcoming age / anniversary, and the
 // days until the next annual occurrence. Tapping opens edit-memory.
 export function UpcomingMemoryRow({ memory: m }: { memory: Memory }) {
-  const deleteMemory = useStore(s => s.deleteMemory);
+  const deleteMemory    = useStore(s => s.deleteMemory);
+  const toggleMemoryFav = useStore(s => s.toggleMemoryFav);
 
   const isBday = m.type === 'birthday';
   const nb     = nextAnnual(m.originDate);
@@ -42,9 +44,12 @@ export function UpcomingMemoryRow({ memory: m }: { memory: Memory }) {
             <Text> · {dateStr}</Text>
           </Text>
         </View>
-        <View style={{ alignItems: 'flex-end' }}>
-          <Text style={{ fontSize: 20, fontWeight: '800', color }}>{d}</Text>
-          <Text style={{ fontSize: 9, color: Colors.text3, textTransform: 'uppercase' }}>{d === 1 ? 'day' : 'days'}</Text>
+        <View style={{ alignItems: 'center' }}>
+          <View style={{ alignItems: 'flex-end' }}>
+            <Text style={{ fontSize: 20, fontWeight: '800', color }}>{d}</Text>
+            <Text style={{ fontSize: 9, color: Colors.text3, textTransform: 'uppercase' }}>{d === 1 ? 'day' : 'days'}</Text>
+          </View>
+          <FavStar active={m.fav} onToggle={() => toggleMemoryFav(m.id)} />
         </View>
       </TouchableOpacity>
     </SwipeableRow>

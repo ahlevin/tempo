@@ -42,6 +42,7 @@ export default function AddMemoryModal() {
       type:type as any, name:name.trim(), emoji, originDate:date,
       entries: type==='lifelog' ? [{date,note:note.trim()}] : [],
       note: type!=='lifelog' ? note.trim() : '',
+      fav: false,
     });
     router.back();
   }

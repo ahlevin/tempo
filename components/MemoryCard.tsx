@@ -5,6 +5,7 @@ import { Colors } from '../constants/colors';
 import { useStore } from '../store/useStore';
 import { Memory } from '../store/types';
 import { SwipeableRow } from './SwipeableRow';
+import { FavStar } from './FavStar';
 import {
   yearsMonthsDays, nextAnnual, daysSince, daysUntil, daysBetween,
   ordinal, fmtShort, fmtFull,
@@ -46,7 +47,8 @@ function Bridge({ text, color }: { text: string; color: string }) {
 }
 
 export function MemoryCard({ memory: m }: { memory: Memory }) {
-  const deleteMemory = useStore(s => s.deleteMemory);
+  const deleteMemory    = useStore(s => s.deleteMemory);
+  const toggleMemoryFav = useStore(s => s.toggleMemoryFav);
   const [showAll, setShowAll] = useState(false);
 
   const color  = TYPE_COLOR[m.type];
@@ -74,6 +76,7 @@ export function MemoryCard({ memory: m }: { memory: Memory }) {
             <Text style={{ fontSize: 15, fontWeight: '700', color: Colors.text1 }} numberOfLines={1}>{m.name}</Text>
             <Text style={{ fontSize: 11, color: Colors.text3, marginTop: 2 }}>{fmtShort(m.originDate)}</Text>
           </View>
+          <FavStar active={m.fav} onToggle={() => toggleMemoryFav(m.id)} />
         </View>
 
         {m.type === 'birthday'    && <BirthdayBody m={m} r={r} color={color} />}

@@ -26,7 +26,7 @@ export default function AddGoalModal() {
   function submit() {
     if (!name.trim() || !target || !date) { showToast('⚠️', 'Missing info', 'Please fill in all fields.'); return; }
     addGoal({ name:name.trim(), emoji, target:parseFloat(target),
-      unit:unit.trim()||'units', step:parseFloat(step)||1, date, fav:true });
+      unit:unit.trim()||'units', step:parseFloat(step)||1, date, fav:false });
     router.back();
   }
 

@@ -103,6 +103,7 @@ export function rowToMemory(r: any): Memory {
     originDate: datePart(r.origin_date ?? ''),
     entries: (r.entries ?? []) as LogEntry[],
     note: r.note ?? '',
+    fav: !!r.fav,
   };
 }
 
@@ -116,6 +117,7 @@ export function memoryToRow(m: Memory, userId: string) {
     origin_date: m.originDate,
     note: m.note,
     entries: m.entries,
+    fav: m.fav,
   };
 }
 

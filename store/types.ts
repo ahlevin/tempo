@@ -53,6 +53,7 @@ export interface Memory {
   originDate: string;
   entries: LogEntry[];
   note: string;
+  fav: boolean;
 }
 
 export interface UserPrefs {

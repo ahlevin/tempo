@@ -30,7 +30,7 @@ export default function AddEventModal() {
     const startIso = allDay ? `${start.slice(0, 10)}T00:00:00` : start;
     addEvent({
       name: name.trim(), emoji, cat: cat as any,
-      allDay, start: startIso, end: allDay ? null : end, date: startIso.slice(0, 10), fav: true,
+      allDay, start: startIso, end: allDay ? null : end, date: startIso.slice(0, 10), fav: false,
       recur, alerts,
     });
     router.back();

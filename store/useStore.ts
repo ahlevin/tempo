@@ -54,6 +54,7 @@ interface TempoStore {
   addMemory: (m: Omit<Memory, 'id'>) => void;
   updateMemory: (id: string, patch: Partial<Memory>) => void;
   deleteMemory: (id: string) => void;
+  toggleMemoryFav: (id: string) => void;
   addLogEntry: (memId: string, entry: { date: string; note: string }) => void;
   updatePrefs: (patch: Partial<UserPrefs>) => void;
 }
@@ -298,6 +299,10 @@ export const useStore = create<TempoStore>()(
         deleteMemory: (id) => {
           set(s => ({ memories: s.memories.filter(m => m.id !== id) }));
           enqueue({ kind: 'delete', table: 'memories', id });
+        },
+        toggleMemoryFav: (id) => {
+          set(s => ({ memories: s.memories.map(m => m.id === id ? { ...m, fav: !m.fav } : m) }));
+          enqueue({ kind: 'upsert', table: 'memories', id });
         },
         addLogEntry: (memId, entry) => {
           set(s => ({ memories: s.memories.map(m => m.id === memId ? { ...m, entries: [...m.entries, entry] } : m) }));

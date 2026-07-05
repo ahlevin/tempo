@@ -4,11 +4,13 @@ import { router } from 'expo-router';
 import { Colors } from '../../constants/colors';
 import { useStore } from '../../store/useStore';
 import { SwipeableRow } from '../../components/SwipeableRow';
+import { MemoryCard } from '../../components/MemoryCard';
 import { nextOccurrence, daysUntil, urgencyColor, fmtDateTime } from '../../utils/dates';
 
 export default function FavoritesScreen() {
-  const events = useStore(s => s.events);
-  const goals  = useStore(s => s.goals);
+  const events   = useStore(s => s.events);
+  const goals    = useStore(s => s.goals);
+  const memories = useStore(s => s.memories);
   const toggleEventFav = useStore(s => s.toggleEventFav);
   const toggleGoalFav  = useStore(s => s.toggleGoalFav);
   const deleteEvent    = useStore(s => s.deleteEvent);
@@ -17,7 +19,8 @@ export default function FavoritesScreen() {
   const favEvents = events.filter(e => e.fav)
     .sort((a,b) => daysUntil(nextOccurrence(a)) - daysUntil(nextOccurrence(b)));
   const favGoals = goals.filter(g => g.fav);
-  const empty = !favEvents.length && !favGoals.length;
+  const favMemories = memories.filter(m => m.fav);
+  const empty = !favEvents.length && !favGoals.length && !favMemories.length;
 
   return (
     <SafeAreaView style={{ flex:1, backgroundColor:Colors.bg }} edges={['top']}>
@@ -30,7 +33,7 @@ export default function FavoritesScreen() {
           <View style={{ alignItems:'center', paddingVertical:60 }}>
             <Text style={{ fontSize:40, marginBottom:12 }}>⭐</Text>
             <Text style={{ color:Colors.text3, fontSize:15, textAlign:'center' }}>
-              No favorites yet.{'\n'}Tap ☆ on any event or goal.
+              No favorites yet.{'\n'}Tap ☆ on any event, goal, or memory.
             </Text>
           </View>
         )}
@@ -107,6 +110,12 @@ export default function FavoritesScreen() {
                 </SwipeableRow>
               );
             })}
+          </View>
+        )}
+        {favMemories.length > 0 && (
+          <View style={{ marginTop: (favEvents.length || favGoals.length) ? 16 : 0 }}>
+            <Text style={{ fontSize:16, fontWeight:'700', color:Colors.text1, marginBottom:10 }}>Memories</Text>
+            {favMemories.map(m => <MemoryCard key={m.id} memory={m} />)}
           </View>
         )}
       </ScrollView>

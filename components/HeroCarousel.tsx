@@ -191,39 +191,69 @@ function GoalCard({ goal: g }: { goal: any }) {
   );
 }
 
-function MemoryCard({ memory: m, type }: { memory: any; type: 'bday' | 'anniv' }) {
-  const isBday = type === 'bday';
-  const nb     = nextAnnual(m.originDate);
-  const r      = yearsMonthsDays(m.originDate);
-  const days   = daysUntil(nb);
-  const num    = r.y + 1;
-  const color  = isBday ? Colors.rose : Colors.accent;
-  const wday   = new Date(nb + 'T00:00:00').toLocaleDateString('en-US', { weekday:'long' });
-  const dstr   = new Date(nb + 'T00:00:00').toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' });
+function MemoryCard({ memory: m }: { memory: any }) {
+  const r = yearsMonthsDays(m.originDate);
 
+  // Birthday / anniversary → annual countdown.
+  if (m.type === 'birthday' || m.type === 'anniversary') {
+    const isBday = m.type === 'birthday';
+    const nb    = nextAnnual(m.originDate);
+    const days  = daysUntil(nb);
+    const num   = r.y + 1;
+    const color = isBday ? Colors.rose : Colors.accent;
+    const wday  = new Date(nb + 'T00:00:00').toLocaleDateString('en-US', { weekday:'long' });
+    const dstr  = new Date(nb + 'T00:00:00').toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' });
+    return (
+      <View style={{ width:W, backgroundColor:'#1E0F1A', borderRadius:24, padding:22,
+        borderWidth:1, borderColor: isBday ? 'rgba(232,80,122,0.28)' : 'rgba(124,106,245,0.28)' }}>
+        <Text style={{ fontSize:11, fontWeight:'600', letterSpacing:1.2, textTransform:'uppercase', color, marginBottom:5 }}>
+          {isBday ? 'Birthday Countdown' : 'Anniversary Countdown'}
+        </Text>
+        <Text style={{ fontSize:22, fontWeight:'700', color:Colors.text1, marginBottom:4 }} numberOfLines={1}>
+          {m.emoji} {m.name}
+        </Text>
+        <Text style={{ fontSize:14, fontWeight:'600', color, marginBottom:14 }}>
+          {isBday ? `Turning ${num}` : `${ordinal(num)} Anniversary`}
+        </Text>
+        <View style={{ alignItems:'center', paddingVertical:10 }}>
+          <Text style={{ fontSize:64, fontWeight:'800', color, letterSpacing:-2, fontVariant:['tabular-nums'] }}>{days}</Text>
+          <Text style={{ fontSize:11, color:Colors.text3, textTransform:'uppercase', letterSpacing:1, marginTop:4 }}>days away</Text>
+        </View>
+        <View style={{ borderTopWidth:1, borderTopColor:'rgba(255,255,255,0.07)', paddingTop:10 }}>
+          <Text style={{ fontSize:12, color:Colors.text2 }}>
+            <Text style={{ color:Colors.text3 }}>{wday} · </Text>
+            <Text style={{ fontWeight:'600', color:Colors.text1 }}>{dstr}</Text>
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
+  // Life log → count of entries. Milestone → time since.
+  const isLog = m.type === 'lifelog';
+  const color = isLog ? Colors.teal : Colors.amber;
+  const ago = r.y > 0 ? { v:r.y, l:r.y===1?'year ago':'years ago' }
+            : r.mo > 0 ? { v:r.mo, l:r.mo===1?'month ago':'months ago' }
+            : { v:r.d, l:r.d===1?'day ago':'days ago' };
+  const bigVal   = isLog ? m.entries.length : ago.v;
+  const bigLabel = isLog ? (m.entries.length === 1 ? 'time' : 'times') : ago.l;
+  const dstr = new Date(m.originDate + 'T00:00:00').toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' });
   return (
-    <View style={{ width:W, backgroundColor:'#1E0F1A', borderRadius:24, padding:22,
-      borderWidth:1, borderColor: isBday ? 'rgba(232,80,122,0.28)' : 'rgba(124,106,245,0.28)' }}>
-      <Text style={{ fontSize:11, fontWeight:'600', letterSpacing:1.2,
-        textTransform:'uppercase', color, marginBottom:5 }}>
-        {isBday ? 'Birthday Countdown' : 'Anniversary Countdown'}
+    <View style={{ width:W, backgroundColor: isLog ? '#0F1E1A' : '#1E160A', borderRadius:24, padding:22,
+      borderWidth:1, borderColor: isLog ? 'rgba(62,207,178,0.28)' : 'rgba(240,160,75,0.28)' }}>
+      <Text style={{ fontSize:11, fontWeight:'600', letterSpacing:1.2, textTransform:'uppercase', color, marginBottom:5 }}>
+        {isLog ? 'Life Log' : 'Milestone'}
       </Text>
-      <Text style={{ fontSize:22, fontWeight:'700', color:Colors.text1, marginBottom:4 }}
-        numberOfLines={1}>
+      <Text style={{ fontSize:22, fontWeight:'700', color:Colors.text1, marginBottom:14 }} numberOfLines={1}>
         {m.emoji} {m.name}
       </Text>
-      <Text style={{ fontSize:14, fontWeight:'600', color, marginBottom:14 }}>
-        {isBday ? `Turning ${num}` : `${ordinal(num)} Anniversary`}
-      </Text>
       <View style={{ alignItems:'center', paddingVertical:10 }}>
-        <Text style={{ fontSize:64, fontWeight:'800', color,
-          letterSpacing:-2, fontVariant:['tabular-nums'] }}>{days}</Text>
-        <Text style={{ fontSize:11, color:Colors.text3,
-          textTransform:'uppercase', letterSpacing:1, marginTop:4 }}>days away</Text>
+        <Text style={{ fontSize:64, fontWeight:'800', color, letterSpacing:-2, fontVariant:['tabular-nums'] }}>{bigVal}</Text>
+        <Text style={{ fontSize:11, color:Colors.text3, textTransform:'uppercase', letterSpacing:1, marginTop:4 }}>{bigLabel}</Text>
       </View>
       <View style={{ borderTopWidth:1, borderTopColor:'rgba(255,255,255,0.07)', paddingTop:10 }}>
         <Text style={{ fontSize:12, color:Colors.text2 }}>
-          <Text style={{ color:Colors.text3 }}>{wday} · </Text>
+          <Text style={{ color:Colors.text3 }}>Since </Text>
           <Text style={{ fontWeight:'600', color:Colors.text1 }}>{dstr}</Text>
         </Text>
       </View>
@@ -237,16 +267,18 @@ export function HeroCarousel() {
   const memories = useStore(s => s.memories);
   const [idx, setIdx] = useState(0);
 
-  const items: any[] = [];
-  events.filter(e => e.fav)
-    .sort((a,b) => daysUntil(nextOccurrence(a)) - daysUntil(nextOccurrence(b)))
-    .forEach(e => items.push({ type:'event', data:e }));
-  goals.filter(g => g.fav)
-    .forEach(g => items.push({ type:'goal', data:g }));
-  memories.forEach(m => {
-    if (m.type === 'birthday')    items.push({ type:'bday',  data:m });
-    if (m.type === 'anniversary') items.push({ type:'anniv', data:m });
+  // Hero = ONLY starred items, of every type (events, goals, memories),
+  // sorted by soonest upcoming date. Memories no longer auto-appear.
+  const items: { kind: 'event' | 'goal' | 'memory'; data: any; days: number }[] = [];
+  events.filter(e => e.fav).forEach(e => items.push({ kind:'event', data:e, days: daysUntil(nextOccurrence(e)) }));
+  goals.filter(g => g.fav).forEach(g => items.push({ kind:'goal', data:g, days: daysUntil(g.date) }));
+  memories.filter(m => m.fav).forEach(m => {
+    // birthdays/anniversaries have a next-occurrence; lifelog/milestone don't, so they sort last.
+    const days = (m.type === 'birthday' || m.type === 'anniversary')
+      ? daysUntil(nextAnnual(m.originDate)) : Number.MAX_SAFE_INTEGER;
+    items.push({ kind:'memory', data:m, days });
   });
+  items.sort((a, b) => a.days - b.days);
 
   if (!items.length) {
     return (
@@ -255,7 +287,7 @@ export function HeroCarousel() {
         borderColor:'rgba(255,255,255,0.08)' }}>
         <Text style={{ fontSize:32, marginBottom:10 }}>⭐</Text>
         <Text style={{ color:Colors.text3, fontSize:14, textAlign:'center' }}>
-          Star events or goals to pin them here.
+          Star events, goals, or memories to pin them here.
         </Text>
       </View>
     );
@@ -277,10 +309,9 @@ export function HeroCarousel() {
       >
         {items.map((item, i) => (
           <View key={i}>
-            {item.type === 'event' && <EventCard event={item.data} />}
-            {item.type === 'goal'  && <GoalCard  goal={item.data} />}
-            {item.type === 'bday'  && <MemoryCard memory={item.data} type="bday" />}
-            {item.type === 'anniv' && <MemoryCard memory={item.data} type="anniv" />}
+            {item.kind === 'event'  && <EventCard event={item.data} />}
+            {item.kind === 'goal'   && <GoalCard  goal={item.data} />}
+            {item.kind === 'memory' && <MemoryCard memory={item.data} />}
           </View>
         ))}
       </ScrollView>
