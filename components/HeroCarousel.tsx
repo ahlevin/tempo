@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect } from 'react';
-import { View, Text, ScrollView, Dimensions, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, Dimensions, TouchableOpacity, Platform } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import { Colors, CatColors } from '../constants/colors';
 import { useStore } from '../store/useStore';
@@ -266,6 +266,14 @@ export function HeroCarousel() {
   const goals    = useStore(s => s.goals);
   const memories = useStore(s => s.memories);
   const [idx, setIdx] = useState(0);
+  const scrollRef = useRef<ScrollView>(null);
+
+  // Smoothly scroll to a card index (matches the paging snap interval) and sync idx.
+  const goTo = (i: number) => {
+    const clamped = Math.max(0, Math.min(i, items.length - 1));
+    scrollRef.current?.scrollTo({ x: clamped * (W + 12), animated: true });
+    setIdx(clamped);
+  };
 
   // Hero = ONLY starred items, of every type (events, goals, memories),
   // sorted by soonest upcoming date. Memories no longer auto-appear.
@@ -293,37 +301,71 @@ export function HeroCarousel() {
     );
   }
 
+  // Mouse-friendly arrows on web (touch devices use swipe). Harmless elsewhere.
+  const showArrows = Platform.OS === 'web' && items.length > 1;
+
   return (
     <View style={{ marginBottom:8 }}>
-      <ScrollView
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        snapToInterval={W + 12}
-        decelerationRate="fast"
-        contentContainerStyle={{ gap:12 }}
-        onMomentumScrollEnd={e => {
-          const i = Math.round(e.nativeEvent.contentOffset.x / (W + 12));
-          setIdx(Math.max(0, Math.min(i, items.length - 1)));
-        }}
-      >
-        {items.map((item, i) => (
-          <View key={i}>
-            {item.kind === 'event'  && <EventCard event={item.data} />}
-            {item.kind === 'goal'   && <GoalCard  goal={item.data} />}
-            {item.kind === 'memory' && <MemoryCard memory={item.data} />}
+      <View style={{ position:'relative' }}>
+        <ScrollView
+          ref={scrollRef}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          snapToInterval={W + 12}
+          decelerationRate="fast"
+          contentContainerStyle={{ gap:12 }}
+          onMomentumScrollEnd={e => {
+            const i = Math.round(e.nativeEvent.contentOffset.x / (W + 12));
+            setIdx(Math.max(0, Math.min(i, items.length - 1)));
+          }}
+        >
+          {items.map((item, i) => (
+            <View key={i}>
+              {item.kind === 'event'  && <EventCard event={item.data} />}
+              {item.kind === 'goal'   && <GoalCard  goal={item.data} />}
+              {item.kind === 'memory' && <MemoryCard memory={item.data} />}
+            </View>
+          ))}
+        </ScrollView>
+
+        {/* Prev — hidden on the first card so there are no dead clicks */}
+        {showArrows && idx > 0 && (
+          <View pointerEvents="box-none" style={{ position:'absolute', left:4, top:0, bottom:0, justifyContent:'center' }}>
+            <TouchableOpacity onPress={() => goTo(idx - 1)} accessibilityLabel="Previous" style={ARROW_BTN}>
+              <Text style={ARROW_TXT}>‹</Text>
+            </TouchableOpacity>
           </View>
-        ))}
-      </ScrollView>
+        )}
+        {/* Next — hidden on the last card */}
+        {showArrows && idx < items.length - 1 && (
+          <View pointerEvents="box-none" style={{ position:'absolute', right:4, top:0, bottom:0, justifyContent:'center' }}>
+            <TouchableOpacity onPress={() => goTo(idx + 1)} accessibilityLabel="Next" style={ARROW_BTN}>
+              <Text style={ARROW_TXT}>›</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
+
       {items.length > 1 && (
         <View style={{ flexDirection:'row', justifyContent:'center', gap:6, marginTop:10 }}>
           {items.map((_,i) => (
-            <View key={i} style={{ height:5, borderRadius:3,
-              backgroundColor: i===idx ? '#fff' : 'rgba(255,255,255,0.2)',
-              width: i===idx ? 18 : 5 }} />
+            <TouchableOpacity key={i} onPress={() => goTo(i)} accessibilityLabel={`Go to card ${i + 1}`}
+              hitSlop={{ top:10, bottom:10, left:6, right:6 }}>
+              <View style={{ height:5, borderRadius:3,
+                backgroundColor: i===idx ? '#fff' : 'rgba(255,255,255,0.2)',
+                width: i===idx ? 18 : 5 }} />
+            </TouchableOpacity>
           ))}
         </View>
       )}
     </View>
   );
 }
+
+const ARROW_BTN = {
+  width: 36, height: 36, borderRadius: 18,
+  backgroundColor: 'rgba(10,10,15,0.72)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.16)',
+  alignItems: 'center' as const, justifyContent: 'center' as const,
+};
+const ARROW_TXT = { fontSize: 22, lineHeight: 24, fontWeight: '700' as const, color: Colors.text1, marginTop: -2 };
