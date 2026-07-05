@@ -54,7 +54,6 @@ export default function HomeScreen() {
   }
 
   const showGoals = filter === 'all' || filter === 'goal';
-  const soonest = [...events].sort((a,b) => daysUntil(a.start) - daysUntil(b.start))[0];
 
   return (
     <SafeAreaView style={{ flex:1, backgroundColor:Colors.bg }} edges={['top']}>
@@ -111,44 +110,6 @@ export default function HomeScreen() {
                 onPress={() => router.push('/modals/add-goal')} />
             : goals.map(g => <GoalCard key={g.id} goal={g} />)}
         </>}
-
-        {/* Milestones */}
-        <SectionHeader title="Milestones" />
-        {soonest ? (() => {
-          const days = daysUntil(soonest.start);
-          return (
-            <View style={{ gap:8 }}>
-              {[
-                { label:'1 week to go',  thr:7,  icon:'🔥' },
-                { label:'1 month to go', thr:30, icon:'📅' },
-                { label:'3 months out',  thr:90, icon:'🗓️' },
-              ].map((s,i) => {
-                const dt    = days - s.thr;
-                const badge = dt < 0 ? '✓ Passed' : 'In ' + dt + 'd';
-                const color = dt < 0 ? Colors.rose : dt <= 10 ? Colors.amber : Colors.teal;
-                const bg    = dt < 0 ? 'rgba(232,80,122,0.15)' :
-                  dt <= 10 ? 'rgba(240,160,75,0.12)' : 'rgba(62,207,178,0.1)';
-                return (
-                  <View key={i} style={{ flexDirection:'row', alignItems:'center', gap:11,
-                    padding:11, backgroundColor:Colors.surf, borderRadius:14,
-                    borderWidth:1, borderColor:Colors.border }}>
-                    <Text style={{ fontSize:16 }}>{s.icon}</Text>
-                    <View style={{ flex:1 }}>
-                      <Text style={{ fontSize:13, fontWeight:'600', color:Colors.text1 }}>{s.label}</Text>
-                      <Text style={{ fontSize:11, color:Colors.text3 }}>
-                        for {soonest.emoji} {soonest.name}
-                      </Text>
-                    </View>
-                    <View style={{ backgroundColor:bg, borderRadius:20,
-                      paddingVertical:3, paddingHorizontal:9 }}>
-                      <Text style={{ fontSize:11, fontWeight:'700', color }}>{badge}</Text>
-                    </View>
-                  </View>
-                );
-              })}
-            </View>
-          );
-        })() : <EmptyState text="Add events to see milestones." />}
 
         {/* Memories */}
         <SectionHeader title="Memories & Life Log" onAdd={() => router.push('/modals/add-memory')} />
@@ -209,13 +170,6 @@ function SectionHeader({ title, onAdd }: { title:string; onAdd?:()=>void }) {
   );
 }
 
-function EmptyState({ text }: { text:string }) {
-  return (
-    <View style={{ alignItems:'center', paddingVertical:22 }}>
-      <Text style={{ color:Colors.text3, fontSize:14, textAlign:'center' }}>{text}</Text>
-    </View>
-  );
-}
 
 function EmptyPrompt({ icon, text, onPress }: { icon:string; text:string; onPress:()=>void }) {
   return (
