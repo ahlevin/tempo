@@ -10,6 +10,7 @@ import { DateWeatherBar } from '../../components/DateWeatherBar';
 import { MemoryCard } from '../../components/MemoryCard';
 import { EventCard } from '../../components/EventCard';
 import { GoalCard } from '../../components/GoalCard';
+import { AddChooser } from '../../components/AddChooser';
 import { UpcomingMemoryRow } from '../../components/UpcomingMemoryRow';
 import { Event, Memory } from '../../store/types';
 import { nextOccurrence, nextAnnual, daysUntil } from '../../utils/dates';
@@ -26,6 +27,7 @@ export default function HomeScreen() {
   const memories    = useStore(s => s.memories);
   const prefs       = useStore(s => s.prefs);
   const [filter, setFilter] = useState('all');
+  const [chooserOpen, setChooserOpen] = useState(false);
 
   const FILTERS = [
     { id:'all',         label:'All' },
@@ -93,10 +95,10 @@ export default function HomeScreen() {
         </ScrollView>
 
         {/* Events */}
-        <SectionHeader title="Upcoming" onAdd={() => router.push('/modals/add-event')} />
+        <SectionHeader title="Upcoming" onAdd={() => setChooserOpen(true)} />
         {upcoming.length === 0 && filter !== 'goal' ? (
           <EmptyPrompt icon="⏳" text="No countdowns yet — tap to start counting down to something."
-            onPress={() => router.push('/modals/add-event')} />
+            onPress={() => setChooserOpen(true)} />
         ) : upcoming.map(it => it.kind === 'event'
             ? <EventCard key={`e-${it.data.id}`} event={it.data} />
             : <UpcomingMemoryRow key={`m-${it.data.id}`} memory={it.data} />)}
@@ -179,7 +181,7 @@ export default function HomeScreen() {
       </ScrollView>
 
       {/* FAB */}
-      <TouchableOpacity onPress={() => router.push('/modals/add-event')}
+      <TouchableOpacity onPress={() => setChooserOpen(true)}
         style={{ position:'absolute', bottom:90, right:20, width:54, height:54,
           borderRadius:27, backgroundColor:Colors.accent,
           alignItems:'center', justifyContent:'center',
@@ -187,6 +189,8 @@ export default function HomeScreen() {
           shadowOpacity:0.45, shadowRadius:16, elevation:8 }}>
         <Text style={{ fontSize:28, color:'#fff', lineHeight:32 }}>+</Text>
       </TouchableOpacity>
+
+      <AddChooser visible={chooserOpen} onClose={() => setChooserOpen(false)} />
     </SafeAreaView>
   );
 }

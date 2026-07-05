@@ -2,33 +2,37 @@ import { useState } from 'react';
 import { ScrollView, View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
 import { useToast } from '../../components/Toast';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { format, subDays } from 'date-fns';
 import { Colors } from '../../constants/colors';
 import { MEM_EMOJIS, MEMORY_TYPES } from '../../constants/data';
 import { useStore } from '../../store/useStore';
 import { DateTimeField } from '../../components/DateTimeField';
 
+const DATE_LABELS: Record<string,string> = {
+  birthday:'Date of Birth', anniversary:'Anniversary Date',
+  lifelog:'First Occurrence', milestone:'Date of Milestone'
+};
+const DEF_EMOJIS: Record<string,string> = {
+  birthday:'🎂', anniversary:'💑', lifelog:'🏔️', milestone:'⭐'
+};
+const MEM_TYPE_IDS = ['birthday', 'anniversary', 'lifelog', 'milestone'];
+
 export default function AddMemoryModal() {
   const addMemory = useStore(s => s.addMemory);
   const { showToast } = useToast();
-  const [type,  setType]  = useState('milestone');
+  // Preselect the type when the add-chooser routes here with ?type=birthday etc.
+  const { type: typeParam } = useLocalSearchParams<{ type?: string }>();
+  const initialType = typeParam && MEM_TYPE_IDS.includes(typeParam) ? typeParam : 'milestone';
+  const [type,  setType]  = useState(initialType);
   const [name,  setName]  = useState('');
   const [date,  setDate]  = useState(format(subDays(new Date(), 1), 'yyyy-MM-dd'));
-  const [emoji, setEmoji] = useState('⭐');
+  const [emoji, setEmoji] = useState(DEF_EMOJIS[initialType] || '⭐');
   const [note,  setNote]  = useState('');
 
   const fi = { backgroundColor:'rgba(255,255,255,0.06)', borderWidth:1,
     borderColor:'rgba(255,255,255,0.1)', borderRadius:12, padding:12,
     color:Colors.text1, fontSize:15, marginBottom:14 };
-
-  const DATE_LABELS: Record<string,string> = {
-    birthday:'Date of Birth', anniversary:'Anniversary Date',
-    lifelog:'First Occurrence', milestone:'Date of Milestone'
-  };
-  const DEF_EMOJIS: Record<string,string> = {
-    birthday:'🎂', anniversary:'💑', lifelog:'🏔️', milestone:'⭐'
-  };
 
   function pickType(t: string) { setType(t); setEmoji(DEF_EMOJIS[t]||'⭐'); }
 
