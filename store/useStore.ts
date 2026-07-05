@@ -69,9 +69,16 @@ const MAX_TRIES = 3;
 const BACKOFF_MS = [400, 1200];
 const sleep = (ms: number) => new Promise<void>(r => setTimeout(r, ms));
 
-// A single in-flight flush. Concurrent callers await THIS promise instead of
-// no-oping, so no op is ever stranded; the flush loops until the outbox drains
-// or a pass makes no progress.
+// Flush controller.
+//  - `flushing` is the source of truth for "a flush loop is active". It's a
+//    boolean set before the loop and cleared in finally; unlike a promise
+//    assignment it can't be clobbered when an empty pass completes synchronously.
+//  - `flushDirty` records that ops were enqueued WHILE a flush was running, so the
+//    loop runs a follow-up pass instead of finishing on the stale snapshot it
+//    started with (the empty-start bug).
+//  - `flushPromise` is only what awaiting callers block on.
+let flushing = false;
+let flushDirty = false;
 let flushPromise: Promise<void> | null = null;
 
 function opDesc(op: SyncOp): string {
@@ -183,44 +190,54 @@ export const useStore = create<TempoStore>()(
         },
 
         flushOutbox: async () => {
-          // Coalesce concurrent callers onto the single in-flight flush. This is
-          // what prevents stranding: an op enqueued mid-flush (e.g. the wizard's
-          // addMemory right after updatePrefs) is picked up by a trailing pass
-          // rather than being dropped by a no-op guard.
-          if (flushPromise) { slog(`flushOutbox: already running (awaiting in-flight, ${get().outbox.length} queued)`); return flushPromise; }
           if (!get().userId) { slog(`flushOutbox: SKIPPED — no userId yet (${get().outbox.length} op(s) queued, will flush on load)`); return; }
-          slog(`flushOutbox: starting — ${get().outbox.length} op(s) queued`);
+          // A flush is already active: mark dirty so it runs a FOLLOW-UP pass for
+          // whatever we just enqueued, and await the in-flight one. We don't start
+          // a second loop — the dirty flag guarantees our op gets a pass.
+          if (flushing) {
+            flushDirty = true;
+            slog(`flushOutbox: already running — marked dirty (${get().outbox.length} queued)`);
+            return flushPromise ?? Promise.resolve();
+          }
 
+          flushing = true;
+          slog(`flushOutbox: starting — ${get().outbox.length} op(s) queued`);
           flushPromise = (async () => {
             try {
-              // Loop while passes make progress and work remains. Bounded: a pass
-              // that makes no progress (all failing / offline) breaks out so we
-              // never spin — remaining ops wait for the next trigger.
+              // Re-snapshot the LIVE outbox each pass. Loop again when new ops
+              // arrived mid-flush (flushDirty) or while we're still draining and
+              // making progress. Bounded: a pass with no progress and nothing new
+              // stops, so we never spin on persistent failures / offline.
               for (;;) {
+                flushDirty = false;                       // clear before the pass; enqueues during it re-set this
                 const uid = get().userId;
-                const batch = get().outbox.slice();
-                if (!uid || batch.length === 0) break;
-                slog(`flush start — ${batch.length} op(s): ${batch.map(opDesc).join(', ')}`);
-
-                const done = new Set<SyncOp>();
+                const batch = uid ? get().outbox.slice() : [];
                 let progressed = false;
-                for (const op of batch) {
-                  let res: 'ok' | 'fail' | 'skip' = 'fail';
-                  for (let attempt = 0; attempt < MAX_TRIES; attempt++) {
-                    res = await processOp(op, uid);
-                    if (res !== 'fail') break;
-                    if (attempt < MAX_TRIES - 1) await sleep(BACKOFF_MS[attempt]);
+
+                if (batch.length > 0) {
+                  slog(`flush pass — ${batch.length} op(s): ${batch.map(opDesc).join(', ')}`);
+                  const done = new Set<SyncOp>();
+                  for (const op of batch) {
+                    let res: 'ok' | 'fail' | 'skip' = 'fail';
+                    for (let attempt = 0; attempt < MAX_TRIES; attempt++) {
+                      res = await processOp(op, uid!);
+                      if (res !== 'fail') break;
+                      if (attempt < MAX_TRIES - 1) await sleep(BACKOFF_MS[attempt]);
+                    }
+                    if (res === 'ok') { done.add(op); progressed = true; }
+                    // 'fail' and 'skip' stay in the outbox to retry later — never dropped.
                   }
-                  if (res === 'ok') { done.add(op); progressed = true; }
-                  // 'fail' and 'skip' stay in the outbox to retry later — never dropped.
+                  set(s => ({ outbox: s.outbox.filter(o => !done.has(o)) }));
+                  slog(`flush pass done — sent ${done.size}, remaining ${get().outbox.length}`);
                 }
-                // Remove only succeeded ops (by reference); ops enqueued during the
-                // pass are new references and survive to the next iteration.
-                set(s => ({ outbox: s.outbox.filter(o => !done.has(o)) }));
-                slog(`flush pass done — sent ${done.size}, remaining ${get().outbox.length}`);
-                if (!progressed) break;
+
+                // Decide whether to run another pass.
+                if (flushDirty) { slog(`rerun triggered — ${get().outbox.length} queued`); continue; }
+                if (progressed && get().outbox.length > 0) continue;  // keep draining
+                break;                                                 // empty, or stuck (no progress, nothing new)
               }
             } finally {
+              flushing = false;
               flushPromise = null;
             }
           })();
