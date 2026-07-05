@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 import { format } from 'date-fns';
 import { Event, Goal, Memory, UserPrefs } from './types';
 import {
@@ -57,8 +58,10 @@ interface TempoStore {
   updatePrefs: (patch: Partial<UserPrefs>) => void;
 }
 
-// Dev-only sync tracing. Gated on __DEV__ so it's a no-op (and easy to strip) in prod.
-const SYNC_DEBUG = typeof __DEV__ !== 'undefined' && __DEV__;
+// Sync tracing. Enabled in dev on every platform AND always on web (so we can
+// watch enqueue → flush → POST in the browser console, since the web build runs
+// with __DEV__ === false). Flip SYNC_DEBUG to remove later.
+const SYNC_DEBUG = (typeof __DEV__ !== 'undefined' && __DEV__) || Platform.OS === 'web';
 const slog = (...args: any[]) => { if (SYNC_DEBUG) console.log('[sync]', ...args); };
 
 // Per-op in-pass retry with backoff (transient failures like a not-yet-ready session).
@@ -117,14 +120,18 @@ export const useStore = create<TempoStore>()(
       const processOp = async (op: SyncOp, uid: string): Promise<'ok' | 'fail' | 'skip'> => {
         try {
           if (op.kind === 'prefs') {
+            slog('→ POST /rest/v1/prefs (upsert)');
             await dbUpsertPrefs(prefsToRow(get().prefs, uid));
           } else if (op.kind === 'upsert') {
             const row = rowForUpsert(get(), op.table, op.id, uid);
             if (!row) { slog(`skip ${opDesc(op)} (item not in local state)`); return 'skip'; }
+            slog(`→ POST /rest/v1/${op.table} (upsert id=${op.id})`);
             await dbUpsert(op.table, row);
           } else {
+            slog(`→ DELETE /rest/v1/${op.table} (id=${op.id})`);
             await dbDelete(op.table, op.id, uid);
           }
+          slog(`✓ ${opDesc(op)} written`);
           return 'ok';
         } catch (e) {
           console.error(`[sync] ${opDesc(op)} failed:`, e);
@@ -180,8 +187,9 @@ export const useStore = create<TempoStore>()(
           // what prevents stranding: an op enqueued mid-flush (e.g. the wizard's
           // addMemory right after updatePrefs) is picked up by a trailing pass
           // rather than being dropped by a no-op guard.
-          if (flushPromise) return flushPromise;
-          if (!get().userId) return;
+          if (flushPromise) { slog(`flushOutbox: already running (awaiting in-flight, ${get().outbox.length} queued)`); return flushPromise; }
+          if (!get().userId) { slog(`flushOutbox: SKIPPED — no userId yet (${get().outbox.length} op(s) queued, will flush on load)`); return; }
+          slog(`flushOutbox: starting — ${get().outbox.length} op(s) queued`);
 
           flushPromise = (async () => {
             try {

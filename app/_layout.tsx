@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { View, Text, ActivityIndicator, AppState } from 'react-native';
+import { View, Text, ActivityIndicator, AppState, Platform } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Colors } from '../constants/colors';
@@ -44,8 +44,24 @@ function RootNavigator() {
     else clearForSignOut();
   }, [user?.id]);
 
-  // Push any queued offline writes when the app returns to the foreground.
+  // Re-push queued writes when the app/tab wakes or reconnects. AppState 'active'
+  // is native-only and unreliable on web, so on web we listen to DOM online/focus/
+  // visibility events instead. (Mutations already trigger a flush directly; this is
+  // just a belt-and-suspenders retry for anything left queued.)
   useEffect(() => {
+    if (Platform.OS === 'web') {
+      const g: any = globalThis as any;
+      const wake = () => { flushOutbox(); };
+      g.addEventListener?.('online', wake);
+      g.addEventListener?.('focus', wake);
+      const onVis = () => { if (g.document?.visibilityState === 'visible') flushOutbox(); };
+      g.document?.addEventListener?.('visibilitychange', onVis);
+      return () => {
+        g.removeEventListener?.('online', wake);
+        g.removeEventListener?.('focus', wake);
+        g.document?.removeEventListener?.('visibilitychange', onVis);
+      };
+    }
     const sub = AppState.addEventListener('change', st => { if (st === 'active') flushOutbox(); });
     return () => sub.remove();
   }, []);
