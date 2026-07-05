@@ -85,7 +85,7 @@ export function EventCard({ event: e }: { event: Event }) {
         </View>
         <TouchableOpacity hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           onPress={(ev) => { ev.stopPropagation(); toggleFav(e.id); }}>
-          <Text style={{ fontSize: 16 }}>{e.fav ? '⭐' : '☆'}</Text>
+          <Text style={{ fontSize: 18, color: e.fav ? Colors.amber : Colors.text2 }}>{e.fav ? '⭐' : '☆'}</Text>
         </TouchableOpacity>
       </View>
     </TouchableOpacity>

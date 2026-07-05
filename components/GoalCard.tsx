@@ -62,7 +62,7 @@ export function GoalCard({ goal: g }: { goal: Goal }) {
           <Text style={{ fontSize: 9, color: Colors.text3, textTransform: 'uppercase' }}>days</Text>
           <TouchableOpacity hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             onPress={(ev) => { ev.stopPropagation(); toggleFav(g.id); }}>
-            <Text style={{ fontSize: 15 }}>{g.fav ? '⭐' : '☆'}</Text>
+            <Text style={{ fontSize: 17, color: g.fav ? Colors.amber : Colors.text2 }}>{g.fav ? '⭐' : '☆'}</Text>
           </TouchableOpacity>
         </View>
       </TouchableOpacity>
