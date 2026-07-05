@@ -57,13 +57,43 @@ interface TempoStore {
   updatePrefs: (patch: Partial<UserPrefs>) => void;
 }
 
-// Guards against overlapping flushes.
-let flushing = false;
+// Dev-only sync tracing. Gated on __DEV__ so it's a no-op (and easy to strip) in prod.
+const SYNC_DEBUG = typeof __DEV__ !== 'undefined' && __DEV__;
+const slog = (...args: any[]) => { if (SYNC_DEBUG) console.log('[sync]', ...args); };
+
+// Per-op in-pass retry with backoff (transient failures like a not-yet-ready session).
+const MAX_TRIES = 3;
+const BACKOFF_MS = [400, 1200];
+const sleep = (ms: number) => new Promise<void>(r => setTimeout(r, ms));
+
+// A single in-flight flush. Concurrent callers await THIS promise instead of
+// no-oping, so no op is ever stranded; the flush loops until the outbox drains
+// or a pass makes no progress.
+let flushPromise: Promise<void> | null = null;
+
+function opDesc(op: SyncOp): string {
+  return op.kind === 'prefs' ? 'prefs' : `${op.kind}:${op.table}:${op.id}`;
+}
 
 function rowForUpsert(s: TempoStore, table: CloudTable, id: string, uid: string) {
   if (table === 'events') { const e = s.events.find(x => x.id === id); return e ? eventToRow(e, uid) : null; }
   if (table === 'goals')  { const g = s.goals.find(x => x.id === id);  return g ? goalToRow(g, uid) : null; }
   const m = s.memories.find(x => x.id === id); return m ? memoryToRow(m, uid) : null;
+}
+
+const pendingUpsertIds = (outbox: SyncOp[], table: CloudTable) =>
+  new Set(outbox.filter((o): o is Extract<SyncOp, { kind: 'upsert' }> => o.kind === 'upsert' && o.table === table).map(o => o.id));
+const pendingDeleteIds = (outbox: SyncOp[], table: CloudTable) =>
+  new Set(outbox.filter((o): o is Extract<SyncOp, { kind: 'delete' }> => o.kind === 'delete' && o.table === table).map(o => o.id));
+
+// Cloud is source of truth, but keep local items that still have a pending upsert
+// (unsynced creates/edits) and drop items with a pending delete — so an in-flight
+// refetch can never clobber work that hasn't reached Supabase yet.
+function mergePending<T extends { id: string }>(cloud: T[], local: T[], pendUp: Set<string>, pendDel: Set<string>): T[] {
+  const byId = new Map(cloud.map(x => [x.id, x] as const));
+  for (const id of pendUp) { const loc = local.find(x => x.id === id); if (loc) byId.set(id, loc); }
+  for (const id of pendDel) byId.delete(id);
+  return Array.from(byId.values());
 }
 
 export const useStore = create<TempoStore>()(
@@ -78,7 +108,28 @@ export const useStore = create<TempoStore>()(
           return !(o.table === op.table && o.id === op.id);
         });
         set({ outbox: [...filtered, op] });
+        slog(`enqueue ${opDesc(op)} — outbox now ${get().outbox.length}`);
         void get().flushOutbox();
+      };
+
+      // Push one op to Supabase. Returns 'ok' (remove from outbox), 'fail' (retry
+      // later), or 'skip' (item no longer in local state — keep the op, no write).
+      const processOp = async (op: SyncOp, uid: string): Promise<'ok' | 'fail' | 'skip'> => {
+        try {
+          if (op.kind === 'prefs') {
+            await dbUpsertPrefs(prefsToRow(get().prefs, uid));
+          } else if (op.kind === 'upsert') {
+            const row = rowForUpsert(get(), op.table, op.id, uid);
+            if (!row) { slog(`skip ${opDesc(op)} (item not in local state)`); return 'skip'; }
+            await dbUpsert(op.table, row);
+          } else {
+            await dbDelete(op.table, op.id, uid);
+          }
+          return 'ok';
+        } catch (e) {
+          console.error(`[sync] ${opDesc(op)} failed:`, e);
+          return 'fail';
+        }
       };
 
       return {
@@ -96,20 +147,23 @@ export const useStore = create<TempoStore>()(
           set({ userId: uid, loading: true, ready: sameUser });
           try {
             await get().flushOutbox();                 // push local intent first (LWW)
-            if (get().outbox.length > 0) {
-              // Still-pending writes (offline): keep local cache, don't overwrite with cloud.
-              set({ loading: false, ready: true });
-              return;
-            }
             const snap = await fetchAll(uid);
+            // Merge cloud over local, but preserve any items whose writes are still
+            // queued (pending upserts) and honour pending deletes — so a create made
+            // while this fetch was in flight can't be clobbered/dropped.
+            const ob = get().outbox;
+            const prefsPending = ob.some(o => o.kind === 'prefs');
             set({
-              events: snap.events, goals: snap.goals, memories: snap.memories,
-              prefs: snap.prefs ?? DEFAULT_PREFS,
-              prefsExists: snap.prefs !== null,
+              events:   mergePending(snap.events,   get().events,   pendingUpsertIds(ob, 'events'),   pendingDeleteIds(ob, 'events')),
+              goals:    mergePending(snap.goals,    get().goals,    pendingUpsertIds(ob, 'goals'),    pendingDeleteIds(ob, 'goals')),
+              memories: mergePending(snap.memories, get().memories, pendingUpsertIds(ob, 'memories'), pendingDeleteIds(ob, 'memories')),
+              prefs: prefsPending ? get().prefs : (snap.prefs ?? DEFAULT_PREFS),
+              prefsExists: snap.prefs !== null || prefsPending,
               loading: false, ready: true,
             });
-          } catch {
-            // Offline / error: keep whatever cache we have.
+          } catch (e) {
+            // Offline / error: keep whatever cache we have (writes stay queued).
+            slog('loadForUser fetch failed (offline?):', e);
             set({ loading: false, ready: true });
           }
         },
@@ -122,32 +176,47 @@ export const useStore = create<TempoStore>()(
         },
 
         flushOutbox: async () => {
-          const uid = get().userId;
-          if (!uid || flushing) return;
-          const batch = get().outbox;
-          if (!batch.length) return;
-          flushing = true;
-          const failed: SyncOp[] = [];
-          try {
-            for (const op of batch) {
-              try {
-                if (op.kind === 'prefs') {
-                  await dbUpsertPrefs(prefsToRow(get().prefs, uid));
-                } else if (op.kind === 'upsert') {
-                  const row = rowForUpsert(get(), op.table, op.id, uid);
-                  if (row) await dbUpsert(op.table, row);
-                } else {
-                  await dbDelete(op.table, op.id, uid);
+          // Coalesce concurrent callers onto the single in-flight flush. This is
+          // what prevents stranding: an op enqueued mid-flush (e.g. the wizard's
+          // addMemory right after updatePrefs) is picked up by a trailing pass
+          // rather than being dropped by a no-op guard.
+          if (flushPromise) return flushPromise;
+          if (!get().userId) return;
+
+          flushPromise = (async () => {
+            try {
+              // Loop while passes make progress and work remains. Bounded: a pass
+              // that makes no progress (all failing / offline) breaks out so we
+              // never spin — remaining ops wait for the next trigger.
+              for (;;) {
+                const uid = get().userId;
+                const batch = get().outbox.slice();
+                if (!uid || batch.length === 0) break;
+                slog(`flush start — ${batch.length} op(s): ${batch.map(opDesc).join(', ')}`);
+
+                const done = new Set<SyncOp>();
+                let progressed = false;
+                for (const op of batch) {
+                  let res: 'ok' | 'fail' | 'skip' = 'fail';
+                  for (let attempt = 0; attempt < MAX_TRIES; attempt++) {
+                    res = await processOp(op, uid);
+                    if (res !== 'fail') break;
+                    if (attempt < MAX_TRIES - 1) await sleep(BACKOFF_MS[attempt]);
+                  }
+                  if (res === 'ok') { done.add(op); progressed = true; }
+                  // 'fail' and 'skip' stay in the outbox to retry later — never dropped.
                 }
-              } catch {
-                failed.push(op);
+                // Remove only succeeded ops (by reference); ops enqueued during the
+                // pass are new references and survive to the next iteration.
+                set(s => ({ outbox: s.outbox.filter(o => !done.has(o)) }));
+                slog(`flush pass done — sent ${done.size}, remaining ${get().outbox.length}`);
+                if (!progressed) break;
               }
+            } finally {
+              flushPromise = null;
             }
-          } finally {
-            flushing = false;
-            // Preserve ops enqueued while we were flushing, plus any failures.
-            set(s => ({ outbox: [...s.outbox.filter(o => !batch.includes(o)), ...failed] }));
-          }
+          })();
+          return flushPromise;
         },
 
         addEvent: (e) => {

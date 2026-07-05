@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { format, addDays, subYears } from 'date-fns';
@@ -8,6 +8,7 @@ import { TIMEZONES } from '../../constants/data';
 import { useStore } from '../../store/useStore';
 import { UserPrefs } from '../../store/types';
 import { DateTimeField } from '../../components/DateTimeField';
+import { useToast } from '../../components/Toast';
 
 const STEPS = ['Your name', 'Time zone', 'First countdown', 'Daily quote'];
 
@@ -30,6 +31,9 @@ export default function OnboardingWizard() {
   const updatePrefs = useStore(s => s.updatePrefs);
   const addEvent    = useStore(s => s.addEvent);
   const addMemory   = useStore(s => s.addMemory);
+  const flushOutbox = useStore(s => s.flushOutbox);
+  const { showToast } = useToast();
+  const [saving, setSaving] = useState(false);
 
   const [step,     setStep]     = useState(0);
   const [name,     setName]     = useState(prefs.displayName || '');
@@ -52,7 +56,10 @@ export default function OnboardingWizard() {
     }
   }
 
-  function finish() {
+  async function finish() {
+    if (saving) return;
+    setSaving(true);
+
     updatePrefs({ displayName: name.trim(), timezone: tz, quotePref: quote, onboarded: true });
     if (evName.trim()) {
       if (itemType === 'event') {
@@ -72,6 +79,17 @@ export default function OnboardingWizard() {
         });
       }
     }
+
+    // Wait for the queued writes (prefs + the item) to actually reach Supabase
+    // before entering the app, so we don't navigate away as if they saved.
+    await flushOutbox();
+    if (useStore.getState().outbox.length > 0) {
+      // Didn't reach the cloud (offline/error). It's queued locally and will
+      // retry automatically — surface that rather than implying it synced.
+      showToast('⚠️', 'Saved on this device', "We'll sync to the cloud once you're back online.");
+    }
+
+    setSaving(false);
     router.replace('/tabs');
   }
 
@@ -212,9 +230,12 @@ export default function OnboardingWizard() {
               <Text style={{ fontSize: 15, fontWeight: '700', color: Colors.text2 }}>Back</Text>
             </TouchableOpacity>
           )}
-          <TouchableOpacity onPress={next}
-            style={{ flex: 1, paddingVertical: 16, borderRadius: 14, backgroundColor: Colors.accent, alignItems: 'center' }}>
-            <Text style={{ fontSize: 16, fontWeight: '700', color: '#fff' }}>{isLast ? 'Finish' : 'Next'}</Text>
+          <TouchableOpacity onPress={next} disabled={saving}
+            style={{ flex: 1, paddingVertical: 16, borderRadius: 14, backgroundColor: Colors.accent,
+              alignItems: 'center', opacity: saving ? 0.7 : 1 }}>
+            {saving
+              ? <ActivityIndicator color="#fff" />
+              : <Text style={{ fontSize: 16, fontWeight: '700', color: '#fff' }}>{isLast ? 'Finish' : 'Next'}</Text>}
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
