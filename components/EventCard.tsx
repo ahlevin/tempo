@@ -5,6 +5,7 @@ import { useStore } from '../store/useStore';
 import { Event } from '../store/types';
 import { useToast } from './Toast';
 import { SwipeableRow } from './SwipeableRow';
+import { FavStar } from './FavStar';
 import { nextOccurrence, daysUntil, pctElapsed, urgencyColor, recurLabel, fmtDateTime } from '../utils/dates';
 
 const CAT_ACCENT: Record<string, string> = {
@@ -78,15 +79,12 @@ export function EventCard({ event: e }: { event: Event }) {
           <View style={{ height: '100%', width: `${p}%` as DimensionValue, backgroundColor: uc, borderRadius: 1 }} />
         </View>
       </View>
-      <View style={{ alignItems: 'flex-end', gap: 6 }}>
+      <View style={{ alignItems: 'center' }}>
         <View style={{ alignItems: 'flex-end' }}>
           <Text style={{ fontSize: 20, fontWeight: '800', color: uc }}>{d}</Text>
           <Text style={{ fontSize: 9, color: Colors.text3, textTransform: 'uppercase' }}>{d === 1 ? 'day' : 'days'}</Text>
         </View>
-        <TouchableOpacity hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          onPress={(ev) => { ev.stopPropagation(); toggleFav(e.id); }}>
-          <Text style={{ fontSize: 18, color: e.fav ? Colors.amber : Colors.text2 }}>{e.fav ? '⭐' : '☆'}</Text>
-        </TouchableOpacity>
+        <FavStar active={e.fav} onToggle={() => toggleFav(e.id)} />
       </View>
     </TouchableOpacity>
     </SwipeableRow>

@@ -7,6 +7,7 @@ import { Goal } from '../store/types';
 import { daysUntil } from '../utils/dates';
 import { Confetti } from './Confetti';
 import { SwipeableRow } from './SwipeableRow';
+import { FavStar } from './FavStar';
 
 export function GoalCard({ goal: g }: { goal: Goal }) {
   const toggleFav  = useStore(s => s.toggleGoalFav);
@@ -57,13 +58,12 @@ export function GoalCard({ goal: g }: { goal: Goal }) {
           </View>
           <Text style={{ fontSize: 11, color: Colors.text3, marginTop: 2 }}>{dstr}</Text>
         </View>
-        <View style={{ alignItems: 'flex-end', gap: 4 }}>
-          <Text style={{ fontSize: 18, fontWeight: '800', color: Colors.teal }}>{d}</Text>
-          <Text style={{ fontSize: 9, color: Colors.text3, textTransform: 'uppercase' }}>days</Text>
-          <TouchableOpacity hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            onPress={(ev) => { ev.stopPropagation(); toggleFav(g.id); }}>
-            <Text style={{ fontSize: 17, color: g.fav ? Colors.amber : Colors.text2 }}>{g.fav ? '⭐' : '☆'}</Text>
-          </TouchableOpacity>
+        <View style={{ alignItems: 'center' }}>
+          <View style={{ alignItems: 'flex-end' }}>
+            <Text style={{ fontSize: 18, fontWeight: '800', color: Colors.teal }}>{d}</Text>
+            <Text style={{ fontSize: 9, color: Colors.text3, textTransform: 'uppercase' }}>days</Text>
+          </View>
+          <FavStar active={g.fav} onToggle={() => toggleFav(g.id)} />
         </View>
       </TouchableOpacity>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
