@@ -59,4 +59,6 @@ export interface UserPrefs {
   quotePref: 'bible' | 'motivational' | 'jokes' | 'off';
   timezone: string;
   location: string;
+  displayName: string;
+  onboarded: boolean;
 }

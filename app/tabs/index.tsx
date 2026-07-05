@@ -77,14 +77,16 @@ export default function HomeScreen() {
         {/* Events */}
         <SectionHeader title="Upcoming" onAdd={() => router.push('/modals/add-event')} />
         {filteredEvents.length === 0 && filter !== 'goal' ? (
-          <EmptyState text="No events yet. Tap + Add to create one." />
+          <EmptyPrompt icon="⏳" text="No countdowns yet — tap to start counting down to something."
+            onPress={() => router.push('/modals/add-event')} />
         ) : filteredEvents.map(e => <EventCard key={e.id} event={e} />)}
 
         {/* Goals */}
         {showGoals && <>
           <SectionHeader title="Goals" onAdd={() => router.push('/modals/add-goal')} />
           {goals.length === 0
-            ? <EmptyState text="No goals yet. Tap + Add to create one." />
+            ? <EmptyPrompt icon="🎯" text="No goals yet — tap to set something you're working toward."
+                onPress={() => router.push('/modals/add-goal')} />
             : goals.map(g => <GoalCard key={g.id} goal={g} />)}
         </>}
 
@@ -129,7 +131,8 @@ export default function HomeScreen() {
         {/* Memories */}
         <SectionHeader title="Memories & Life Log" onAdd={() => router.push('/modals/add-memory')} />
         {memories.length === 0
-          ? <EmptyState text="No memories yet. Tap + Add to create one." />
+          ? <EmptyPrompt icon="📸" text="No memories yet — tap to remember a birthday, milestone, or life log."
+              onPress={() => router.push('/modals/add-memory')} />
           : memories.map(m => <MemoryCard key={m.id} memory={m} />)}
 
         {/* Integrations */}
@@ -187,5 +190,21 @@ function EmptyState({ text }: { text:string }) {
     <View style={{ alignItems:'center', paddingVertical:22 }}>
       <Text style={{ color:Colors.text3, fontSize:14, textAlign:'center' }}>{text}</Text>
     </View>
+  );
+}
+
+function EmptyPrompt({ icon, text, onPress }: { icon:string; text:string; onPress:()=>void }) {
+  return (
+    <TouchableOpacity onPress={onPress} activeOpacity={0.8}
+      style={{ alignItems:'center', paddingVertical:26, paddingHorizontal:20,
+        backgroundColor:Colors.glass, borderRadius:18, borderWidth:1,
+        borderColor:Colors.border, borderStyle:'dashed' }}>
+      <Text style={{ fontSize:30, marginBottom:10 }}>{icon}</Text>
+      <Text style={{ color:Colors.text2, fontSize:14, textAlign:'center', lineHeight:20 }}>{text}</Text>
+      <View style={{ marginTop:12, backgroundColor:'rgba(124,106,245,0.15)', borderWidth:1,
+        borderColor:'rgba(124,106,245,0.3)', borderRadius:20, paddingVertical:7, paddingHorizontal:16 }}>
+        <Text style={{ color:Colors.accent, fontSize:13, fontWeight:'700' }}>+ Add</Text>
+      </View>
+    </TouchableOpacity>
   );
 }

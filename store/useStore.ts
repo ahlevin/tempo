@@ -1,107 +1,239 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { format } from 'date-fns';
 import { Event, Goal, Memory, UserPrefs } from './types';
-import { format, addDays } from 'date-fns';
+import {
+  fetchAll, dbUpsert, dbDelete, dbUpsertPrefs,
+  eventToRow, goalToRow, memoryToRow, prefsToRow, uuid, CloudTable,
+} from '../lib/db';
 
-const fd = (n: number) => format(addDays(new Date(), n), 'yyyy-MM-dd');
-const fdt = (n: number, time: string) => `${fd(n)}T${time}`;
 const today = () => format(new Date(), 'yyyy-MM-dd');
 
-// allDay events carry start at midnight + end:null; timed events carry an explicit time + end.
-const SEED_EVENTS: Event[] = [
-  { id:'1', name:'Hawaii Trip',         emoji:'🏖️', cat:'travel',      allDay:true,  start:fdt(34,'00:00:00'),  end:null,                  date:fd(34),  created:fd(-14), fav:true,  recur:null,                                          alerts:[{value:1,unit:'months'},{value:1,unit:'weeks'},{value:1,unit:'days'}] },
-  { id:'2', name:"Mom's Birthday",      emoji:'🎂', cat:'celebration', allDay:true,  start:fdt(8,'00:00:00'),   end:null,                  date:fd(8),   created:fd(-5),  fav:true,  recur:{freq:'yearly',dow:[],endType:'never'},         alerts:[{value:1,unit:'weeks'},{value:1,unit:'days'}] },
-  { id:'3', name:'Product Launch',      emoji:'🚀', cat:'work',        allDay:false, start:fdt(61,'09:00:00'),  end:fdt(61,'17:00:00'),    date:fd(61),  created:fd(-30), fav:false, recur:null,                                          alerts:[{value:2,unit:'weeks'}] },
-  { id:'4', name:'Wedding Anniversary', emoji:'💍', cat:'personal',    allDay:true,  start:fdt(120,'00:00:00'), end:null,                  date:fd(120), created:fd(-10), fav:true,  recur:{freq:'yearly',dow:[],endType:'never'},         alerts:[{value:1,unit:'months'},{value:1,unit:'weeks'}] },
-  { id:'5', name:'Skiing Weekend',      emoji:'⛷️', cat:'travel',      allDay:true,  start:fdt(19,'00:00:00'),  end:null,                  date:fd(19),  created:fd(-2),  fav:false, recur:null,                                          alerts:[] },
-  { id:'6', name:'Team Standup',        emoji:'💼', cat:'work',        allDay:false, start:fdt(1,'09:30:00'),   end:fdt(1,'09:45:00'),     date:fd(1),   created:fd(-60), fav:false, recur:{freq:'weekly',dow:[1,2,3,4,5],endType:'never'},alerts:[{value:30,unit:'minutes'}] },
-  { id:'7', name:'Date Night',          emoji:'❤️', cat:'personal',    allDay:false, start:fdt(5,'19:00:00'),   end:fdt(5,'22:00:00'),     date:fd(5),   created:fd(-30), fav:true,  recur:{freq:'weekly',dow:[5],endType:'never'},        alerts:[{value:2,unit:'hours'},{value:1,unit:'days'}] },
-];
+const DEFAULT_PREFS: UserPrefs = {
+  quotePref: 'motivational',
+  timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+  location: '',
+  displayName: '',
+  onboarded: false,
+};
 
-const SEED_GOALS: Goal[] = [
-  { id:'101', name:'Run 100 Miles',  emoji:'🏃', target:100,  current:34,   unit:'miles', step:1,  date:fd(90),  created:fd(-20), fav:true  },
-  { id:'102', name:'Read 24 Books',  emoji:'📚', target:24,   current:7,    unit:'books', step:1,  date:fd(200), created:fd(-10), fav:false },
-  { id:'103', name:'Save $5,000',    emoji:'💰', target:5000, current:1850, unit:'$',     step:50, date:fd(150), created:fd(-40), fav:true  },
-];
-
-const SEED_MEMORIES: Memory[] = [
-  { id:'201', type:'birthday',    emoji:'🎂', name:"Alan's Birthday",     originDate:'1985-06-15', entries:[], note:'' },
-  { id:'202', type:'anniversary', emoji:'💍', name:'Wedding Anniversary',  originDate:'2018-09-22', entries:[], note:'Our special day' },
-  { id:'203', type:'lifelog',     emoji:'🏔️', name:'Half Dome Hike',       originDate:'2019-07-04', entries:[
-    {date:'2019-07-04',note:'First time — solo, brutal but incredible'},
-    {date:'2021-08-12',note:'With college friends'},
-    {date:'2023-06-30',note:'Early start 4am, perfect conditions'},
-  ], note:'' },
-  { id:'204', type:'milestone',   emoji:'🎓', name:'College Graduation',   originDate:'2007-05-18', entries:[], note:'UC Berkeley, Computer Science' },
-  { id:'205', type:'lifelog',     emoji:'🏃', name:'Marathon Completed',   originDate:'2020-03-01', entries:[
-    {date:'2020-03-01',note:'First marathon — SF, 4:12'},
-    {date:'2022-10-16',note:'Chicago Marathon, 3:58 — PR!'},
-  ], note:'' },
-];
+// A queued write. Upserts reference the row by id and re-read the latest state
+// at flush time (last-write-wins); deletes carry only the id.
+type SyncOp =
+  | { kind: 'upsert'; table: CloudTable; id: string }
+  | { kind: 'delete'; table: CloudTable; id: string }
+  | { kind: 'prefs' };
 
 interface TempoStore {
   events: Event[];
   goals: Goal[];
   memories: Memory[];
   prefs: UserPrefs;
-  seeded: boolean;
-  seed: () => void;
-  addEvent: (e: Omit<Event,'id'|'created'>) => void;
+  userId: string | null;
+  prefsExists: boolean;   // did a prefs row exist in the cloud? (false => new user)
+  loading: boolean;       // a cloud fetch is in flight
+  ready: boolean;         // first load resolved for the current user (cache or cloud)
+  outbox: SyncOp[];       // pending writes awaiting the cloud
+
+  loadForUser: (userId: string) => Promise<void>;
+  clearForSignOut: () => void;
+  flushOutbox: () => Promise<void>;
+
+  addEvent: (e: Omit<Event, 'id' | 'created'>) => void;
   updateEvent: (id: string, patch: Partial<Event>) => void;
   deleteEvent: (id: string) => void;
   toggleEventFav: (id: string) => void;
-  addGoal: (g: Omit<Goal,'id'|'created'|'current'>) => void;
+  addGoal: (g: Omit<Goal, 'id' | 'created' | 'current'>) => void;
   updateGoal: (id: string, patch: Partial<Goal>) => void;
   deleteGoal: (id: string) => void;
-  nudgeGoal: (id: string, dir: 1|-1) => void;
+  nudgeGoal: (id: string, dir: 1 | -1) => void;
   setGoalProgress: (id: string, value: number) => void;
   toggleGoalFav: (id: string) => void;
-  addMemory: (m: Omit<Memory,'id'>) => void;
+  addMemory: (m: Omit<Memory, 'id'>) => void;
   updateMemory: (id: string, patch: Partial<Memory>) => void;
   deleteMemory: (id: string) => void;
-  addLogEntry: (memId: string, entry: {date:string;note:string}) => void;
+  addLogEntry: (memId: string, entry: { date: string; note: string }) => void;
   updatePrefs: (patch: Partial<UserPrefs>) => void;
+}
+
+// Guards against overlapping flushes.
+let flushing = false;
+
+function rowForUpsert(s: TempoStore, table: CloudTable, id: string, uid: string) {
+  if (table === 'events') { const e = s.events.find(x => x.id === id); return e ? eventToRow(e, uid) : null; }
+  if (table === 'goals')  { const g = s.goals.find(x => x.id === id);  return g ? goalToRow(g, uid) : null; }
+  const m = s.memories.find(x => x.id === id); return m ? memoryToRow(m, uid) : null;
 }
 
 export const useStore = create<TempoStore>()(
   persist(
-    (set, get) => ({
-      events: [], goals: [], memories: [],
-      prefs: { quotePref:'motivational', timezone: Intl.DateTimeFormat().resolvedOptions().timeZone, location:'' },
-      seeded: false,
-      seed: () => { if(get().seeded) return; set({events:SEED_EVENTS,goals:SEED_GOALS,memories:SEED_MEMORIES,seeded:true}); },
-      addEvent: (e) => set(s => ({events:[...s.events,{...e,id:Date.now().toString(),created:today()}]})),
-      updateEvent: (id,patch) => set(s => ({events:s.events.map(e => e.id===id?{...e,...patch}:e)})),
-      deleteEvent: (id) => set(s => ({events:s.events.filter(e => e.id!==id)})),
-      toggleEventFav: (id) => set(s => ({events:s.events.map(e => e.id===id?{...e,fav:!e.fav}:e)})),
-      addGoal: (g) => set(s => ({goals:[...s.goals,{...g,id:Date.now().toString(),created:today(),current:0}]})),
-      updateGoal: (id,patch) => set(s => ({goals:s.goals.map(g => g.id===id?{...g,...patch}:g)})),
-      deleteGoal: (id) => set(s => ({goals:s.goals.filter(g => g.id!==id)})),
-      nudgeGoal: (id,dir) => set(s => ({goals:s.goals.map(g => g.id!==id?g:{...g,current:Math.max(0,Math.min(g.target,g.current+dir*(g.step||1)))})})),
-      setGoalProgress: (id,value) => set(s => ({goals:s.goals.map(g => g.id===id?{...g,current:Math.min(g.target,Math.max(0,value))}:g)})),
-      toggleGoalFav: (id) => set(s => ({goals:s.goals.map(g => g.id===id?{...g,fav:!g.fav}:g)})),
-      addMemory: (m) => set(s => ({memories:[...s.memories,{...m,id:Date.now().toString()}]})),
-      updateMemory: (id,patch) => set(s => ({memories:s.memories.map(m => m.id===id?{...m,...patch}:m)})),
-      deleteMemory: (id) => set(s => ({memories:s.memories.filter(m => m.id!==id)})),
-      addLogEntry: (memId,entry) => set(s => ({memories:s.memories.map(m => m.id===memId?{...m,entries:[...m.entries,entry]}:m)})),
-      updatePrefs: (patch) => set(s => ({prefs:{...s.prefs,...patch}})),
-    }),
-    {
-      name:'tempo-storage',
-      storage:createJSONStorage(()=>AsyncStorage),
-      version: 1,
-      // v0 → v1: events were date-only. Give each an all-day start at midnight,
-      // no end, preserving every other field so existing data survives.
-      migrate: (persisted: any, _fromVersion: number) => {
-        if (persisted && Array.isArray(persisted.events)) {
-          persisted.events = persisted.events.map((e: any) => {
-            if (e.start) return e;
-            const d = e.date || today();
-            return { ...e, allDay: e.allDay ?? true, start: `${d}T00:00:00`, end: e.end ?? null };
+    (set, get) => {
+      // Enqueue a write (deduped by table+id; a delete supersedes prior upserts)
+      // and opportunistically push. If offline, it stays queued for later.
+      const enqueue = (op: SyncOp) => {
+        const filtered = get().outbox.filter(o => {
+          if (o.kind === 'prefs') return op.kind !== 'prefs';
+          if (op.kind === 'prefs') return true;
+          return !(o.table === op.table && o.id === op.id);
+        });
+        set({ outbox: [...filtered, op] });
+        void get().flushOutbox();
+      };
+
+      return {
+        events: [], goals: [], memories: [], prefs: DEFAULT_PREFS,
+        userId: null, prefsExists: false, loading: false, ready: false, outbox: [],
+
+        loadForUser: async (uid) => {
+          const prev = get().userId;
+          const sameUser = prev === uid;
+          if (prev && !sameUser) {
+            // User switch: never let User B see User A's cache.
+            set({ events: [], goals: [], memories: [], prefs: DEFAULT_PREFS, prefsExists: false, outbox: [] });
+          }
+          // Same user with a warm cache => show instantly and refresh in background.
+          set({ userId: uid, loading: true, ready: sameUser });
+          try {
+            await get().flushOutbox();                 // push local intent first (LWW)
+            if (get().outbox.length > 0) {
+              // Still-pending writes (offline): keep local cache, don't overwrite with cloud.
+              set({ loading: false, ready: true });
+              return;
+            }
+            const snap = await fetchAll(uid);
+            set({
+              events: snap.events, goals: snap.goals, memories: snap.memories,
+              prefs: snap.prefs ?? DEFAULT_PREFS,
+              prefsExists: snap.prefs !== null,
+              loading: false, ready: true,
+            });
+          } catch {
+            // Offline / error: keep whatever cache we have.
+            set({ loading: false, ready: true });
+          }
+        },
+
+        clearForSignOut: () => {
+          set({
+            events: [], goals: [], memories: [], prefs: DEFAULT_PREFS,
+            userId: null, prefsExists: false, loading: false, ready: false, outbox: [],
           });
+        },
+
+        flushOutbox: async () => {
+          const uid = get().userId;
+          if (!uid || flushing) return;
+          const batch = get().outbox;
+          if (!batch.length) return;
+          flushing = true;
+          const failed: SyncOp[] = [];
+          try {
+            for (const op of batch) {
+              try {
+                if (op.kind === 'prefs') {
+                  await dbUpsertPrefs(prefsToRow(get().prefs, uid));
+                } else if (op.kind === 'upsert') {
+                  const row = rowForUpsert(get(), op.table, op.id, uid);
+                  if (row) await dbUpsert(op.table, row);
+                } else {
+                  await dbDelete(op.table, op.id, uid);
+                }
+              } catch {
+                failed.push(op);
+              }
+            }
+          } finally {
+            flushing = false;
+            // Preserve ops enqueued while we were flushing, plus any failures.
+            set(s => ({ outbox: [...s.outbox.filter(o => !batch.includes(o)), ...failed] }));
+          }
+        },
+
+        addEvent: (e) => {
+          const id = uuid();
+          set(s => ({ events: [...s.events, { ...e, id, created: today() }] }));
+          enqueue({ kind: 'upsert', table: 'events', id });
+        },
+        updateEvent: (id, patch) => {
+          set(s => ({ events: s.events.map(e => e.id === id ? { ...e, ...patch } : e) }));
+          enqueue({ kind: 'upsert', table: 'events', id });
+        },
+        deleteEvent: (id) => {
+          set(s => ({ events: s.events.filter(e => e.id !== id) }));
+          enqueue({ kind: 'delete', table: 'events', id });
+        },
+        toggleEventFav: (id) => {
+          set(s => ({ events: s.events.map(e => e.id === id ? { ...e, fav: !e.fav } : e) }));
+          enqueue({ kind: 'upsert', table: 'events', id });
+        },
+        addGoal: (g) => {
+          const id = uuid();
+          set(s => ({ goals: [...s.goals, { ...g, id, created: today(), current: 0 }] }));
+          enqueue({ kind: 'upsert', table: 'goals', id });
+        },
+        updateGoal: (id, patch) => {
+          set(s => ({ goals: s.goals.map(g => g.id === id ? { ...g, ...patch } : g) }));
+          enqueue({ kind: 'upsert', table: 'goals', id });
+        },
+        deleteGoal: (id) => {
+          set(s => ({ goals: s.goals.filter(g => g.id !== id) }));
+          enqueue({ kind: 'delete', table: 'goals', id });
+        },
+        nudgeGoal: (id, dir) => {
+          set(s => ({ goals: s.goals.map(g => g.id !== id ? g : { ...g, current: Math.max(0, Math.min(g.target, g.current + dir * (g.step || 1))) }) }));
+          enqueue({ kind: 'upsert', table: 'goals', id });
+        },
+        setGoalProgress: (id, value) => {
+          set(s => ({ goals: s.goals.map(g => g.id === id ? { ...g, current: Math.min(g.target, Math.max(0, value)) } : g) }));
+          enqueue({ kind: 'upsert', table: 'goals', id });
+        },
+        toggleGoalFav: (id) => {
+          set(s => ({ goals: s.goals.map(g => g.id === id ? { ...g, fav: !g.fav } : g) }));
+          enqueue({ kind: 'upsert', table: 'goals', id });
+        },
+        addMemory: (m) => {
+          const id = uuid();
+          set(s => ({ memories: [...s.memories, { ...m, id }] }));
+          enqueue({ kind: 'upsert', table: 'memories', id });
+        },
+        updateMemory: (id, patch) => {
+          set(s => ({ memories: s.memories.map(m => m.id === id ? { ...m, ...patch } : m) }));
+          enqueue({ kind: 'upsert', table: 'memories', id });
+        },
+        deleteMemory: (id) => {
+          set(s => ({ memories: s.memories.filter(m => m.id !== id) }));
+          enqueue({ kind: 'delete', table: 'memories', id });
+        },
+        addLogEntry: (memId, entry) => {
+          set(s => ({ memories: s.memories.map(m => m.id === memId ? { ...m, entries: [...m.entries, entry] } : m) }));
+          enqueue({ kind: 'upsert', table: 'memories', id: memId });
+        },
+        updatePrefs: (patch) => {
+          set(s => ({ prefs: { ...s.prefs, ...patch }, prefsExists: true }));
+          enqueue({ kind: 'prefs' });
+        },
+      };
+    },
+    {
+      name: 'tempo-storage',
+      storage: createJSONStorage(() => AsyncStorage),
+      version: 2,
+      // Persist only durable data + the offline queue; loading/ready are runtime.
+      partialize: (s) => ({
+        events: s.events, goals: s.goals, memories: s.memories,
+        prefs: s.prefs, userId: s.userId, prefsExists: s.prefsExists, outbox: s.outbox,
+      }),
+      // v1 (local seed era) -> v2 (cloud). Drop any locally-seeded cache so stale
+      // demo data never lingers; the cloud repopulates on next login.
+      migrate: (_persisted: any, version: number) => {
+        if (version < 2) {
+          return {
+            events: [], goals: [], memories: [], prefs: DEFAULT_PREFS,
+            userId: null, prefsExists: false, outbox: [],
+          };
         }
-        return persisted;
+        return _persisted;
       },
     }
   )
