@@ -159,6 +159,35 @@ export default function ProfileScreen() {
           )}
         </View>
 
+        <SLabel label="Browse" />
+        <View style={{ borderRadius:18, borderWidth:1, borderColor:colors.border,
+          backgroundColor:colors.surf, overflow:'hidden', marginBottom:28 }}>
+          <TouchableOpacity onPress={() => router.push('/modals/favorites')}
+            style={{ flexDirection:'row', alignItems:'center', gap:14, padding:14 }}>
+            <View style={{ width:44, height:44, borderRadius:13,
+              backgroundColor: colors.isDark ? 'rgba(240,160,75,0.16)' : colors.tint, alignItems:'center', justifyContent:'center' }}>
+              <Text style={{ fontSize:20 }}>⭐</Text>
+            </View>
+            <View style={{ flex:1 }}>
+              <Text style={{ fontSize:15, fontWeight:'600', color:colors.text1 }}>Favorites</Text>
+              <Text style={{ fontSize:12, color:colors.text3, marginTop:2 }}>Your starred countdowns, goals &amp; memories</Text>
+            </View>
+            <Text style={{ fontSize:16, color:colors.text3 }}>›</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push('/modals/calendar')}
+            style={{ flexDirection:'row', alignItems:'center', gap:14, padding:14, borderTopWidth:1, borderTopColor:colors.border }}>
+            <View style={{ width:44, height:44, borderRadius:13,
+              backgroundColor: colors.isDark ? 'rgba(124,106,245,0.16)' : colors.tint, alignItems:'center', justifyContent:'center' }}>
+              <Text style={{ fontSize:20 }}>📆</Text>
+            </View>
+            <View style={{ flex:1 }}>
+              <Text style={{ fontSize:15, fontWeight:'600', color:colors.text1 }}>Calendar</Text>
+              <Text style={{ fontSize:12, color:colors.text3, marginTop:2 }}>Coming soon</Text>
+            </View>
+            <Text style={{ fontSize:16, color:colors.text3 }}>›</Text>
+          </TouchableOpacity>
+        </View>
+
         <SLabel label="Countdown" />
         <TouchableOpacity onPress={() => router.push('/modals/holidays-settings')}
           style={{ flexDirection:'row', alignItems:'center', gap:14, padding:14,

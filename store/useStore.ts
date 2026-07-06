@@ -3,7 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import { format } from 'date-fns';
-import { Event, Goal, Memory, UserPrefs, Alert } from './types';
+import { Event, Goal, Memory, UserPrefs, Alert, Recurrence } from './types';
 import { DEFAULT_HOLIDAY_IDS } from '../constants/holidays';
 import {
   fetchAll, dbUpsert, dbDelete, dbUpsertPrefs,
@@ -58,7 +58,12 @@ interface TempoStore {
   updateMemory: (id: string, patch: Partial<Memory>) => void;
   deleteMemory: (id: string) => void;
   toggleMemoryFav: (id: string) => void;
-  addLogEntry: (memId: string, entry: { date: string; note: string; item?: string }) => void;
+  addLogEntry: (memId: string, entry: { date: string; note: string; item?: string; datePrecision?: import('./types').DatePrecision }) => void;
+  // Cross-type conversion. Events and memories are different tables, so a
+  // cross-table convert DELETEs the old row and CREATEs the new one (id preserved).
+  convertEventToMemory: (id: string, targetType: Memory['type']) => void;
+  convertMemoryToEvent: (id: string) => void;
+  convertMemoryType: (id: string, targetType: Memory['type']) => void;
   updatePrefs: (patch: Partial<UserPrefs>) => void;
   setHolidaysEnabled: (on: boolean) => void;
   setHolidayShown: (id: string, shown: boolean) => void;
@@ -314,6 +319,75 @@ export const useStore = create<TempoStore>()(
         addLogEntry: (memId, entry) => {
           set(s => ({ memories: s.memories.map(m => m.id === memId ? { ...m, entries: [...m.entries, entry] } : m) }));
           enqueue({ kind: 'upsert', table: 'memories', id: memId });
+        },
+        convertEventToMemory: (id, targetType) => {
+          const e = get().events.find(x => x.id === id);
+          if (!e) return;
+          const originDate = (e.start || '').slice(0, 10) || today();
+          const memory: Memory = {
+            id: e.id,                    // preserve id across tables
+            type: targetType,
+            name: e.name,
+            emoji: e.emoji,
+            originDate,
+            yearUnknown: false,
+            // A life log keeps the event's date as its first entry; other memory
+            // types (birthday/anniversary/memorial) start with no entries.
+            entries: targetType === 'lifelog' ? [{ date: originDate, note: '' }] : [],
+            logKind: targetType === 'lifelog' ? 'count' : undefined,
+            note: e.note ?? '',
+            fav: e.fav,
+            alerts: e.alerts ?? [],
+          };
+          set(s => ({
+            events: s.events.filter(x => x.id !== id),
+            memories: [...s.memories, memory],
+          }));
+          enqueue({ kind: 'delete', table: 'events', id });
+          enqueue({ kind: 'upsert', table: 'memories', id });
+        },
+        convertMemoryToEvent: (id) => {
+          const m = get().memories.find(x => x.id === id);
+          if (!m) return;
+          // Recurring memory origins (birthday/anniversary/memorial) become yearly
+          // events; a life log becomes a one-time event.
+          const recur: Recurrence | null =
+            (m.type === 'birthday' || m.type === 'anniversary' || m.type === 'memorial')
+              ? { freq: 'yearly', dow: [], endType: 'never' }
+              : null;
+          const event: Event = {
+            id: m.id,
+            name: m.name,
+            emoji: m.emoji,
+            cat: 'parties',
+            allDay: true,
+            start: `${m.originDate}T00:00:00`,
+            end: null,
+            date: m.originDate,
+            created: today(),
+            fav: m.fav,
+            note: m.note ?? '',
+            recur,
+            alerts: m.alerts ?? [],
+          };
+          set(s => ({
+            memories: s.memories.filter(x => x.id !== id),
+            events: [...s.events, event],
+          }));
+          enqueue({ kind: 'delete', table: 'memories', id });
+          enqueue({ kind: 'upsert', table: 'events', id });
+        },
+        convertMemoryType: (id, targetType) => {
+          set(s => ({ memories: s.memories.map(m => {
+            if (m.id !== id) return m;
+            const next: Memory = { ...m, type: targetType };
+            if (targetType === 'lifelog') {
+              next.logKind = m.logKind ?? 'count';
+              if (!next.entries.length) next.entries = [{ date: m.originDate, note: '' }];
+            }
+            return next;
+          }) }));
+          enqueue({ kind: 'upsert', table: 'memories', id });
         },
         updatePrefs: (patch) => {
           set(s => ({ prefs: { ...s.prefs, ...patch }, prefsExists: true }));

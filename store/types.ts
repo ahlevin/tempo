@@ -43,12 +43,18 @@ export interface Goal {
   alerts: Alert[];
 }
 
+export type DatePrecision = 'none' | 'year' | 'month' | 'full';
+
 export interface LogEntry {
+  /** "YYYY-MM-DD" (unknown parts defaulted to 01), or "" when precision is 'none'. */
   date: string;
   note: string;
   /** For COLLECTION life logs: the named thing logged (e.g. a country). Absent
    *  on plain count entries (backward compatible). */
   item?: string;
+  /** How much of `date` is known — controls display (e.g. "2019" vs "March 2019"
+   *  vs "March 15, 2019" vs no date). Absent → treat as 'full'. */
+  datePrecision?: DatePrecision;
 }
 
 export interface Memory {
@@ -67,6 +73,9 @@ export interface Memory {
   logKind?: 'count' | 'collection';
   logPreset?: string;   // preset id (constants/lifelogs.ts), or undefined for custom
   logTarget?: number;   // the "Y" (universe size or custom target) for collections
+  /** Memory-level date precision (default 'full'); life-log entries can each
+   *  override via LogEntry.datePrecision for back-filled/partial dates. */
+  datePrecision?: DatePrecision;
   note: string;
   fav: boolean;
   alerts: Alert[];

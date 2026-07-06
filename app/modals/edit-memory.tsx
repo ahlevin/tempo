@@ -18,6 +18,8 @@ export default function EditMemoryModal() {
   const memories     = useStore(s => s.memories);
   const updateMemory = useStore(s => s.updateMemory);
   const deleteMemory = useStore(s => s.deleteMemory);
+  const convertMemoryToEvent = useStore(s => s.convertMemoryToEvent);
+  const convertMemoryType    = useStore(s => s.convertMemoryType);
   const confirm      = useConfirm();
   const { showToast } = useToast();
   const m = memories.find(x => x.id === id);
@@ -50,6 +52,27 @@ export default function EditMemoryModal() {
   async function del() {
     const ok = await confirm({ title:`Delete "${m!.name}"?`, message:'All entries will be lost.', confirmLabel:'Delete', destructive:true });
     if (ok) { deleteMemory(id); router.back(); }
+  }
+
+  // Convert to an Event, or to another memory type. Options exclude the current type.
+  const MEM_TYPES: { type: 'birthday'|'anniversary'|'memorial'|'lifelog'; label: string; emoji: string }[] = [
+    { type:'birthday',    label:'Birthday',    emoji:'🎂' },
+    { type:'anniversary', label:'Anniversary', emoji:'💑' },
+    { type:'memorial',    label:'Memorial',    emoji:'🕊️' },
+    { type:'lifelog',     label:'Life Log',    emoji:'📓' },
+  ];
+  const convertTargets = MEM_TYPES.filter(t => t.type !== m.type);
+  async function toEvent() {
+    const ok = await confirm({ title:'Convert to Event?',
+      message:`"${m!.name}" will move to your Countdowns as an event. Its date, note, reminders, and star are kept.`,
+      confirmLabel:'Convert' });
+    if (ok) { convertMemoryToEvent(id); router.back(); }
+  }
+  async function toMemType(t: typeof MEM_TYPES[number]) {
+    const ok = await confirm({ title:`Convert to ${t.label}?`,
+      message:`"${m!.name}" will become a ${t.label}. Its date, note, and entries are kept.`,
+      confirmLabel:'Convert' });
+    if (ok) { convertMemoryType(id, t.type); router.back(); }
   }
 
   return (
@@ -96,6 +119,25 @@ export default function EditMemoryModal() {
             style={{ backgroundColor:colors.rose, borderRadius:14, padding:15, alignItems:'center', marginBottom:12 }}>
             <Text style={{ color:'#fff', fontSize:15, fontWeight:'700' }}>Save Changes →</Text>
           </TouchableOpacity>
+
+          <FL label="Change type" />
+          <View style={{ flexDirection:'row', flexWrap:'wrap', gap:7, marginBottom:16 }}>
+            <TouchableOpacity onPress={toEvent}
+              style={{ flexDirection:'row', alignItems:'center', gap:6, paddingVertical:9, paddingHorizontal:12,
+                borderRadius:11, borderWidth:1, borderColor:colors.border, backgroundColor:colors.glass }}>
+              <Text style={{ fontSize:15 }}>🎉</Text>
+              <Text style={{ fontSize:13, fontWeight:'600', color:colors.text2 }}>Event</Text>
+            </TouchableOpacity>
+            {convertTargets.map(t => (
+              <TouchableOpacity key={t.type} onPress={() => toMemType(t)}
+                style={{ flexDirection:'row', alignItems:'center', gap:6, paddingVertical:9, paddingHorizontal:12,
+                  borderRadius:11, borderWidth:1, borderColor:colors.border, backgroundColor:colors.glass }}>
+                <Text style={{ fontSize:15 }}>{t.emoji}</Text>
+                <Text style={{ fontSize:13, fontWeight:'600', color:colors.text2 }}>{t.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
           <TouchableOpacity onPress={del}
             style={{ backgroundColor:(colors.isDark ? 'rgba(232,80,122,0.15)' : 'rgba(197,0,26,0.10)'), borderWidth:1,
               borderColor:(colors.isDark ? 'rgba(232,80,122,0.3)' : 'rgba(197,0,26,0.30)'), borderRadius:14, padding:15, alignItems:'center' }}>

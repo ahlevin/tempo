@@ -1,34 +1,30 @@
 import { useState } from 'react';
 import { ScrollView, View, Text, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useStore } from '../../store/useStore';
 import { HeroCarousel } from '../../components/HeroCarousel';
 import { QuoteCard } from '../../components/QuoteCard';
 import { DateWeatherBar } from '../../components/DateWeatherBar';
-import { MemoryCard } from '../../components/MemoryCard';
 import { EventCard } from '../../components/EventCard';
-import { GoalCard } from '../../components/GoalCard';
 import { AddChooser } from '../../components/AddChooser';
 import { UpcomingMemoryRow } from '../../components/UpcomingMemoryRow';
 import { HolidayRow } from '../../components/HolidayRow';
+import { SectionHeader, EmptyPrompt } from '../../components/SectionUI';
 import { Event, Memory } from '../../store/types';
 import { CATEGORIES } from '../../constants/data';
 import { catColor } from '../../constants/colors';
 import { visibleHolidays, HolidayItem } from '../../constants/holidays';
 import { nextOccurrence, nextAnnual, daysUntil } from '../../utils/dates';
 
-// Home-screen filter pills: All, the 7 event categories, the 3 recurring memory
-// types, and Goals. Selecting a category shows those events; a memory-type shows
-// those memories; Goals shows goals.
+// Countdowns filter pills: All, the 7 event categories, and the 3 recurring
+// memory types. (Goals and Life Logs live in their own tabs now.)
 const FILTERS: { id: string; label: string; emoji: string }[] = [
   { id: 'all', label: 'All', emoji: '' },
   ...CATEGORIES.map(c => ({ id: c.id, label: c.short, emoji: c.emoji })),
   { id: 'birthday',    label: 'Birthdays',     emoji: '🎂' },
   { id: 'anniversary', label: 'Anniversaries', emoji: '💍' },
   { id: 'memorial',    label: 'Memorials',     emoji: '🕊️' },
-  { id: 'goal',        label: 'Goals',         emoji: '🎯' },
 ];
 
 // A row in the "Upcoming" list: an event, a recurring memory, or a visible
@@ -45,7 +41,6 @@ const upcomingDays = (it: UpcomingItem) =>
 export default function HomeScreen() {
   const { colors } = useTheme();
   const events      = useStore(s => s.events);
-  const goals       = useStore(s => s.goals);
   const memories    = useStore(s => s.memories);
   const prefs       = useStore(s => s.prefs);
   const [filter, setFilter] = useState('all');
@@ -53,12 +48,11 @@ export default function HomeScreen() {
 
   const isCat     = CATEGORIES.some(c => c.id === filter);
   const isMemType = filter === 'birthday' || filter === 'anniversary' || filter === 'memorial';
-  const isGoal    = filter === 'goal';
   const isAll     = filter === 'all';
 
-  // Upcoming list: 'all' interleaves events + recurring memories; a category pill
-  // narrows to those events; a memory-type pill narrows to those memories. All
-  // sorted by soonest next occurrence.
+  // Countdowns list: 'all' interleaves events + recurring memories + holidays; a
+  // category pill narrows to those events; a memory-type pill narrows to those
+  // memories. All sorted by soonest next occurrence.
   const upcoming: UpcomingItem[] = [];
   if (isAll || isCat) {
     events
@@ -80,12 +74,7 @@ export default function HomeScreen() {
   }
   upcoming.sort((a, b) => upcomingDays(a) - upcomingDays(b));
 
-  // Section visibility. Goals + the full Memories/Life-Log list only appear under
-  // "All" (or the Goals pill); a specific pill shows just its matching Upcoming list.
-  const showUpcoming = isAll || isCat || isMemType;
-  const showGoals    = isAll || isGoal;
-  const showMemories = isAll;
-  const upcomingTitle = isAll ? 'Upcoming' : (FILTERS.find(f => f.id === filter)?.label ?? 'Upcoming');
+  const listTitle = isAll ? 'Upcoming' : (FILTERS.find(f => f.id === filter)?.label ?? 'Upcoming');
 
   return (
     <SafeAreaView style={{ flex:1, backgroundColor:colors.bg }} edges={['top']}>
@@ -143,59 +132,16 @@ export default function HomeScreen() {
           })}
         </ScrollView>
 
-        {/* Upcoming (events + recurring memories, filtered) */}
-        {showUpcoming && <>
-          <SectionHeader title={upcomingTitle} onAdd={() => setChooserOpen(true)} />
-          {upcoming.length === 0 ? (
-            <EmptyPrompt icon="⏳" text="Nothing here yet — tap to start counting down to something."
-              onPress={() => setChooserOpen(true)} />
-          ) : upcoming.map(it => it.kind === 'event'
-              ? <EventCard key={`e-${it.data.id}`} event={it.data} />
-              : it.kind === 'memory'
-              ? <UpcomingMemoryRow key={`m-${it.data.id}`} memory={it.data} />
-              : <HolidayRow key={`h-${it.data.id}`} item={it.data} />)}
-        </>}
-
-        {/* Goals */}
-        {showGoals && <>
-          <SectionHeader title="Goals" onAdd={() => router.push('/modals/add-goal')} />
-          {goals.length === 0
-            ? <EmptyPrompt icon="🎯" text="No goals yet — tap to set something you're working toward."
-                onPress={() => router.push('/modals/add-goal')} />
-            : goals.map(g => <GoalCard key={g.id} goal={g} />)}
-        </>}
-
-        {/* Memories (full cards incl. Life Log) — only under "All" */}
-        {showMemories && <>
-          <SectionHeader title="Memories & Life Log" onAdd={() => router.push('/modals/add-memory')} />
-          {memories.length === 0
-            ? <EmptyPrompt icon="📸" text="No memories yet — tap to remember a birthday, anniversary, or life log."
-                onPress={() => router.push('/modals/add-memory')} />
-            : memories.map(m => <MemoryCard key={m.id} memory={m} />)}
-        </>}
-
-        {/* Integrations */}
-        <SectionHeader title="Integrations" />
-        {[
-          { icon:'📅', title:'Connect Your Calendar', sub:'Sync with Google, Apple & Outlook' },
-          { icon:'📲', title:'Home Screen Widgets',   sub:'Glanceable countdowns at a glance' },
-        ].map((card,i) => (
-          <View key={i} style={{ flexDirection:'row', alignItems:'center', gap:14,
-            backgroundColor: colors.isDark ? 'rgba(62,207,178,0.08)' : colors.surf2, borderWidth:1,
-            borderColor: colors.isDark ? 'rgba(62,207,178,0.18)' : colors.border,
-            borderRadius:18, padding:14, marginBottom:9 }}>
-            <Text style={{ fontSize:24 }}>{card.icon}</Text>
-            <View style={{ flex:1 }}>
-              <Text style={{ fontSize:14, fontWeight:'700', color:colors.text1 }}>{card.title}</Text>
-              <Text style={{ fontSize:12, color:colors.text2, marginTop:2 }}>{card.sub}</Text>
-            </View>
-            <View style={{ backgroundColor: colors.isDark ? 'rgba(62,207,178,0.14)' : colors.tint, borderWidth:1,
-              borderColor: colors.isDark ? 'rgba(62,207,178,0.28)' : colors.border, borderRadius:20,
-              paddingVertical:5, paddingHorizontal:10 }}>
-              <Text style={{ fontSize:12, fontWeight:'600', color:colors.teal }}>Soon</Text>
-            </View>
-          </View>
-        ))}
+        {/* Countdowns: events + birthdays/anniversaries/memorials + holidays */}
+        <SectionHeader title={listTitle} onAdd={() => setChooserOpen(true)} />
+        {upcoming.length === 0 ? (
+          <EmptyPrompt icon="⏳" text="Nothing here yet — tap to start counting down to something."
+            onPress={() => setChooserOpen(true)} />
+        ) : upcoming.map(it => it.kind === 'event'
+            ? <EventCard key={`e-${it.data.id}`} event={it.data} />
+            : it.kind === 'memory'
+            ? <UpcomingMemoryRow key={`m-${it.data.id}`} memory={it.data} />
+            : <HolidayRow key={`h-${it.data.id}`} item={it.data} />)}
       </ScrollView>
 
       {/* FAB */}
@@ -210,38 +156,5 @@ export default function HomeScreen() {
 
       <AddChooser visible={chooserOpen} onClose={() => setChooserOpen(false)} />
     </SafeAreaView>
-  );
-}
-
-function SectionHeader({ title, onAdd }: { title:string; onAdd?:()=>void }) {
-  const { colors } = useTheme();
-  return (
-    <View style={{ flexDirection:'row', alignItems:'baseline', justifyContent:'space-between',
-      marginTop:22, marginBottom:10, marginHorizontal:4 }}>
-      <Text style={{ fontSize:18, fontWeight:'700', color:colors.text1, letterSpacing:-0.3 }}>{title}</Text>
-      {onAdd && (
-        <TouchableOpacity onPress={onAdd}>
-          <Text style={{ fontSize:13, color:colors.accent, fontWeight:'500' }}>+ Add</Text>
-        </TouchableOpacity>
-      )}
-    </View>
-  );
-}
-
-
-function EmptyPrompt({ icon, text, onPress }: { icon:string; text:string; onPress:()=>void }) {
-  const { colors } = useTheme();
-  return (
-    <TouchableOpacity onPress={onPress} activeOpacity={0.8}
-      style={{ alignItems:'center', paddingVertical:26, paddingHorizontal:20,
-        backgroundColor:colors.glass, borderRadius:18, borderWidth:1,
-        borderColor:colors.border, borderStyle:'dashed' }}>
-      <Text style={{ fontSize:30, marginBottom:10 }}>{icon}</Text>
-      <Text style={{ color:colors.text2, fontSize:14, textAlign:'center', lineHeight:20 }}>{text}</Text>
-      <View style={{ marginTop:12, backgroundColor: colors.isDark ? 'rgba(124,106,245,0.15)' : colors.tint, borderWidth:1,
-        borderColor: colors.isDark ? 'rgba(124,106,245,0.3)' : colors.border, borderRadius:20, paddingVertical:7, paddingHorizontal:16 }}>
-        <Text style={{ color:colors.accent, fontSize:13, fontWeight:'700' }}>+ Add</Text>
-      </View>
-    </TouchableOpacity>
   );
 }

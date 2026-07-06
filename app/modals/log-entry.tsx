@@ -5,8 +5,17 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { format } from 'date-fns';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useStore } from '../../store/useStore';
+import { DatePrecision } from '../../store/types';
 import { DateTimeField } from '../../components/DateTimeField';
 import { presetUniverse } from '../../constants/lifelogs';
+
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const PRECISIONS: { id: DatePrecision; label: string }[] = [
+  { id:'full',  label:'Full date' },
+  { id:'month', label:'Month + year' },
+  { id:'year',  label:'Year only' },
+  { id:'none',  label:'No date' },
+];
 
 export default function LogEntryModal() {
   const { colors } = useTheme();
@@ -15,8 +24,12 @@ export default function LogEntryModal() {
   const addLogEntry = useStore(s => s.addLogEntry);
   const m = memories.find(x => x.id === id);
 
+  const now = new Date();
+  const [precision, setPrecision] = useState<DatePrecision>('full');
   const [usePast, setUsePast] = useState(past === '1');
-  const [date,    setDate]    = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [date,    setDate]    = useState(format(now, 'yyyy-MM-dd')); // full-date value
+  const [year,    setYear]    = useState(String(now.getFullYear()));
+  const [month,   setMonth]   = useState(now.getMonth());            // 0-11
   const [note,    setNote]    = useState('');
   const [item,    setItem]    = useState('');   // selected collection item
   const [query,   setQuery]   = useState('');
@@ -39,11 +52,21 @@ export default function LogEntryModal() {
   if (!m) { router.back(); return null; }
 
   const loggedCount = isPicker ? new Set(m.entries.map(e => e.item).filter(Boolean)).size : m.entries.length;
+  const pad2 = (n: number) => String(n).padStart(2, '0');
+  const y4 = /^\d{4}$/.test(year) ? year : String(now.getFullYear());
+
+  // Build the stored date at the chosen precision (unknown parts default to 01).
+  function buildDate(): string {
+    if (precision === 'none')  return '';
+    if (precision === 'year')  return `${y4}-01-01`;
+    if (precision === 'month') return `${y4}-${pad2(month + 1)}-01`;
+    return usePast ? date : format(new Date(), 'yyyy-MM-dd');
+  }
 
   function submit() {
     if (isPicker && !item) return; // must pick an item first
-    const entryDate = usePast ? date : format(new Date(), 'yyyy-MM-dd');
-    addLogEntry(id, { date: entryDate, note: note.trim(), ...(isPicker ? { item } : {}) });
+    addLogEntry(id, { date: buildDate(), note: note.trim(), datePrecision: precision,
+      ...(isPicker ? { item } : {}) });
     router.back();
   }
 
@@ -100,21 +123,60 @@ export default function LogEntryModal() {
 
           <Text style={{ fontSize:11, fontWeight:'600', color:colors.text3,
             textTransform:'uppercase', letterSpacing:0.5, marginBottom:8 }}>Date</Text>
-          <View style={{ flexDirection:'row', gap:8, marginBottom:14 }}>
-            {[{l:'Today',v:false},{l:'Past date',v:true}].map(opt => (
-              <TouchableOpacity key={String(opt.v)} onPress={() => setUsePast(opt.v)}
-                style={{ flex:1, padding:10, borderRadius:9, borderWidth:1.5,
-                  borderColor: usePast===opt.v ? colors.teal : colors.border,
-                  backgroundColor: usePast===opt.v ? (colors.isDark ? 'rgba(62,207,178,0.1)' : colors.tint) : colors.glass,
-                  alignItems:'center' }}>
-                <Text style={{ fontSize:13, fontWeight:'600',
-                  color: usePast===opt.v ? colors.teal : colors.text2 }}>{opt.l}</Text>
-              </TouchableOpacity>
-            ))}
+          {/* Precision chooser — supports back-filling partial or unknown dates. */}
+          <View style={{ flexDirection:'row', flexWrap:'wrap', gap:7, marginBottom:12 }}>
+            {PRECISIONS.map(p => {
+              const sel = precision === p.id;
+              return (
+                <TouchableOpacity key={p.id} onPress={() => setPrecision(p.id)}
+                  style={{ paddingVertical:8, paddingHorizontal:12, borderRadius:10, borderWidth:1.5,
+                    borderColor: sel ? colors.teal : colors.border,
+                    backgroundColor: sel ? (colors.isDark ? 'rgba(62,207,178,0.12)' : colors.tint) : colors.glass }}>
+                  <Text style={{ fontSize:12, fontWeight:'600', color: sel ? colors.teal : colors.text2 }}>{p.label}</Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
-          {usePast && (
-            <DateTimeField mode="date" value={date} onChange={setDate} />
+
+          {precision === 'full' && (
+            <>
+              <View style={{ flexDirection:'row', gap:8, marginBottom:14 }}>
+                {[{l:'Today',v:false},{l:'Past date',v:true}].map(opt => (
+                  <TouchableOpacity key={String(opt.v)} onPress={() => setUsePast(opt.v)}
+                    style={{ flex:1, padding:10, borderRadius:9, borderWidth:1.5,
+                      borderColor: usePast===opt.v ? colors.teal : colors.border,
+                      backgroundColor: usePast===opt.v ? (colors.isDark ? 'rgba(62,207,178,0.1)' : colors.tint) : colors.glass,
+                      alignItems:'center' }}>
+                    <Text style={{ fontSize:13, fontWeight:'600',
+                      color: usePast===opt.v ? colors.teal : colors.text2 }}>{opt.l}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              {usePast && <DateTimeField mode="date" value={date} onChange={setDate} />}
+            </>
           )}
+
+          {precision === 'month' && (
+            <View style={{ flexDirection:'row', flexWrap:'wrap', gap:6, marginBottom:14 }}>
+              {MONTHS.map((mo, i) => {
+                const sel = month === i;
+                return (
+                  <TouchableOpacity key={mo} onPress={() => setMonth(i)}
+                    style={{ width:'22%', paddingVertical:9, borderRadius:9, borderWidth:1, alignItems:'center',
+                      borderColor: sel ? colors.teal : colors.border,
+                      backgroundColor: sel ? (colors.isDark ? 'rgba(62,207,178,0.12)' : colors.tint) : colors.glass }}>
+                    <Text style={{ fontSize:12, fontWeight:'600', color: sel ? colors.teal : colors.text2 }}>{mo}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )}
+
+          {(precision === 'month' || precision === 'year') && (
+            <TextInput value={year} onChangeText={setYear} keyboardType="number-pad" maxLength={4}
+              placeholder="Year (e.g. 2019)" placeholderTextColor={colors.text3} style={fi} />
+          )}
+
           <Text style={{ fontSize:11, fontWeight:'600', color:colors.text3,
             textTransform:'uppercase', letterSpacing:0.5, marginBottom:6 }}>
             Note (optional)

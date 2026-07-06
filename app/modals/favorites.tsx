@@ -2,19 +2,23 @@ import { ScrollView, View, Text, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useTheme } from '../../contexts/ThemeContext';
-import { dayCountColor, lightCardShadow } from '../../constants/colors';
+import { dayCountColor, lightCardShadow, catColor } from '../../constants/colors';
 import { useStore } from '../../store/useStore';
 import { SwipeableRow } from '../../components/SwipeableRow';
 import { MemoryCard } from '../../components/MemoryCard';
+import { visibleHolidays } from '../../constants/holidays';
 import { nextOccurrence, daysUntil, fmtDateTime } from '../../utils/dates';
 
+// Favorites now lives as a sub-screen linked from Profile (was its own tab).
 export default function FavoritesScreen() {
   const { colors } = useTheme();
   const events   = useStore(s => s.events);
   const goals    = useStore(s => s.goals);
   const memories = useStore(s => s.memories);
+  const holidayPrefs   = useStore(s => s.prefs.holidays);
   const toggleEventFav = useStore(s => s.toggleEventFav);
   const toggleGoalFav  = useStore(s => s.toggleGoalFav);
+  const setHolidayFav  = useStore(s => s.setHolidayFav);
   const deleteEvent    = useStore(s => s.deleteEvent);
   const deleteGoal     = useStore(s => s.deleteGoal);
 
@@ -22,20 +26,27 @@ export default function FavoritesScreen() {
     .sort((a,b) => daysUntil(nextOccurrence(a)) - daysUntil(nextOccurrence(b)));
   const favGoals = goals.filter(g => g.fav);
   const favMemories = memories.filter(m => m.fav);
-  const empty = !favEvents.length && !favGoals.length && !favMemories.length;
+  const favHolidays = visibleHolidays(holidayPrefs).filter(h => h.fav);
+  const empty = !favEvents.length && !favGoals.length && !favMemories.length && !favHolidays.length;
+
+  const hcolor = catColor(colors, 'holidays');
 
   return (
-    <SafeAreaView style={{ flex:1, backgroundColor:colors.bg }} edges={['top']}>
-      <View style={{ paddingHorizontal:20, paddingBottom:12 }}>
-        <Text style={{ fontSize:24, fontWeight:'700', color:colors.text1 }}>Favorites</Text>
+    <SafeAreaView style={{ flex:1, backgroundColor:colors.surf2 }} edges={['top']}>
+      <View style={{ flexDirection:'row', justifyContent:'space-between', alignItems:'center',
+        paddingHorizontal:20, paddingVertical:14 }}>
+        <Text style={{ fontSize:22, fontWeight:'700', color:colors.text1 }}>Favorites</Text>
+        <TouchableOpacity onPress={() => router.back()}>
+          <Text style={{ fontSize:16, color:colors.text3 }}>✕</Text>
+        </TouchableOpacity>
       </View>
-      <ScrollView contentContainerStyle={{ paddingHorizontal:16, paddingBottom:120 }}
+      <ScrollView contentContainerStyle={{ paddingHorizontal:16, paddingBottom:60 }}
         showsVerticalScrollIndicator={false}>
         {empty && (
           <View style={{ alignItems:'center', paddingVertical:60 }}>
             <Text style={{ fontSize:40, marginBottom:12 }}>⭐</Text>
             <Text style={{ color:colors.text3, fontSize:15, textAlign:'center' }}>
-              No favorites yet.{'\n'}Tap ☆ on any event, goal, or memory.
+              No favorites yet.{'\n'}Tap ☆ on any event, goal, memory, or holiday.
             </Text>
           </View>
         )}
@@ -53,7 +64,8 @@ export default function FavoritesScreen() {
                   onPress={() => router.push({ pathname:'/modals/edit-event', params:{ id:e.id } })}
                   style={{ backgroundColor:colors.surf, borderRadius:18,
                   borderWidth:1, borderColor:colors.border, padding:14,
-                  marginBottom:8, flexDirection:'row', alignItems:'center', gap:12 }}>
+                  marginBottom:8, flexDirection:'row', alignItems:'center', gap:12,
+                  ...(colors.isDark ? null : lightCardShadow) }}>
                   <Text style={{ fontSize:22 }}>{e.emoji}</Text>
                   <View style={{ flex:1 }}>
                     <Text style={{ fontSize:14, fontWeight:'600', color:colors.text1 }}>{e.name}</Text>
@@ -77,8 +89,34 @@ export default function FavoritesScreen() {
             })}
           </View>
         )}
-        {favGoals.length > 0 && (
+        {favHolidays.length > 0 && (
           <View style={{ marginTop: favEvents.length ? 16 : 0 }}>
+            <Text style={{ fontSize:16, fontWeight:'700', color:colors.text1, marginBottom:10 }}>Holidays</Text>
+            {favHolidays.map(h => (
+              <TouchableOpacity key={h.id} activeOpacity={0.8}
+                onPress={() => router.push({ pathname:'/modals/holiday-detail', params:{ id:h.id } })}
+                style={{ backgroundColor:colors.surf, borderRadius:18, borderWidth:1, borderColor:colors.border,
+                  padding:14, marginBottom:8, flexDirection:'row', alignItems:'center', gap:12,
+                  ...(colors.isDark ? null : lightCardShadow) }}>
+                <Text style={{ fontSize:22 }}>{h.emoji}</Text>
+                <View style={{ flex:1 }}>
+                  <Text style={{ fontSize:14, fontWeight:'600', color:colors.text1 }}>{h.name}</Text>
+                  <Text style={{ fontSize:11, color:colors.text3, marginTop:2 }}>Holiday · repeats yearly</Text>
+                </View>
+                <View style={{ alignItems:'flex-end', gap:4 }}>
+                  <Text style={{ fontSize:20, fontWeight:'800', color:hcolor }}>{h.days}</Text>
+                  <Text style={{ fontSize:9, color:colors.text3, textTransform:'uppercase' }}>{h.days===1?'day':'days'}</Text>
+                  <TouchableOpacity hitSlop={{ top:8, bottom:8, left:8, right:8 }}
+                    onPress={(ev) => { ev.stopPropagation(); setHolidayFav(h.id, false); }}>
+                    <Text style={{ fontSize:16 }}>⭐</Text>
+                  </TouchableOpacity>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+        {favGoals.length > 0 && (
+          <View style={{ marginTop: (favEvents.length || favHolidays.length) ? 16 : 0 }}>
             <Text style={{ fontSize:16, fontWeight:'700', color:colors.text1, marginBottom:10 }}>Goals</Text>
             {favGoals.map(g => {
               const pct = Math.round(Math.min(100,(g.current/g.target)*100));
@@ -115,7 +153,7 @@ export default function FavoritesScreen() {
           </View>
         )}
         {favMemories.length > 0 && (
-          <View style={{ marginTop: (favEvents.length || favGoals.length) ? 16 : 0 }}>
+          <View style={{ marginTop: (favEvents.length || favHolidays.length || favGoals.length) ? 16 : 0 }}>
             <Text style={{ fontSize:16, fontWeight:'700', color:colors.text1, marginBottom:10 }}>Memories</Text>
             {favMemories.map(m => <MemoryCard key={m.id} memory={m} />)}
           </View>

@@ -11,8 +11,17 @@ import { lightCardShadow, catColor } from '../constants/colors';
 import { presetUniverse } from '../constants/lifelogs';
 import {
   yearsMonthsDays, nextAnnual, daysSince, daysUntil, daysBetween,
-  ordinal, fmtShort, fmtFull, fmtMonthDay, fmtShortNoYear,
+  ordinal, fmtShort, fmtFull, fmtMonthDay, fmtShortNoYear, fmtLogDate,
 } from '../utils/dates';
+
+// Sort life-log entries oldest→newest with dateless/partial handled: entries
+// with a date sort ascending; dateless entries fall to the end.
+function cmpEntryAsc(a: Memory['entries'][number], b: Memory['entries'][number]) {
+  if (!a.date && !b.date) return 0;
+  if (!a.date) return 1;
+  if (!b.date) return -1;
+  return a.date.localeCompare(b.date);
+}
 
 // memorial's 'accent' key is a placeholder — its color is resolved via
 // catColor('memorial') (muted slate) rather than a palette key.
@@ -249,13 +258,14 @@ function LifelogBody({
   const target = m.logTarget;
   const isCollection = kind === 'collection';
 
-  const chrono = [...m.entries].sort((a, b) => a.date.localeCompare(b.date));
-  const last = chrono[chrono.length - 1];
+  const chrono = [...m.entries].sort(cmpEntryAsc);
+  const dated = chrono.filter(e => e.date);        // entries that actually have a date
+  const last = dated[dated.length - 1];            // most-recent dated entry (for "last …")
 
-  // For collections, count distinct named items and remember when each was first logged.
-  const itemDate = new Map<string, string>();
-  for (const e of chrono) if (e.item && !itemDate.has(e.item)) itemDate.set(e.item, e.date);
-  const count = isCollection ? itemDate.size : m.entries.length;
+  // For collections, keep the first-logged entry per distinct named item.
+  const itemEntry = new Map<string, Memory['entries'][number]>();
+  for (const e of chrono) if (e.item && !itemEntry.has(e.item)) itemEntry.set(e.item, e);
+  const count = isCollection ? itemEntry.size : m.entries.length;
   const pct = isCollection && target ? Math.min(100, Math.round((count / target) * 100)) : null;
 
   const openAdd = (past: string) => router.push({ pathname: '/modals/log-entry', params: { id: m.id, past } });
@@ -279,7 +289,7 @@ function LifelogBody({
           <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' }}>
             <Text style={{ fontSize: 30, fontWeight: '800', color, fontVariant: ['tabular-nums'] }}>{count}</Text>
             <Text style={{ fontSize: 15, fontWeight: '600', color: colors.text2 }}>{count === 1 ? 'time' : 'times'}</Text>
-            {last && <Text style={{ fontSize: 12, color: colors.text3, marginLeft: 4 }}>· last {fmtShort(last.date)}</Text>}
+            {last && <Text style={{ fontSize: 12, color: colors.text3, marginLeft: 4 }}>· last {fmtLogDate(last.date, last.datePrecision)}</Text>}
           </View>
         )}
       </View>
@@ -319,17 +329,18 @@ function LifelogBody({
       {/* Expanded detail */}
       {expanded && count > 0 && (
         isCollection
-          ? <CollectionList itemDate={itemDate} color={color} universe={universe} target={target} />
+          ? <CollectionList itemEntry={itemEntry} universe={universe} target={target} />
           : <CountTimeline chrono={chrono} color={color} />
       )}
     </>
   );
 }
 
-function CollectionList({ itemDate, color, universe, target }:
-  { itemDate: Map<string, string>; color: string; universe?: string[]; target?: number }) {
+function CollectionList({ itemEntry, universe, target }:
+  { itemEntry: Map<string, Memory['entries'][number]>; universe?: string[]; target?: number }) {
   const { colors } = useTheme();
-  const rows = Array.from(itemDate.entries()).sort((a, b) => b[1].localeCompare(a[1])); // newest first
+  // Newest first, dateless items last.
+  const rows = Array.from(itemEntry.values()).sort((a, b) => -cmpEntryAsc(a, b));
   const total = universe ? universe.length : target;
   const remaining = total ? Math.max(0, total - rows.length) : 0;
   return (
@@ -337,13 +348,13 @@ function CollectionList({ itemDate, color, universe, target }:
       <Text style={{ fontSize: 10, fontWeight: '700', color: colors.text3, textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 8 }}>
         Logged{remaining > 0 ? ` · ${remaining} to go` : ' · complete! 🎉'}
       </Text>
-      {rows.map(([item, date]) => (
-        <View key={item} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 9 }}>
+      {rows.map((e) => (
+        <View key={e.item} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 9 }}>
           <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: colors.isDark ? 'rgba(62,207,178,0.16)' : colors.tint, alignItems: 'center', justifyContent: 'center' }}>
             <Text style={{ fontSize: 11, color: colors.teal }}>✓</Text>
           </View>
-          <Text style={{ flex: 1, fontSize: 13, fontWeight: '600', color: colors.text1 }} numberOfLines={1}>{item}</Text>
-          <Text style={{ fontSize: 11, color: colors.text3 }}>{fmtShort(date)}</Text>
+          <Text style={{ flex: 1, fontSize: 13, fontWeight: '600', color: colors.text1 }} numberOfLines={1}>{e.item}</Text>
+          <Text style={{ fontSize: 11, color: colors.text3 }}>{fmtLogDate(e.date, e.datePrecision)}</Text>
         </View>
       ))}
     </View>
@@ -352,34 +363,36 @@ function CollectionList({ itemDate, color, universe, target }:
 
 function CountTimeline({ chrono, color }: { chrono: Memory['entries']; color: string }) {
   const { colors } = useTheme();
-  const first = chrono[0];
-  const last  = chrono[chrono.length - 1];
-  const avgBetween = chrono.length > 1 ? Math.round(daysBetween(first.date, last.date) / (chrono.length - 1)) : null;
+  // Stats only make sense for fully/partly dated entries.
+  const dated = chrono.filter(e => e.date);
+  const first = dated[0];
+  const last  = dated[dated.length - 1];
+  const avgBetween = dated.length > 1 ? Math.round(daysBetween(first.date, last.date) / (dated.length - 1)) : null;
+  // Newest first (dateless last), numbered by chronological order.
   const rows = chrono
-    .map((e, i) => ({ entry: e, num: i + 1, gap: i === 0 ? null : daysBetween(chrono[i - 1].date, e.date) }))
-    .reverse(); // newest first
+    .map((e, i) => ({ entry: e, num: i + 1 }))
+    .reverse();
   return (
     <View style={{ marginTop: 14 }}>
-      <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
-        <Stat value={daysSince(last.date)} label="since last" color={color} />
-        <Stat value={daysSince(first.date)} label="days since first" color={colors.text1} />
-        <Stat value={avgBetween === null ? '—' : avgBetween} label="avg between" color={colors.text1} />
-      </View>
+      {dated.length > 0 && (
+        <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
+          <Stat value={daysSince(last.date)} label="since last" color={color} />
+          <Stat value={daysSince(first.date)} label="days since first" color={colors.text1} />
+          <Stat value={avgBetween === null ? '—' : avgBetween} label="avg between" color={colors.text1} />
+        </View>
+      )}
       <Text style={{ fontSize: 10, fontWeight: '700', color: colors.text3, textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 8 }}>
         History
       </Text>
-      {rows.map(({ entry, num, gap }) => (
-        <View key={entry.date + num} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 10 }}>
+      {rows.map(({ entry, num }) => (
+        <View key={(entry.date || 'none') + num} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 10 }}>
           <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: colors.isDark ? 'rgba(62,207,178,0.16)' : colors.tint, alignItems: 'center', justifyContent: 'center', marginTop: 1 }}>
             <Text style={{ fontSize: 11, fontWeight: '800', color: colors.teal }}>{num}</Text>
           </View>
           <View style={{ flex: 1 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-              <Text style={{ fontSize: 13, fontWeight: '600', color: colors.text1 }}>{fmtFull(entry.date)}</Text>
-              {gap !== null && (
-                <Text style={{ fontSize: 11, fontWeight: '700', color: colors.text3 }}>+{gap}d</Text>
-              )}
-            </View>
+            <Text style={{ fontSize: 13, fontWeight: '600', color: entry.date ? colors.text1 : colors.text3 }}>
+              {entry.datePrecision === 'full' || !entry.datePrecision ? fmtFull(entry.date) : fmtLogDate(entry.date, entry.datePrecision)}
+            </Text>
             {!!entry.note && (
               <Text style={{ fontSize: 12, color: colors.text2, marginTop: 2 }}>{entry.note}</Text>
             )}

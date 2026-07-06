@@ -5,9 +5,9 @@ import { useTheme } from '../../contexts/ThemeContext';
 function TabIcon({ label, icon, focused }: { label: string; icon: string; focused: boolean }) {
   const { colors } = useTheme();
   return (
-    <View style={{ alignItems: 'center', gap: 3 }}>
+    <View style={{ alignItems: 'center', gap: 3, width: 76 }}>
       <Text style={{ fontSize: 20, lineHeight: 24 }}>{icon}</Text>
-      <Text style={{ fontSize: 10, fontWeight: '600', color: focused ? colors.accent : colors.text3 }}>
+      <Text numberOfLines={1} style={{ fontSize: 10, fontWeight: '600', color: focused ? colors.accent : colors.text3 }}>
         {label}
       </Text>
     </View>
@@ -36,12 +36,12 @@ export default function TabLayout() {
         options={{ tabBarIcon: ({ focused }) => <TabIcon icon="⏳" label="Countdowns" focused={focused} /> }}
       />
       <Tabs.Screen
-        name="calendar"
-        options={{ tabBarIcon: ({ focused }) => <TabIcon icon="📆" label="Calendar" focused={focused} /> }}
+        name="lifelog"
+        options={{ tabBarIcon: ({ focused }) => <TabIcon icon="📓" label="Life Log" focused={focused} /> }}
       />
       <Tabs.Screen
-        name="favorites"
-        options={{ tabBarIcon: ({ focused }) => <TabIcon icon="⭐" label="Favorites" focused={focused} /> }}
+        name="goals"
+        options={{ tabBarIcon: ({ focused }) => <TabIcon icon="🎯" label="Goals" focused={focused} /> }}
       />
       <Tabs.Screen
         name="profile"

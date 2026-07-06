@@ -205,6 +205,18 @@ export function fmtShortNoYear(dateStr: string): string {
   return isValidDate(d) ? format(d, 'MMM d') : '';
 }
 
+// A life-log entry date rendered at its known precision:
+//  full → "Mar 15, 2019", month → "March 2019", year → "2019", none → "No date".
+export function fmtLogDate(dateStr: string, precision?: 'none' | 'year' | 'month' | 'full'): string {
+  const p = precision ?? 'full';
+  if (p === 'none' || !dateStr) return 'No date';
+  if (p === 'year')  return dateStr.slice(0, 4);
+  const d = toDate(dateStr);
+  if (!isValidDate(d)) return dateStr.slice(0, 4) || 'No date';
+  if (p === 'month') return format(d, 'MMMM yyyy');
+  return format(d, 'MMM d, yyyy');
+}
+
 // Event-aware display: timed events append the time, all-day events show date only.
 // Compact, e.g. "Fri, Jun 26 · 7:00 PM" or "Fri, Jun 26".
 export function fmtDateTime(iso: string, allDay: boolean): string {
