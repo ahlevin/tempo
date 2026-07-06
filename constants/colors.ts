@@ -92,18 +92,46 @@ export function dayCountColor(colors: Palette, days: number): string {
   return days <= 30 ? colors.rose : colors.accent;
 }
 
-// Category accents / tints — shared across themes (vivid colors read on both).
-export const CatColors: Record<string, string> = {
-  travel:      '#3ECFB2',
-  celebration: '#7C6AF5',
-  work:        '#F0A04B',
-  personal:    '#E8507A',
-  goal:        '#3ECFB2',
+// Accent color per category / kind, with distinct dark- and light-theme (Yacht
+// Club) values. Dark = vivid on near-black; light = deeper/saturated so it holds
+// contrast on white. Covers the 7 event categories plus goals and the recurring
+// memory types (used for hero accents and the home filter pills).
+export interface CatColorPair { dark: string; light: string; }
+export const CatColorMap: Record<string, CatColorPair> = {
+  // Event categories
+  money:    { dark: '#34D399', light: '#059669' }, // green / emerald
+  travel:   { dark: '#3ECFB2', light: '#0D9488' }, // teal
+  work:     { dark: '#5B8DEF', light: '#2563EB' }, // blue (Work / School)
+  medical:  { dark: '#FB6F84', light: '#C5001A' }, // red / crimson
+  house:    { dark: '#F0A04B', light: '#B45309' }, // amber (House / Vehicle)
+  holidays: { dark: '#2E8B57', light: '#1B5E20' }, // pine / forest green
+  parties:  { dark: '#7C6AF5', light: '#5B4BD1' }, // violet
+  // Goals + recurring memory types
+  goal:        { dark: '#3ECFB2', light: '#002C54' },
+  birthday:    { dark: '#E8507A', light: '#002C54' },
+  anniversary: { dark: '#7C6AF5', light: '#002C54' },
+  memorial:    { dark: '#8FA3B8', light: '#5B6B7A' }, // muted slate / gray-blue
 };
 
-export const CatBg: Record<string, string> = {
-  travel:      'rgba(62,207,178,0.11)',
-  celebration: 'rgba(124,106,245,0.11)',
-  work:        'rgba(240,160,75,0.11)',
-  personal:    'rgba(232,80,122,0.11)',
-};
+function hexToRgba(hex: string, a: number): string {
+  const h = hex.replace('#', '');
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return `rgba(${r},${g},${b},${a})`;
+}
+
+// Theme-aware accent for a category/kind id. Falls back to the theme accent.
+export function catColor(colors: Palette, id: string): string {
+  const c = CatColorMap[id];
+  if (!c) return colors.accent;
+  return colors.isDark ? c.dark : c.light;
+}
+
+// Theme-aware soft background (emoji circle / chip) for a category id. Light
+// theme uses the neutral Yacht Club tint; dark uses a translucent accent wash.
+export function catBg(colors: Palette, id: string): string {
+  if (!colors.isDark) return colors.tint;
+  const c = CatColorMap[id];
+  return hexToRgba(c ? c.dark : '#7C6AF5', 0.12);
+}

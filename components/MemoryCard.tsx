@@ -7,20 +7,24 @@ import { Memory } from '../store/types';
 import { SwipeableRow } from './SwipeableRow';
 import { FavStar } from './FavStar';
 import { AlertBadge } from './AlertBadge';
-import { lightCardShadow } from '../constants/colors';
+import { lightCardShadow, catColor } from '../constants/colors';
 import {
   yearsMonthsDays, nextAnnual, daysSince, daysUntil, daysBetween,
   ordinal, fmtShort, fmtFull, fmtMonthDay, fmtShortNoYear,
 } from '../utils/dates';
 
+// memorial's 'accent' key is a placeholder — its color is resolved via
+// catColor('memorial') (muted slate) rather than a palette key.
 const TYPE_COLOR_KEY: Record<Memory['type'], 'rose' | 'accent' | 'teal'> = {
-  birthday: 'rose', anniversary: 'accent', lifelog: 'teal',
+  birthday: 'rose', anniversary: 'accent', memorial: 'accent', lifelog: 'teal',
 };
 const TYPE_BORDER: Record<Memory['type'], string> = {
-  birthday: 'rgba(232,80,122,0.28)', anniversary: 'rgba(124,106,245,0.28)', lifelog: 'rgba(62,207,178,0.28)',
+  birthday: 'rgba(232,80,122,0.28)', anniversary: 'rgba(124,106,245,0.28)',
+  memorial: 'rgba(143,163,184,0.28)', lifelog: 'rgba(62,207,178,0.28)',
 };
 const TYPE_BG: Record<Memory['type'], string> = {
-  birthday: 'rgba(232,80,122,0.12)', anniversary: 'rgba(124,106,245,0.12)', lifelog: 'rgba(62,207,178,0.11)',
+  birthday: 'rgba(232,80,122,0.12)', anniversary: 'rgba(124,106,245,0.12)',
+  memorial: 'rgba(143,163,184,0.12)', lifelog: 'rgba(62,207,178,0.11)',
 };
 
 function Stat({ value, label, color }: { value: string | number; label: string; color: string }) {
@@ -47,7 +51,7 @@ function Bridge({ text, color }: { text: string; color: string }) {
   );
 }
 
-const KNOWN_TYPES = new Set(['birthday', 'anniversary', 'lifelog']);
+const KNOWN_TYPES = new Set(['birthday', 'anniversary', 'memorial', 'lifelog']);
 
 export function MemoryCard({ memory: m }: { memory: Memory }) {
   const { colors } = useTheme();
@@ -58,9 +62,12 @@ export function MemoryCard({ memory: m }: { memory: Memory }) {
   // Legacy/unknown types (e.g. a removed 'milestone' row) render nothing.
   if (!KNOWN_TYPES.has(m.type)) return null;
 
-  // Light "Yacht Club": all decorative type colors route to navy (rose is
-  // reserved for crimson urgency); borders/backgrounds use the neutral tokens.
-  const color  = colors.isDark ? colors[TYPE_COLOR_KEY[m.type]] : colors.accent;
+  // Light "Yacht Club": decorative type colors route to navy (rose is reserved
+  // for crimson urgency); borders/backgrounds use the neutral tokens. Memorial
+  // keeps its muted slate in both themes (respectful, never crimson/navy).
+  const color  = m.type === 'memorial'
+    ? catColor(colors, 'memorial')
+    : (colors.isDark ? colors[TYPE_COLOR_KEY[m.type]] : colors.accent);
   const border = colors.isDark ? TYPE_BORDER[m.type] : colors.border;
   const bg     = colors.isDark ? TYPE_BG[m.type] : colors.tint;
   const r      = yearsMonthsDays(m.originDate);
@@ -85,17 +92,23 @@ export function MemoryCard({ memory: m }: { memory: Memory }) {
           <View style={{ flex: 1 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
               <Text style={{ fontSize: 15, fontWeight: '700', color: colors.text1, maxWidth: '80%' }} numberOfLines={1}>{m.name}</Text>
-              {(m.type === 'birthday' || m.type === 'anniversary') && <AlertBadge count={m.alerts?.length} />}
+              {(m.type === 'birthday' || m.type === 'anniversary' || m.type === 'memorial') && <AlertBadge count={m.alerts?.length} />}
             </View>
             <Text style={{ fontSize: 11, color: colors.text3, marginTop: 2 }}>
               {m.yearUnknown ? fmtShortNoYear(m.originDate) : fmtShort(m.originDate)}
             </Text>
+            {!!m.note && (
+              <Text style={{ fontSize: 11, color: colors.text2, marginTop: 2, fontStyle: 'italic' }} numberOfLines={1}>
+                {m.note}
+              </Text>
+            )}
           </View>
           <FavStar active={m.fav} onToggle={() => toggleMemoryFav(m.id)} />
         </View>
 
         {m.type === 'birthday'    && <BirthdayBody m={m} r={r} color={color} />}
         {m.type === 'anniversary' && <AnniversaryBody m={m} r={r} color={color} />}
+        {m.type === 'memorial'    && <MemorialBody m={m} r={r} color={color} />}
         {m.type === 'lifelog'     && (
           <LifelogBody m={m} color={color} showAll={showAll} onToggle={() => setShowAll(v => !v)} />
         )}
@@ -189,6 +202,35 @@ function AnniversaryBody({ m, r, color }: { m: Memory; r: YMD; color: string }) 
       </View>
       <Bridge color={color}
         text={`${ordinal(r.y + 1)} anniversary — ${fmtShort(nb)} · ${daysUntil(nb)} days away`} />
+    </>
+  );
+}
+
+// Memorial reuses the anniversary layout (annual countdown, "X years since"),
+// with respectful wording — "years since" / "Remembering · N years" — instead
+// of "Nth anniversary".
+function MemorialBody({ m, r, color }: { m: Memory; r: YMD; color: string }) {
+  const { colors } = useTheme();
+  const nb = nextAnnual(m.originDate);
+  if (m.yearUnknown) {
+    return (
+      <>
+        <BigDate value={fmtMonthDay(m.originDate)} label="in memory" color={color} />
+        <Bridge color={color}
+          text={`Remembering · next on ${fmtShortNoYear(nb)} — ${daysUntil(nb)} days away`} />
+      </>
+    );
+  }
+  return (
+    <>
+      <BigNumber value={r.y} label="years since" color={color} />
+      <View style={{ flexDirection: 'row', gap: 8 }}>
+        <Stat value={daysSince(m.originDate).toLocaleString()} label="days since" color={color} />
+        <Stat value={r.y * 12 + r.mo} label="months" color={colors.text1} />
+        <Stat value={r.d} label="days" color={colors.text1} />
+      </View>
+      <Bridge color={color}
+        text={`Remembering · ${r.y + 1} years — ${fmtShort(nb)} · ${daysUntil(nb)} days away`} />
     </>
   );
 }

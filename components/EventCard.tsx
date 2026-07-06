@@ -1,6 +1,6 @@
 import { DimensionValue, Text, TouchableOpacity, View } from 'react-native';
 import { router } from 'expo-router';
-import { CatBg, lightCardShadow, dayCountColor } from '../constants/colors';
+import { catBg, catColor, lightCardShadow, dayCountColor } from '../constants/colors';
 import { useTheme } from '../contexts/ThemeContext';
 import { useStore } from '../store/useStore';
 import { Event } from '../store/types';
@@ -8,10 +8,6 @@ import { SwipeableRow } from './SwipeableRow';
 import { FavStar } from './FavStar';
 import { AlertBadge } from './AlertBadge';
 import { nextOccurrence, daysUntil, eventProgress, recurLabel, fmtDateTime } from '../utils/dates';
-
-const CAT_ACCENT: Record<string, string> = {
-  travel: '#3ECFB2', celebration: '#7C6AF5', work: '#F0A04B', personal: '#E8507A',
-};
 
 export function EventCard({ event: e }: { event: Event }) {
   const { colors } = useTheme();
@@ -22,7 +18,7 @@ export function EventCard({ event: e }: { event: Event }) {
   const d      = daysUntil(nd);
   const p      = eventProgress(e);
   const uc     = dayCountColor(colors, d);
-  const accent = CAT_ACCENT[e.cat] || colors.accent;
+  const accent = catColor(colors, e.cat);
   const rl     = recurLabel(e);
   const dstr   = fmtDateTime(nd, e.allDay);
 
@@ -41,7 +37,7 @@ export function EventCard({ event: e }: { event: Event }) {
       {colors.isDark && <View style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, backgroundColor: accent, borderRadius: 2 }} />}
       <View style={{
         width: 42, height: 42, borderRadius: 12,
-        backgroundColor: colors.isDark ? (CatBg[e.cat] || 'rgba(124,106,245,0.11)') : colors.tint,
+        backgroundColor: catBg(colors, e.cat),
         alignItems: 'center', justifyContent: 'center',
       }}>
         <Text style={{ fontSize: 20 }}>{e.emoji}</Text>
@@ -60,6 +56,11 @@ export function EventCard({ event: e }: { event: Event }) {
           <AlertBadge count={e.alerts.length} />
         </View>
         <Text style={{ fontSize: 11, color: colors.text3, marginTop: 2 }}>{dstr}</Text>
+        {!!e.note && (
+          <Text style={{ fontSize: 11, color: colors.text2, marginTop: 2, fontStyle: 'italic' }} numberOfLines={1}>
+            {e.note}
+          </Text>
+        )}
         <View style={{ height: 2, backgroundColor: colors.track, borderRadius: 1, marginTop: 7, overflow: 'hidden' }}>
           <View style={{ height: '100%', width: `${p}%` as DimensionValue, backgroundColor: uc, borderRadius: 1 }} />
         </View>

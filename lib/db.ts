@@ -39,6 +39,7 @@ export function rowToEvent(r: any): Event {
     date: datePart(start),
     created: r.created_at ? datePart(r.created_at) : datePart(start),
     fav: !!r.fav,
+    note: r.note ?? '',
     recur: r.recur ?? null,
     alerts: r.alerts ?? [],
   };
@@ -55,6 +56,7 @@ export function eventToRow(e: Event, userId: string) {
     start: e.start,
     end: e.end,
     fav: e.fav,
+    note: e.note,
     recur: e.recur,
     alerts: e.alerts,
     created_at: `${e.created}T00:00:00Z`,
@@ -74,6 +76,7 @@ export function rowToGoal(r: any): Goal {
     date: datePart(r.target_date ?? ''),
     created: r.created_at ? datePart(r.created_at) : datePart(r.target_date ?? ''),
     fav: !!r.fav,
+    note: r.note ?? '',
     alerts: r.alerts ?? [],
   };
 }
@@ -90,6 +93,7 @@ export function goalToRow(g: Goal, userId: string) {
     step: g.step,
     target_date: `${g.date}T00:00:00Z`,
     fav: g.fav,
+    note: g.note,
     alerts: g.alerts,
     created_at: `${g.created}T00:00:00Z`,
   };

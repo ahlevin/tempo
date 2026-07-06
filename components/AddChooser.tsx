@@ -11,6 +11,8 @@ const CHOICES: Choice[] = [
     go: () => router.push({ pathname: '/modals/add-memory', params: { type: 'birthday' } }) },
   { icon: '💍', label: 'Anniversary', sub: 'Repeats yearly · counts the years', tint: 'rgba(124,106,245,0.14)',
     go: () => router.push({ pathname: '/modals/add-memory', params: { type: 'anniversary' } }) },
+  { icon: '🕊️', label: 'Memorial',    sub: 'Remember someone, every year',       tint: 'rgba(143,163,184,0.14)',
+    go: () => router.push({ pathname: '/modals/add-memory', params: { type: 'memorial' } }) },
   { icon: '🎯', label: 'Goal',        sub: 'Track progress to a target',        tint: 'rgba(62,207,178,0.14)',
     go: () => router.push('/modals/add-goal') },
   { icon: '🏔️', label: 'Life Log',    sub: 'Log every time it happens',         tint: 'rgba(62,207,178,0.14)',

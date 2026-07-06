@@ -21,6 +21,7 @@ export default function AddGoalModal() {
   const [step,   setStep]   = useState('1');
   const [date,   setDate]   = useState(format(addDays(new Date(), 90), 'yyyy-MM-dd'));
   const [emoji,  setEmoji]  = useState('🎯');
+  const [note,   setNote]   = useState('');
   const [alerts, setAlerts] = useState<AlertType[]>([]);
 
   const fi = { backgroundColor:colors.glass, borderWidth:1,
@@ -30,7 +31,7 @@ export default function AddGoalModal() {
   function submit() {
     if (!name.trim() || !target || !date) { showToast('⚠️', 'Missing info', 'Please fill in all fields.'); return; }
     addGoal({ name:name.trim(), emoji, target:parseFloat(target),
-      unit:unit.trim()||'units', step:parseFloat(step)||1, date, fav:false, alerts });
+      unit:unit.trim()||'units', step:parseFloat(step)||1, date, fav:false, note:note.trim(), alerts });
     router.back();
   }
 
@@ -75,6 +76,10 @@ export default function AddGoalModal() {
               </TouchableOpacity>
             ))}
           </View>
+          <FL label="Note (optional)" />
+          <TextInput value={note} onChangeText={setNote} multiline
+            placeholder="Add a note…" placeholderTextColor={colors.text3}
+            style={{ ...fi, minHeight:64, textAlignVertical:'top' }} />
           <AlertsEditor value={alerts} onChange={setAlerts} />
           <TouchableOpacity onPress={submit}
             style={{ backgroundColor:colors.teal, borderRadius:14, padding:15, alignItems:'center' }}>

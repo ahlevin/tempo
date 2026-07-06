@@ -15,7 +15,7 @@ export interface Event {
   id: string;
   name: string;
   emoji: string;
-  cat: 'travel' | 'celebration' | 'work' | 'personal';
+  cat: 'money' | 'travel' | 'work' | 'medical' | 'house' | 'holidays' | 'parties';
   allDay: boolean;
   start: string;       // ISO datetime, e.g. "2026-06-26T19:00:00"
   end: string | null;  // ISO datetime, or null when there is no end
@@ -23,6 +23,7 @@ export interface Event {
   date: string;        // "YYYY-MM-DD"
   created: string;
   fav: boolean;
+  note: string;
   recur: Recurrence | null;
   alerts: Alert[];
 }
@@ -38,6 +39,7 @@ export interface Goal {
   date: string;
   created: string;
   fav: boolean;
+  note: string;
   alerts: Alert[];
 }
 
@@ -48,7 +50,7 @@ export interface LogEntry {
 
 export interface Memory {
   id: string;
-  type: 'birthday' | 'anniversary' | 'lifelog';
+  type: 'birthday' | 'anniversary' | 'memorial' | 'lifelog';
   name: string;
   emoji: string;
   originDate: string;

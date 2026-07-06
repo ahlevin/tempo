@@ -22,7 +22,8 @@ export default function AddEventModal() {
   const [start,   setStart]   = useState(`${defaultDay}T09:00:00`);
   const [end,     setEnd]     = useState(`${defaultDay}T10:00:00`);
   const [emoji,   setEmoji]   = useState('🎉');
-  const [cat,     setCat]     = useState('celebration');
+  const [cat,     setCat]     = useState('parties');
+  const [note,   setNote]   = useState('');
   const [recur,  setRecur]  = useState<Recurrence | null>(null);
   const [alerts, setAlerts] = useState<AlertType[]>([]);
 
@@ -32,7 +33,7 @@ export default function AddEventModal() {
     addEvent({
       name: name.trim(), emoji, cat: cat as any,
       allDay, start: startIso, end: allDay ? null : end, date: startIso.slice(0, 10), fav: false,
-      recur, alerts,
+      note: note.trim(), recur, alerts,
     });
     router.back();
   }
@@ -92,10 +93,15 @@ export default function AddEventModal() {
                   borderColor: cat === c.id ? colors.accent : colors.border,
                   backgroundColor: cat === c.id ? (colors.isDark ? 'rgba(124,106,245,0.12)' : colors.tint) : colors.glass }}>
                 <Text style={{ fontSize:13, fontWeight:'600',
-                  color: cat === c.id ? colors.accent : colors.text2 }}>{c.label}</Text>
+                  color: cat === c.id ? colors.accent : colors.text2 }}>{c.emoji} {c.label}</Text>
               </TouchableOpacity>
             ))}
           </View>
+
+          <FL label="Note (optional)" />
+          <TextInput value={note} onChangeText={setNote} multiline
+            placeholder="Add a note…" placeholderTextColor={colors.text3}
+            style={{ ...fi, minHeight:64, textAlignVertical:'top' }} />
 
           <RecurrenceEditor value={recur} onChange={setRecur} />
 

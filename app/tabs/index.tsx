@@ -13,7 +13,21 @@ import { GoalCard } from '../../components/GoalCard';
 import { AddChooser } from '../../components/AddChooser';
 import { UpcomingMemoryRow } from '../../components/UpcomingMemoryRow';
 import { Event, Memory } from '../../store/types';
+import { CATEGORIES } from '../../constants/data';
+import { catColor } from '../../constants/colors';
 import { nextOccurrence, nextAnnual, daysUntil } from '../../utils/dates';
+
+// Home-screen filter pills: All, the 7 event categories, the 3 recurring memory
+// types, and Goals. Selecting a category shows those events; a memory-type shows
+// those memories; Goals shows goals.
+const FILTERS: { id: string; label: string; emoji: string }[] = [
+  { id: 'all', label: 'All', emoji: '' },
+  ...CATEGORIES.map(c => ({ id: c.id, label: c.short, emoji: c.emoji })),
+  { id: 'birthday',    label: 'Birthdays',     emoji: '🎂' },
+  { id: 'anniversary', label: 'Anniversaries', emoji: '💍' },
+  { id: 'memorial',    label: 'Memorials',     emoji: '🕊️' },
+  { id: 'goal',        label: 'Goals',         emoji: '🎯' },
+];
 
 // A row in the "Upcoming" list: either an event or a recurring
 // birthday/anniversary memory. Sorted together by days-until-next-occurrence.
@@ -30,31 +44,37 @@ export default function HomeScreen() {
   const [filter, setFilter] = useState('all');
   const [chooserOpen, setChooserOpen] = useState(false);
 
-  const FILTERS = [
-    { id:'all',         label:'All' },
-    { id:'travel',      label:'✈️ Travel' },
-    { id:'celebration', label:'🎉 Celebration' },
-    { id:'work',        label:'💼 Work' },
-    { id:'personal',    label:'❤️ Personal' },
-    { id:'goal',        label:'🎯 Goals' },
-  ];
+  const isCat     = CATEGORIES.some(c => c.id === filter);
+  const isMemType = filter === 'birthday' || filter === 'anniversary' || filter === 'memorial';
+  const isGoal    = filter === 'goal';
+  const isAll     = filter === 'all';
 
-  // Upcoming = events (+ recurring birthday/anniversary memories when unfiltered),
-  // interleaved and sorted by soonest next occurrence.
+  // Upcoming list: 'all' interleaves events + recurring memories; a category pill
+  // narrows to those events; a memory-type pill narrows to those memories. All
+  // sorted by soonest next occurrence.
   const upcoming: UpcomingItem[] = [];
-  if (filter !== 'goal') {
+  if (isAll || isCat) {
     events
-      .filter(e => filter === 'all' || e.cat === filter)
+      .filter(e => isAll || e.cat === filter)
       .forEach(e => upcoming.push({ kind: 'event', data: e }));
-    if (filter === 'all') {
-      memories
-        .filter(m => m.type === 'birthday' || m.type === 'anniversary')
-        .forEach(m => upcoming.push({ kind: 'memory', data: m }));
-    }
-    upcoming.sort((a, b) => upcomingDays(a) - upcomingDays(b));
   }
+  if (isAll) {
+    memories
+      .filter(m => m.type === 'birthday' || m.type === 'anniversary' || m.type === 'memorial')
+      .forEach(m => upcoming.push({ kind: 'memory', data: m }));
+  } else if (isMemType) {
+    memories
+      .filter(m => m.type === filter)
+      .forEach(m => upcoming.push({ kind: 'memory', data: m }));
+  }
+  upcoming.sort((a, b) => upcomingDays(a) - upcomingDays(b));
 
-  const showGoals = filter === 'all' || filter === 'goal';
+  // Section visibility. Goals + the full Memories/Life-Log list only appear under
+  // "All" (or the Goals pill); a specific pill shows just its matching Upcoming list.
+  const showUpcoming = isAll || isCat || isMemType;
+  const showGoals    = isAll || isGoal;
+  const showMemories = isAll;
+  const upcomingTitle = isAll ? 'Upcoming' : (FILTERS.find(f => f.id === filter)?.label ?? 'Upcoming');
 
   return (
     <SafeAreaView style={{ flex:1, backgroundColor:colors.bg }} edges={['top']}>
@@ -87,34 +107,41 @@ export default function HomeScreen() {
         {/* Quote of the Day */}
         <QuoteCard type={prefs.quotePref} />
 
-        {/* Filter pills */}
+        {/* Filter pills — long, horizontally scrollable. Selected pill uses the
+            item's own accent color. */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false}
           style={{ marginBottom:16 }} contentContainerStyle={{ gap:8 }}>
-          {FILTERS.map(f => (
-            <TouchableOpacity key={f.id} onPress={() => setFilter(f.id)}
-              style={{ paddingVertical:7, paddingHorizontal:14, borderRadius:20, borderWidth:1,
-                borderColor: filter===f.id
-                  ? (colors.isDark ? 'rgba(124,106,245,0.4)' : colors.accent)
-                  : colors.border,
-                backgroundColor: filter===f.id
-                  ? (colors.isDark ? 'rgba(124,106,245,0.2)' : colors.accent)
-                  : (colors.isDark ? colors.glass : colors.surf) }}>
-              <Text style={{ fontSize:12, fontWeight:'600',
-                color: filter===f.id
-                  ? (colors.isDark ? colors.accent : '#FFFFFF')
-                  : (colors.isDark ? colors.text2 : colors.text1) }}>{f.label}</Text>
-            </TouchableOpacity>
-          ))}
+          {FILTERS.map(f => {
+            const sel = filter === f.id;
+            const pc  = catColor(colors, f.id); // item color (theme accent for 'all')
+            return (
+              <TouchableOpacity key={f.id} onPress={() => setFilter(f.id)}
+                style={{ paddingVertical:7, paddingHorizontal:14, borderRadius:20, borderWidth:1,
+                  borderColor: sel ? pc : colors.border,
+                  backgroundColor: sel
+                    ? (colors.isDark ? colors.glass : pc)
+                    : (colors.isDark ? colors.glass : colors.surf) }}>
+                <Text style={{ fontSize:12, fontWeight:'600',
+                  color: sel
+                    ? (colors.isDark ? pc : '#FFFFFF')
+                    : (colors.isDark ? colors.text2 : colors.text1) }}>
+                  {f.emoji ? `${f.emoji} ${f.label}` : f.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </ScrollView>
 
-        {/* Events */}
-        <SectionHeader title="Upcoming" onAdd={() => setChooserOpen(true)} />
-        {upcoming.length === 0 && filter !== 'goal' ? (
-          <EmptyPrompt icon="⏳" text="No countdowns yet — tap to start counting down to something."
-            onPress={() => setChooserOpen(true)} />
-        ) : upcoming.map(it => it.kind === 'event'
-            ? <EventCard key={`e-${it.data.id}`} event={it.data} />
-            : <UpcomingMemoryRow key={`m-${it.data.id}`} memory={it.data} />)}
+        {/* Upcoming (events + recurring memories, filtered) */}
+        {showUpcoming && <>
+          <SectionHeader title={upcomingTitle} onAdd={() => setChooserOpen(true)} />
+          {upcoming.length === 0 ? (
+            <EmptyPrompt icon="⏳" text="Nothing here yet — tap to start counting down to something."
+              onPress={() => setChooserOpen(true)} />
+          ) : upcoming.map(it => it.kind === 'event'
+              ? <EventCard key={`e-${it.data.id}`} event={it.data} />
+              : <UpcomingMemoryRow key={`m-${it.data.id}`} memory={it.data} />)}
+        </>}
 
         {/* Goals */}
         {showGoals && <>
@@ -125,12 +152,14 @@ export default function HomeScreen() {
             : goals.map(g => <GoalCard key={g.id} goal={g} />)}
         </>}
 
-        {/* Memories */}
-        <SectionHeader title="Memories & Life Log" onAdd={() => router.push('/modals/add-memory')} />
-        {memories.length === 0
-          ? <EmptyPrompt icon="📸" text="No memories yet — tap to remember a birthday, anniversary, or life log."
-              onPress={() => router.push('/modals/add-memory')} />
-          : memories.map(m => <MemoryCard key={m.id} memory={m} />)}
+        {/* Memories (full cards incl. Life Log) — only under "All" */}
+        {showMemories && <>
+          <SectionHeader title="Memories & Life Log" onAdd={() => router.push('/modals/add-memory')} />
+          {memories.length === 0
+            ? <EmptyPrompt icon="📸" text="No memories yet — tap to remember a birthday, anniversary, or life log."
+                onPress={() => router.push('/modals/add-memory')} />
+            : memories.map(m => <MemoryCard key={m.id} memory={m} />)}
+        </>}
 
         {/* Integrations */}
         <SectionHeader title="Integrations" />

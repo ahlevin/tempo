@@ -14,12 +14,12 @@ import { Toggle } from '../../components/FormControls';
 
 const DATE_LABELS: Record<string,string> = {
   birthday:'Date of Birth', anniversary:'Anniversary Date',
-  lifelog:'First Occurrence'
+  memorial:'Date to Remember', lifelog:'First Occurrence'
 };
 const DEF_EMOJIS: Record<string,string> = {
-  birthday:'🎂', anniversary:'💑', lifelog:'🏔️'
+  birthday:'🎂', anniversary:'💑', memorial:'🕊️', lifelog:'🏔️'
 };
-const MEM_TYPE_IDS = ['birthday', 'anniversary', 'lifelog'];
+const MEM_TYPE_IDS = ['birthday', 'anniversary', 'memorial', 'lifelog'];
 
 export default function AddMemoryModal() {
   const { colors } = useTheme();
@@ -110,7 +110,7 @@ export default function AddMemoryModal() {
           <FL label="Note (optional)" />
           <TextInput value={note} onChangeText={setNote}
             placeholder="Add a note…" placeholderTextColor={colors.text3} style={fi} />
-          {(type === 'birthday' || type === 'anniversary') && (
+          {(type === 'birthday' || type === 'anniversary' || type === 'memorial') && (
             <AlertsEditor value={alerts} onChange={setAlerts} />
           )}
           <TouchableOpacity onPress={submit}

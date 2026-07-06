@@ -61,6 +61,11 @@ export function GoalCard({ goal: g }: { goal: Goal }) {
             <AlertBadge count={g.alerts?.length} />
           </View>
           <Text style={{ fontSize: 11, color: colors.text3, marginTop: 2 }}>{dstr}</Text>
+          {!!g.note && (
+            <Text style={{ fontSize: 11, color: colors.text2, marginTop: 2, fontStyle: 'italic' }} numberOfLines={1}>
+              {g.note}
+            </Text>
+          )}
         </View>
         <View style={{ alignItems: 'center' }}>
           <View style={{ alignItems: 'flex-end' }}>

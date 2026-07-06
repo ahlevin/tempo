@@ -6,7 +6,7 @@ import { Memory } from '../store/types';
 import { SwipeableRow } from './SwipeableRow';
 import { FavStar } from './FavStar';
 import { AlertBadge } from './AlertBadge';
-import { lightCardShadow, dayCountColor } from '../constants/colors';
+import { lightCardShadow, dayCountColor, catColor } from '../constants/colors';
 import { nextAnnual, daysUntil, yearsMonthsDays, ordinal } from '../utils/dates';
 
 // A compact "Upcoming" list row for a recurring birthday/anniversary memory.
@@ -17,16 +17,24 @@ export function UpcomingMemoryRow({ memory: m }: { memory: Memory }) {
   const deleteMemory    = useStore(s => s.deleteMemory);
   const toggleMemoryFav = useStore(s => s.toggleMemoryFav);
 
-  const isBday = m.type === 'birthday';
+  const isBday     = m.type === 'birthday';
+  const isMemorial = m.type === 'memorial';
   const nb     = nextAnnual(m.originDate);
   const d      = daysUntil(nb);
   const r      = yearsMonthsDays(m.originDate);
-  // Decorative accent for the "Turning N" label / emoji circle. In light,
-  // rose = crimson (reserved for urgency), so the birthday accent routes to navy.
-  const color  = colors.isDark && isBday ? colors.rose : colors.accent;
-  const bg     = colors.isDark ? (isBday ? 'rgba(232,80,122,0.12)' : 'rgba(124,106,245,0.12)') : colors.tint;
-  const dcColor = dayCountColor(colors, d);
-  const context = isBday ? `Turning ${r.y + 1}` : `${ordinal(r.y + 1)} anniversary`;
+  // Decorative accent for the label / emoji circle. In light, rose = crimson
+  // (reserved for urgency), so the birthday accent routes to navy. Memorial
+  // keeps its muted slate in both themes.
+  const color  = isMemorial ? catColor(colors, 'memorial')
+               : (colors.isDark && isBday ? colors.rose : colors.accent);
+  const bg     = colors.isDark
+    ? (isMemorial ? 'rgba(143,163,184,0.12)' : isBday ? 'rgba(232,80,122,0.12)' : 'rgba(124,106,245,0.12)')
+    : colors.tint;
+  // Memorial's day-count stays slate (not the urgency ramp).
+  const dcColor = isMemorial ? color : dayCountColor(colors, d);
+  const context = isBday ? `Turning ${r.y + 1}`
+                : isMemorial ? `${r.y + 1} years since`
+                : `${ordinal(r.y + 1)} anniversary`;
   const dateStr = new Date(nb + 'T00:00:00').toLocaleDateString('en-US',
     { weekday: 'short', month: 'short', day: 'numeric' });
 

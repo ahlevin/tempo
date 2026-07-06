@@ -13,11 +13,12 @@ import { useToast } from '../../components/Toast';
 
 const STEPS = ['Your name', 'Time zone', 'First countdown', 'Daily quote'];
 
-type ItemType = 'event' | 'birthday' | 'anniversary';
+type ItemType = 'event' | 'birthday' | 'anniversary' | 'memorial';
 const ITEM_TYPES: { id: ItemType; label: string; emoji: string }[] = [
   { id: 'event',       label: 'Event',       emoji: '🎉' },
   { id: 'birthday',    label: 'Birthday',    emoji: '🎂' },
   { id: 'anniversary', label: 'Anniversary', emoji: '💍' },
+  { id: 'memorial',    label: 'Memorial',    emoji: '🕊️' },
 ];
 
 const QUOTE_OPTS: { id: UserPrefs['quotePref']; icon: string; label: string; desc: string }[] = [
@@ -73,16 +74,16 @@ export default function OnboardingWizard() {
       if (itemType === 'event') {
         // A plain one-time event, counting down to the chosen date.
         addEvent({
-          name: evName.trim(), emoji: '🎉', cat: 'celebration',
+          name: evName.trim(), emoji: '🎉', cat: 'parties',
           allDay: true, start: `${evDate}T00:00:00`, end: null, date: evDate,
-          fav: false, recur: null, alerts: [],
+          fav: false, note: '', recur: null, alerts: [],
         });
       } else {
         // Birthday/anniversary: a recurring Memory. The origin year (e.g. 1974)
         // is preserved for age/years; the countdown targets the next annual date.
         addMemory({
           type: itemType, name: evName.trim(),
-          emoji: itemType === 'birthday' ? '🎂' : '💍',
+          emoji: itemType === 'birthday' ? '🎂' : itemType === 'memorial' ? '🕊️' : '💍',
           originDate: evDate, yearUnknown, entries: [], note: '', fav: false, alerts: [],
         });
       }
@@ -102,9 +103,11 @@ export default function OnboardingWizard() {
   }
 
   const dateLabel = itemType === 'event' ? 'Date'
-    : itemType === 'birthday' ? 'Date of birth' : 'Anniversary date';
+    : itemType === 'birthday' ? 'Date of birth'
+    : itemType === 'memorial' ? 'Date to remember' : 'Anniversary date';
   const namePlaceholder = itemType === 'event' ? 'e.g. Summer vacation…'
-    : itemType === 'birthday' ? "e.g. Mom's birthday" : 'e.g. Our wedding';
+    : itemType === 'birthday' ? "e.g. Mom's birthday"
+    : itemType === 'memorial' ? 'e.g. In memory of Dad' : 'e.g. Our wedding';
 
   const isLast = step === STEPS.length - 1;
   const next = () => (isLast ? finish() : setStep(step + 1));
@@ -195,8 +198,8 @@ export default function OnboardingWizard() {
                     <Text style={{ fontSize: 15 }}>🔁</Text>
                     <Text style={{ flex: 1, fontSize: 12, color: colors.text2, lineHeight: 17 }}>
                       {yearUnknown
-                        ? `Just the month and day — sayZay counts down to the next ${itemType} every year. The year and ${itemType === 'birthday' ? 'age' : 'years'} won't be shown.`
-                        : `Enter the original ${itemType === 'birthday' ? 'birth date (e.g. the birth year)' : 'wedding date'}. sayZay counts down to the next one every year and shows the ${itemType === 'birthday' ? 'age' : 'years'} automatically — no need to set recurrence.`}
+                        ? `Just the month and day — sayZay counts down to it every year. The year and ${itemType === 'birthday' ? 'age' : 'years'} won't be shown.`
+                        : `Enter the original ${itemType === 'birthday' ? 'birth date (e.g. the birth year)' : itemType === 'memorial' ? 'date being remembered' : 'wedding date'}. sayZay counts down to it every year and shows the ${itemType === 'birthday' ? 'age' : 'years'} automatically — no need to set recurrence.`}
                     </Text>
                   </View>
                 </>

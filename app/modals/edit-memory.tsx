@@ -35,7 +35,7 @@ export default function EditMemoryModal() {
 
   const DATE_LABELS: Record<string,string> = {
     birthday:'Date of Birth', anniversary:'Anniversary Date',
-    lifelog:'First Occurrence'
+    memorial:'Date to Remember', lifelog:'First Occurrence'
   };
 
   if (!m) { router.back(); return null; }
@@ -89,7 +89,7 @@ export default function EditMemoryModal() {
           </View>
           <FL label="Note (optional)" />
           <TextInput value={note} onChangeText={setNote} placeholderTextColor={colors.text3} style={fi} />
-          {(m.type === 'birthday' || m.type === 'anniversary') && (
+          {(m.type === 'birthday' || m.type === 'anniversary' || m.type === 'memorial') && (
             <AlertsEditor value={alerts} onChange={setAlerts} />
           )}
           <TouchableOpacity onPress={save}

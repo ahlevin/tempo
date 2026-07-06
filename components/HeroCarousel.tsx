@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect } from 'react';
 import { View, Text, ScrollView, Dimensions, TouchableOpacity, Platform } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
-import { CatColors, dayCountColor } from '../constants/colors';
+import { catColor, dayCountColor } from '../constants/colors';
 import { useTheme } from '../contexts/ThemeContext';
 import { useStore } from '../store/useStore';
 import { nextOccurrence, daysUntil, msUntil, pctElapsed, eventProgress, recurLabel, nextAnnual, yearsMonthsDays, ordinal, fmtDateTimeFull, fmtMonthDay } from '../utils/dates';
@@ -81,7 +81,7 @@ function EventCard({ event: e }: { event: any }) {
   const mi     = ms > 0 ? Math.floor((ms % 3600000) / 60000) : 0;
   const s      = ms > 0 ? Math.floor((ms % 60000) / 1000) : 0;
   const p      = eventProgress(e);
-  const accent = CatColors[e.cat] || colors.accent;
+  const accent = catColor(colors, e.cat);
   const rl     = recurLabel(e);
   const whenStr = fmtDateTimeFull(nd, e.allDay);
   const pad    = (n: number) => String(n).padStart(2, '0');
@@ -200,34 +200,42 @@ function MemoryCard({ memory: m }: { memory: any }) {
   const { colors } = useTheme();
   const r = yearsMonthsDays(m.originDate);
 
-  // Birthday / anniversary → annual countdown.
-  if (m.type === 'birthday' || m.type === 'anniversary') {
-    const isBday = m.type === 'birthday';
+  // Birthday / anniversary / memorial → annual countdown.
+  if (m.type === 'birthday' || m.type === 'anniversary' || m.type === 'memorial') {
+    const isBday     = m.type === 'birthday';
+    const isMemorial = m.type === 'memorial';
     const nb    = nextAnnual(m.originDate);
     const days  = daysUntil(nb);
     const num   = r.y + 1;
     // Dark keeps the decorative rose/violet. Light: labels/accents route to navy
     // (rose is reserved for crimson urgency); the big day-count uses the urgency ramp.
-    const color     = isBday ? colors.rose : colors.accent;
-    const labelColor = colors.isDark ? color : colors.accent;
-    const bigColor   = colors.isDark ? color : dayCountColor(colors, days);
+    // Memorial keeps its muted slate in both themes (never crimson/navy).
+    const slate      = catColor(colors, 'memorial');
+    const color      = isMemorial ? slate : (isBday ? colors.rose : colors.accent);
+    const labelColor = isMemorial ? slate : (colors.isDark ? color : colors.accent);
+    const bigColor   = isMemorial ? slate : (colors.isDark ? color : dayCountColor(colors, days));
+    const eyebrow    = isBday ? 'Birthday Countdown' : isMemorial ? 'Memorial' : 'Anniversary Countdown';
+    const cardBgDark = isMemorial ? '#141A22' : '#1E0F1A';
+    const borderDark = isMemorial ? 'rgba(143,163,184,0.28)' : (isBday ? 'rgba(232,80,122,0.28)' : 'rgba(124,106,245,0.28)');
+    const midLabel   = m.yearUnknown ? fmtMonthDay(m.originDate)
+      : isBday ? `Turning ${num}`
+      : isMemorial ? `Remembering · ${num} years`
+      : `${ordinal(num)} Anniversary`;
     const wday  = new Date(nb + 'T00:00:00').toLocaleDateString('en-US', { weekday:'long' });
     // Year unknown → the next-occurrence date drops the year (no fake year printed).
     const dstr  = new Date(nb + 'T00:00:00').toLocaleDateString('en-US',
       m.yearUnknown ? { month:'long', day:'numeric' } : { month:'long', day:'numeric', year:'numeric' });
     return (
-      <View style={{ width:W, backgroundColor: colors.isDark ? '#1E0F1A' : colors.surf, borderRadius:24, padding:22,
-        borderWidth:1, borderColor: colors.isDark ? (isBday ? 'rgba(232,80,122,0.28)' : 'rgba(124,106,245,0.28)') : colors.border }}>
+      <View style={{ width:W, backgroundColor: colors.isDark ? cardBgDark : colors.surf, borderRadius:24, padding:22,
+        borderWidth:1, borderColor: colors.isDark ? borderDark : colors.border }}>
         <Text style={{ fontSize:11, fontWeight:'600', letterSpacing:1.2, textTransform:'uppercase', color:labelColor, marginBottom:5 }}>
-          {isBday ? 'Birthday Countdown' : 'Anniversary Countdown'}
+          {eyebrow}
         </Text>
         <Text style={{ fontSize:22, fontWeight:'700', color:colors.text1, marginBottom:4 }} numberOfLines={1}>
           {m.emoji} {m.name}
         </Text>
         <Text style={{ fontSize:14, fontWeight:'600', color:labelColor, marginBottom:14 }}>
-          {m.yearUnknown
-            ? fmtMonthDay(m.originDate)
-            : (isBday ? `Turning ${num}` : `${ordinal(num)} Anniversary`)}
+          {midLabel}
         </Text>
         <View style={{ alignItems:'center', paddingVertical:10 }}>
           <Text style={{ fontSize:64, fontWeight:'800', color:bigColor, letterSpacing:-2, fontVariant:['tabular-nums'] }}>{days}</Text>
@@ -297,10 +305,10 @@ export function HeroCarousel() {
   events.filter(e => e.fav).forEach(e => items.push({ kind:'event', data:e, days: daysUntil(nextOccurrence(e)) }));
   goals.filter(g => g.fav).forEach(g => items.push({ kind:'goal', data:g, days: daysUntil(g.date) }));
   memories
-    .filter(m => m.fav && (m.type === 'birthday' || m.type === 'anniversary' || m.type === 'lifelog'))
+    .filter(m => m.fav && (m.type === 'birthday' || m.type === 'anniversary' || m.type === 'memorial' || m.type === 'lifelog'))
     .forEach(m => {
-      // birthdays/anniversaries have a next-occurrence; life logs don't, so they sort last.
-      const days = (m.type === 'birthday' || m.type === 'anniversary')
+      // birthdays/anniversaries/memorials have a next-occurrence; life logs don't, so they sort last.
+      const days = (m.type === 'birthday' || m.type === 'anniversary' || m.type === 'memorial')
         ? daysUntil(nextAnnual(m.originDate)) : Number.MAX_SAFE_INTEGER;
       items.push({ kind:'memory', data:m, days });
     });

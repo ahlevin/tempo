@@ -80,11 +80,11 @@ export async function rescheduleAll(data: Snapshot): Promise<void> {
     // Birthdays / anniversaries — YEARLY trigger so they recur every year without
     // needing the app open. Fires at 9am on (next occurrence − offset).
     for (const m of data.memories) {
-      if (m.type !== 'birthday' && m.type !== 'anniversary') continue;
+      if (m.type !== 'birthday' && m.type !== 'anniversary' && m.type !== 'memorial') continue;
       if (!m.alerts?.length) continue;
       const base = toDate(nextAnnual(m.originDate));
       if (!isValidDate(base)) continue;
-      const kind = m.type === 'birthday' ? 'Birthday' : 'Anniversary';
+      const kind = m.type === 'birthday' ? 'Birthday' : m.type === 'memorial' ? 'Memorial' : 'Anniversary';
       for (const a of m.alerts) {
         const fire = at9am(new Date(base.getTime() - offsetMs(a)));
         await schedule(

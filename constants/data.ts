@@ -2,16 +2,25 @@ export const EMOJIS = ['✈️','🎉','💼','❤️','🎂','🏖️','🎓','
 export const GOAL_EMOJIS = ['🎯','🏃','💪','📚','💰','🏋️','🚴','✍️','🧘','🥗','🌱','🏊','🎸','🧠','📝','🏆','⚡','🔥','🦋','🌟','💡','🎵'];
 export const MEM_EMOJIS  = ['🎂','💑','🏔️','⭐','🌍','🏃','🎓','💍','🏠','✈️','🎵','🎉','🐶','👶','🏆','🌺','🚀','🎯','🌊','🎸','🦋','💡'];
 
-export const CATEGORIES = [
-  { id:'travel',      label:'✈️ Travel' },
-  { id:'celebration', label:'🎉 Celebration' },
-  { id:'work',        label:'💼 Work' },
-  { id:'personal',    label:'❤️ Personal' },
-] as const;
+// Event categories. `emoji` + `label` render in the category picker; `short` is
+// the compact label used in the home-screen filter pills. Accent colors live in
+// constants/colors.ts (CatColorMap) so they can differ per theme.
+// NOTE: ids 'travel' and 'parties' match existing DB rows (celebration→parties).
+export interface EventCategory { id: string; label: string; short: string; emoji: string; }
+export const CATEGORIES: EventCategory[] = [
+  { id:'money',    label:'Money',                       short:'Money',         emoji:'💰' },
+  { id:'travel',   label:'Travel',                      short:'Travel',        emoji:'✈️' },
+  { id:'work',     label:'Work / School',               short:'Work/School',   emoji:'🎓' },
+  { id:'medical',  label:'Medical',                     short:'Medical',       emoji:'🏥' },
+  { id:'house',    label:'House / Vehicle',             short:'House/Vehicle', emoji:'🏠' },
+  { id:'holidays', label:'Holidays',                    short:'Holidays',      emoji:'🎄' },
+  { id:'parties',  label:'Special Occasions / Parties', short:'Parties',       emoji:'🎉' },
+];
 
 export const MEMORY_TYPES = [
   { id:'birthday',    icon:'🎂', label:'Birthday',    desc:'Person or pet' },
   { id:'anniversary', icon:'💑', label:'Anniversary', desc:'A date you celebrate yearly' },
+  { id:'memorial',    icon:'🕊️', label:'Memorial',    desc:'Remember someone, yearly' },
   { id:'lifelog',     icon:'🏔️', label:'Life Log',    desc:'Track every time' },
 ];
 
