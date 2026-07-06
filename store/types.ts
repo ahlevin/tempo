@@ -63,6 +63,15 @@ export interface Memory {
   alerts: Alert[];
 }
 
+// Per-user holiday visibility. The holiday LIBRARY is code (constants/holidays.ts);
+// only what to show/fav/remind lives here (persisted as prefs.holidays jsonb).
+export interface HolidayPrefs {
+  enabled: boolean;                          // global on/off for the holiday layer
+  shown: Record<string, boolean>;            // holidayId -> visible in countdown
+  fav?: Record<string, boolean>;             // holidayId -> pinned to hero
+  reminders?: Record<string, Alert[]>;       // holidayId -> reminder offsets
+}
+
 export interface UserPrefs {
   quotePref: 'bible' | 'motivational' | 'jokes' | 'off';
   timezone: string;
@@ -70,4 +79,5 @@ export interface UserPrefs {
   displayName: string;
   onboarded: boolean;
   theme: 'light' | 'dark';
+  holidays: HolidayPrefs;
 }

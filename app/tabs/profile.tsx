@@ -1,10 +1,12 @@
 import { ScrollView, View, Text, TouchableOpacity, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState } from 'react';
+import { router } from 'expo-router';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useStore } from '../../store/useStore';
 import { useAuth } from '../../contexts/AuthContext';
 import { TIMEZONES, QUOTES } from '../../constants/data';
+import { catColor } from '../../constants/colors';
 
 type QuoteType = 'bible' | 'motivational' | 'jokes' | 'off';
 const QUOTE_OPTS: { id: QuoteType; icon: string; label: string; desc: string }[] = [
@@ -156,6 +158,26 @@ export default function ProfileScreen() {
             </View>
           )}
         </View>
+
+        <SLabel label="Countdown" />
+        <TouchableOpacity onPress={() => router.push('/modals/holidays-settings')}
+          style={{ flexDirection:'row', alignItems:'center', gap:14, padding:14,
+            borderRadius:18, borderWidth:1, borderColor:colors.border,
+            backgroundColor:colors.surf, marginBottom:28 }}>
+          <View style={{ width:44, height:44, borderRadius:13,
+            backgroundColor: colors.isDark ? 'rgba(46,139,87,0.16)' : colors.tint, alignItems:'center', justifyContent:'center' }}>
+            <Text style={{ fontSize:20 }}>🎄</Text>
+          </View>
+          <View style={{ flex:1 }}>
+            <Text style={{ fontSize:15, fontWeight:'600', color:colors.text1 }}>Holidays</Text>
+            <Text style={{ fontSize:12, color:colors.text3, marginTop:2 }}>
+              {prefs.holidays.enabled
+                ? `On · ${Object.values(prefs.holidays.shown ?? {}).filter(Boolean).length} shown`
+                : 'Off · tap to add US holidays'}
+            </Text>
+          </View>
+          <Text style={{ fontSize:16, color: prefs.holidays.enabled ? catColor(colors, 'holidays') : colors.text3 }}>›</Text>
+        </TouchableOpacity>
 
         <SLabel label="Account" />
         <TouchableOpacity onPress={() => signOut()}

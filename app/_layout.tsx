@@ -126,6 +126,8 @@ function RootNavigator() {
         <Stack.Screen name="modals/edit-memory" options={{ presentation: 'modal' }} />
         <Stack.Screen name="modals/log-entry"   options={{ presentation: 'modal' }} />
         <Stack.Screen name="modals/exact-edit"  options={{ presentation: 'modal' }} />
+        <Stack.Screen name="modals/holiday-detail"    options={{ presentation: 'modal' }} />
+        <Stack.Screen name="modals/holidays-settings" options={{ presentation: 'modal' }} />
       </Stack>
       {booting && <LoadingScreen />}
     </View>

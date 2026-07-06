@@ -3,6 +3,7 @@ import { View, Text, ScrollView, Dimensions, TouchableOpacity, Platform } from '
 import { useIsFocused } from 'expo-router';
 import { catColor, heroTintBg } from '../constants/colors';
 import { CATEGORIES } from '../constants/data';
+import { visibleHolidays, HolidayItem } from '../constants/holidays';
 import { useTheme } from '../contexts/ThemeContext';
 import { useTick } from '../contexts/TickContext';
 import { useStore } from '../store/useStore';
@@ -261,6 +262,27 @@ function MemoryCard({ memory: m }: { memory: any }) {
   );
 }
 
+// ---- Holiday (derived layer, favoritable into the hero) --------------------
+
+function HolidayCard({ item }: { item: HolidayItem }) {
+  const { colors } = useTheme();
+  const setHolidayFav = useStore(s => s.setHolidayFav);
+  const accent = catColor(colors, 'holidays');
+  const wday = new Date(item.dateISO + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long' });
+  const dstr = new Date(item.dateISO + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  return (
+    <HeroFrame bgDark="#0F1E14" borderDark="rgba(46,139,87,0.28)" fav={item.fav} onFav={() => setHolidayFav(item.id, !item.fav)}>
+      <Eyebrow color={accent}>Holiday Countdown</Eyebrow>
+      <CardName>{item.emoji} {item.name}</CardName>
+      <Secondary color={accent}>Repeats yearly</Secondary>
+      <View style={tileRow}>
+        <HeroTile value={item.days} label={item.days === 1 ? 'Day Away' : 'Days Away'} accent={accent} bg={heroTintBg(colors, accent)} />
+        <InfoColumn line1={wday} line2={dstr} />
+      </View>
+    </HeroFrame>
+  );
+}
+
 // ---- Carousel -------------------------------------------------------------
 
 export function HeroCarousel() {
@@ -269,6 +291,7 @@ export function HeroCarousel() {
   const events   = useStore(s => s.events);
   const goals    = useStore(s => s.goals);
   const memories = useStore(s => s.memories);
+  const holidayPrefs = useStore(s => s.prefs.holidays);
   const [idx, setIdx] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
 
@@ -279,9 +302,9 @@ export function HeroCarousel() {
     setIdx(clamped);
   };
 
-  // Hero = ONLY starred items, of every type (events, goals, memories),
+  // Hero = ONLY starred items, of every type (events, goals, memories, holidays),
   // sorted by soonest upcoming date.
-  const items: { kind: 'event' | 'goal' | 'memory'; data: any; days: number }[] = [];
+  const items: { kind: 'event' | 'goal' | 'memory' | 'holiday'; data: any; days: number }[] = [];
   events.filter(e => e.fav).forEach(e => items.push({ kind:'event', data:e, days: daysUntil(nextOccurrence(e)) }));
   goals.filter(g => g.fav).forEach(g => items.push({ kind:'goal', data:g, days: daysUntil(g.date) }));
   memories
@@ -291,6 +314,7 @@ export function HeroCarousel() {
         ? daysUntil(nextAnnual(m.originDate)) : Number.MAX_SAFE_INTEGER;
       items.push({ kind:'memory', data:m, days });
     });
+  visibleHolidays(holidayPrefs).filter(h => h.fav).forEach(h => items.push({ kind:'holiday', data:h, days: h.days }));
   items.sort((a, b) => a.days - b.days);
 
   if (!items.length) {
@@ -334,9 +358,10 @@ export function HeroCarousel() {
         {items.map((item, i) => (
           <View key={i}>
             {/* Only the on-screen card on the focused Home tab ticks (per minute). */}
-            {item.kind === 'event'  && <EventCard event={item.data} active={focused && i === idx} />}
-            {item.kind === 'goal'   && <GoalCard  goal={item.data} />}
-            {item.kind === 'memory' && <MemoryCard memory={item.data} />}
+            {item.kind === 'event'   && <EventCard event={item.data} active={focused && i === idx} />}
+            {item.kind === 'goal'    && <GoalCard  goal={item.data} />}
+            {item.kind === 'memory'  && <MemoryCard memory={item.data} />}
+            {item.kind === 'holiday' && <HolidayCard item={item.data} />}
           </View>
         ))}
       </ScrollView>

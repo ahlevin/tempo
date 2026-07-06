@@ -133,6 +133,7 @@ export function memoryToRow(m: Memory, userId: string) {
 
 // ---- Prefs ----------------------------------------------------------------
 export function rowToPrefs(r: any): UserPrefs {
+  const h = r.holidays ?? {};
   return {
     quotePref: r.quote_pref ?? 'motivational',
     timezone: r.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone,
@@ -140,6 +141,12 @@ export function rowToPrefs(r: any): UserPrefs {
     displayName: r.display_name ?? '',
     onboarded: !!r.onboarded,
     theme: r.theme === 'light' ? 'light' : 'dark',
+    holidays: {
+      enabled: !!h.enabled,
+      shown: h.shown ?? {},
+      fav: h.fav ?? {},
+      reminders: h.reminders ?? {},
+    },
   };
 }
 
@@ -152,6 +159,7 @@ export function prefsToRow(p: UserPrefs, userId: string) {
     display_name: p.displayName,
     onboarded: p.onboarded,
     theme: p.theme,
+    holidays: p.holidays,
     updated_at: new Date().toISOString(),
   };
 }

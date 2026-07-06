@@ -12,9 +12,11 @@ import { EventCard } from '../../components/EventCard';
 import { GoalCard } from '../../components/GoalCard';
 import { AddChooser } from '../../components/AddChooser';
 import { UpcomingMemoryRow } from '../../components/UpcomingMemoryRow';
+import { HolidayRow } from '../../components/HolidayRow';
 import { Event, Memory } from '../../store/types';
 import { CATEGORIES } from '../../constants/data';
 import { catColor } from '../../constants/colors';
+import { visibleHolidays, HolidayItem } from '../../constants/holidays';
 import { nextOccurrence, nextAnnual, daysUntil } from '../../utils/dates';
 
 // Home-screen filter pills: All, the 7 event categories, the 3 recurring memory
@@ -29,11 +31,16 @@ const FILTERS: { id: string; label: string; emoji: string }[] = [
   { id: 'goal',        label: 'Goals',         emoji: '🎯' },
 ];
 
-// A row in the "Upcoming" list: either an event or a recurring
-// birthday/anniversary memory. Sorted together by days-until-next-occurrence.
-type UpcomingItem = { kind: 'event'; data: Event } | { kind: 'memory'; data: Memory };
+// A row in the "Upcoming" list: an event, a recurring memory, or a visible
+// holiday. Sorted together by days-until-next-occurrence.
+type UpcomingItem =
+  | { kind: 'event'; data: Event }
+  | { kind: 'memory'; data: Memory }
+  | { kind: 'holiday'; data: HolidayItem };
 const upcomingDays = (it: UpcomingItem) =>
-  it.kind === 'event' ? daysUntil(nextOccurrence(it.data)) : daysUntil(nextAnnual(it.data.originDate));
+  it.kind === 'event' ? daysUntil(nextOccurrence(it.data))
+  : it.kind === 'memory' ? daysUntil(nextAnnual(it.data.originDate))
+  : it.data.days;
 
 export default function HomeScreen() {
   const { colors } = useTheme();
@@ -66,6 +73,10 @@ export default function HomeScreen() {
     memories
       .filter(m => m.type === filter)
       .forEach(m => upcoming.push({ kind: 'memory', data: m }));
+  }
+  // Visible holidays (derived, never stored) show under "All" and the Holidays pill.
+  if (isAll || filter === 'holidays') {
+    visibleHolidays(prefs.holidays).forEach(h => upcoming.push({ kind: 'holiday', data: h }));
   }
   upcoming.sort((a, b) => upcomingDays(a) - upcomingDays(b));
 
@@ -140,7 +151,9 @@ export default function HomeScreen() {
               onPress={() => setChooserOpen(true)} />
           ) : upcoming.map(it => it.kind === 'event'
               ? <EventCard key={`e-${it.data.id}`} event={it.data} />
-              : <UpcomingMemoryRow key={`m-${it.data.id}`} memory={it.data} />)}
+              : it.kind === 'memory'
+              ? <UpcomingMemoryRow key={`m-${it.data.id}`} memory={it.data} />
+              : <HolidayRow key={`h-${it.data.id}`} item={it.data} />)}
         </>}
 
         {/* Goals */}

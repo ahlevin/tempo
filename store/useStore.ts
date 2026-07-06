@@ -3,7 +3,8 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import { format } from 'date-fns';
-import { Event, Goal, Memory, UserPrefs } from './types';
+import { Event, Goal, Memory, UserPrefs, Alert } from './types';
+import { DEFAULT_HOLIDAY_IDS } from '../constants/holidays';
 import {
   fetchAll, dbUpsert, dbDelete, dbUpsertPrefs,
   eventToRow, goalToRow, memoryToRow, prefsToRow, uuid, CloudTable,
@@ -18,6 +19,7 @@ const DEFAULT_PREFS: UserPrefs = {
   displayName: '',
   onboarded: false,
   theme: 'dark',
+  holidays: { enabled: false, shown: {}, fav: {}, reminders: {} },
 };
 
 // A queued write. Upserts reference the row by id and re-read the latest state
@@ -58,6 +60,10 @@ interface TempoStore {
   toggleMemoryFav: (id: string) => void;
   addLogEntry: (memId: string, entry: { date: string; note: string }) => void;
   updatePrefs: (patch: Partial<UserPrefs>) => void;
+  setHolidaysEnabled: (on: boolean) => void;
+  setHolidayShown: (id: string, shown: boolean) => void;
+  setHolidayFav: (id: string, fav: boolean) => void;
+  setHolidayReminder: (id: string, alerts: Alert[]) => void;
 }
 
 // Sync tracing. Enabled in dev on every platform AND always on web (so we can
@@ -313,12 +319,47 @@ export const useStore = create<TempoStore>()(
           set(s => ({ prefs: { ...s.prefs, ...patch }, prefsExists: true }));
           enqueue({ kind: 'prefs' });
         },
+        // ---- Holidays (visibility layer; the library itself lives in code) ----
+        setHolidaysEnabled: (on) => {
+          set(s => {
+            const h = s.prefs.holidays;
+            // First time turning it on with nothing chosen yet: seed high-signal
+            // defaults so the countdown isn't empty (no religious auto-enable).
+            const seed = on && Object.keys(h.shown ?? {}).length === 0;
+            const shown = seed
+              ? Object.fromEntries(DEFAULT_HOLIDAY_IDS.map(id => [id, true]))
+              : (h.shown ?? {});
+            return { prefs: { ...s.prefs, holidays: { ...h, enabled: on, shown } }, prefsExists: true };
+          });
+          enqueue({ kind: 'prefs' });
+        },
+        setHolidayShown: (id, shown) => {
+          set(s => {
+            const h = s.prefs.holidays;
+            return { prefs: { ...s.prefs, holidays: { ...h, shown: { ...h.shown, [id]: shown } } }, prefsExists: true };
+          });
+          enqueue({ kind: 'prefs' });
+        },
+        setHolidayFav: (id, fav) => {
+          set(s => {
+            const h = s.prefs.holidays;
+            return { prefs: { ...s.prefs, holidays: { ...h, fav: { ...(h.fav ?? {}), [id]: fav } } }, prefsExists: true };
+          });
+          enqueue({ kind: 'prefs' });
+        },
+        setHolidayReminder: (id, alerts) => {
+          set(s => {
+            const h = s.prefs.holidays;
+            return { prefs: { ...s.prefs, holidays: { ...h, reminders: { ...(h.reminders ?? {}), [id]: alerts } } }, prefsExists: true };
+          });
+          enqueue({ kind: 'prefs' });
+        },
       };
     },
     {
       name: 'tempo-storage',
       storage: createJSONStorage(() => AsyncStorage),
-      version: 2,
+      version: 3,
       // Persist only durable data + the offline queue; loading/ready are runtime.
       partialize: (s) => ({
         events: s.events, goals: s.goals, memories: s.memories,
@@ -326,6 +367,7 @@ export const useStore = create<TempoStore>()(
       }),
       // v1 (local seed era) -> v2 (cloud). Drop any locally-seeded cache so stale
       // demo data never lingers; the cloud repopulates on next login.
+      // v2 -> v3: backfill prefs.holidays so older caches don't read undefined.
       migrate: (_persisted: any, version: number) => {
         if (version < 2) {
           return {
@@ -333,7 +375,15 @@ export const useStore = create<TempoStore>()(
             userId: null, prefsExists: false, outbox: [],
           };
         }
-        return _persisted;
+        const p = _persisted ?? {};
+        return {
+          ...p,
+          prefs: {
+            ...DEFAULT_PREFS,
+            ...(p.prefs ?? {}),
+            holidays: { ...DEFAULT_PREFS.holidays, ...(p.prefs?.holidays ?? {}) },
+          },
+        };
       },
     }
   )
