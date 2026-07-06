@@ -359,6 +359,7 @@ export const useStore = create<TempoStore>()(
             allDay: true, start: `${d}T00:00:00`, end: null, date: d,
             created: today(), fav: false, note: e.note ?? '', recur: null, alerts: [],
           };
+          // The log is KEPT even if now empty, so re-attaching later finds it.
           set(s => ({
             events: [...s.events, event],
             memories: s.memories.map(x => x.id === memId ? { ...x, entries: x.entries.filter((_, i) => i !== index) } : x),

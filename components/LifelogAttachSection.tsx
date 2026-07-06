@@ -42,8 +42,13 @@ export const LifelogAttachSection = forwardRef<AttachHandle, { emoji: string }>(
     const q = qualifier.trim();
     return q ? `${p.name} - ${q}` : p.name;
   };
+  // Match existing logs on the FULL resolved NAME (the name already encodes the
+  // preset via its prefix). Matching on name — not requiring logPreset === pid —
+  // is robust to logs whose logPreset is missing/differs (e.g. created via the
+  // custom tab, an older build, or lost on a round-trip), so a detached-then-
+  // re-attached log is still found.
   const matchesFor = (pid: string, qualifier: string) =>
-    pid ? lifelogs.filter(l => l.logPreset === pid && l.name === resolvedPresetName(pid, qualifier)) : [];
+    pid ? lifelogs.filter(l => l.name === resolvedPresetName(pid, qualifier)) : [];
 
   function pickPreset(pid: string) {
     setSelectedPreset(pid);
