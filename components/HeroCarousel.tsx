@@ -246,14 +246,14 @@ function MemoryCard({ memory: m }: { memory: any }) {
   const bigVal   = isColl ? distinct : m.entries.length;
   const bigLabel = isColl ? `of ${m.logTarget}` : (bigVal === 1 ? 'Time' : 'Times');
   const pct = isColl ? Math.min(100, Math.round((distinct / m.logTarget) * 100)) : null;
-  const dstr = new Date(m.originDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-  // Most recent entry date for the secondary line (keeps height uniform + useful).
+  // Life logs have no container date; use entry dates. Most recent for context.
   const lastDate = (m.entries ?? []).map((en: any) => en.date).filter(Boolean).sort().pop();
   const secondary = isColl
     ? `${pct}% complete`
     : (lastDate
         ? `Last: ${new Date(lastDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
         : 'No entries yet');
+  const info2 = isColl ? `${distinct} of ${m.logTarget} logged` : `${bigVal} logged`;
   return (
     <HeroFrame bgDark="#0F1E1A" borderDark="rgba(62,207,178,0.28)" fav={m.fav} onFav={() => toggleFav(m.id)}>
       <Eyebrow color={accent}>Life Log</Eyebrow>
@@ -261,7 +261,7 @@ function MemoryCard({ memory: m }: { memory: any }) {
       <Secondary color={accent}>{secondary}</Secondary>
       <View style={tileRow}>
         <HeroTile value={bigVal} label={bigLabel} accent={accent} bg={heroTintBg(colors, dark)} />
-        <InfoColumn line1="Since" line2={dstr} />
+        <InfoColumn line1="Tracking" line2={info2} />
       </View>
     </HeroFrame>
   );

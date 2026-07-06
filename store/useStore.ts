@@ -59,6 +59,8 @@ interface TempoStore {
   deleteMemory: (id: string) => void;
   toggleMemoryFav: (id: string) => void;
   addLogEntry: (memId: string, entry: { date: string; note: string; item?: string; datePrecision?: import('./types').DatePrecision }) => void;
+  updateLogEntry: (memId: string, index: number, patch: Partial<import('./types').LogEntry>) => void;
+  deleteLogEntry: (memId: string, index: number) => void;
   // Cross-type conversion. Events and memories are different tables, so a
   // cross-table convert DELETEs the old row and CREATEs the new one (id preserved).
   convertEventToMemory: (id: string, targetType: Memory['type']) => void;
@@ -321,6 +323,16 @@ export const useStore = create<TempoStore>()(
           set(s => ({ memories: s.memories.map(m => m.id === memId ? { ...m, entries: [...m.entries, entry] } : m) }));
           enqueue({ kind: 'upsert', table: 'memories', id: memId });
         },
+        updateLogEntry: (memId, index, patch) => {
+          set(s => ({ memories: s.memories.map(m => m.id !== memId ? m
+            : { ...m, entries: m.entries.map((e, i) => i === index ? { ...e, ...patch } : e) }) }));
+          enqueue({ kind: 'upsert', table: 'memories', id: memId });
+        },
+        deleteLogEntry: (memId, index) => {
+          set(s => ({ memories: s.memories.map(m => m.id !== memId ? m
+            : { ...m, entries: m.entries.filter((_, i) => i !== index) }) }));
+          enqueue({ kind: 'upsert', table: 'memories', id: memId });
+        },
         convertEventToMemory: (id, targetType) => {
           const e = get().events.find(x => x.id === id);
           if (!e) return;
@@ -356,15 +368,17 @@ export const useStore = create<TempoStore>()(
             (m.type === 'birthday' || m.type === 'anniversary' || m.type === 'memorial')
               ? { freq: 'yearly', dow: [], endType: 'never' }
               : null;
+          // Life-log containers have no date; fall back to today when converting.
+          const od = m.originDate || today();
           const event: Event = {
             id: m.id,
             name: m.name,
             emoji: m.emoji,
             cat: 'parties',
             allDay: true,
-            start: `${m.originDate}T00:00:00`,
+            start: `${od}T00:00:00`,
             end: null,
-            date: m.originDate,
+            date: od,
             created: today(),
             fav: m.fav,
             note: m.note ?? '',
@@ -384,7 +398,9 @@ export const useStore = create<TempoStore>()(
             const next: Memory = { ...m, type: targetType };
             if (targetType === 'lifelog') {
               next.logKind = m.logKind ?? 'count';
-              if (!next.entries.length) next.entries = [{ date: m.originDate, note: '' }];
+            } else if (!next.originDate) {
+              // Converting a life-log container (no date) → a dated type: seed today.
+              next.originDate = today();
             }
             return next;
           }) }));

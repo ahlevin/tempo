@@ -43,9 +43,11 @@ export default function EditMemoryModal() {
   if (!m) { router.back(); return null; }
 
   function save() {
-    if (!name.trim()||!date) { showToast('⚠️', 'Missing info', 'Please fill in all fields.'); return; }
-    updateMemory(id, { name:name.trim(), originDate:date, emoji, note:note.trim(), yearUnknown,
-      alerts: m!.type === 'lifelog' ? [] : alerts });
+    const lifelog = m!.type === 'lifelog';
+    if (!name.trim() || (!lifelog && !date)) { showToast('⚠️', 'Missing info', 'Please fill in all fields.'); return; }
+    updateMemory(id, lifelog
+      ? { name:name.trim(), emoji }   // life-log container: name + emoji only
+      : { name:name.trim(), originDate:date, emoji, note:note.trim(), yearUnknown, alerts });
     router.back();
   }
 
@@ -91,12 +93,17 @@ export default function EditMemoryModal() {
           showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
           <FL label="Name" />
           <TextInput value={name} onChangeText={setName} placeholderTextColor={colors.text3} style={fi} />
-          <DateTimeField mode="date" label={DATE_LABELS[m.type]||'Date'} value={date} onChange={setDate} />
-          <Toggle label="I don't know the year" value={yearUnknown} onChange={setYearUnknown} />
-          {yearUnknown && (
-            <Text style={{ fontSize:12, color:colors.text3, marginTop:-6, marginBottom:14, marginLeft:2 }}>
-              Only the month and day are used — the year won't be shown.
-            </Text>
+          {/* A life log is a container — its dates live on entries, not here. */}
+          {m.type !== 'lifelog' && (
+            <>
+              <DateTimeField mode="date" label={DATE_LABELS[m.type]||'Date'} value={date} onChange={setDate} />
+              <Toggle label="I don't know the year" value={yearUnknown} onChange={setYearUnknown} />
+              {yearUnknown && (
+                <Text style={{ fontSize:12, color:colors.text3, marginTop:-6, marginBottom:14, marginLeft:2 }}>
+                  Only the month and day are used — the year won't be shown.
+                </Text>
+              )}
+            </>
           )}
           <FL label="Icon" />
           <View style={{ flexDirection:'row', flexWrap:'wrap', gap:6, marginBottom:14 }}>
@@ -110,8 +117,12 @@ export default function EditMemoryModal() {
               </TouchableOpacity>
             ))}
           </View>
-          <FL label="Note (optional)" />
-          <TextInput value={note} onChangeText={setNote} placeholderTextColor={colors.text3} style={fi} />
+          {m.type !== 'lifelog' && (
+            <>
+              <FL label="Note (optional)" />
+              <TextInput value={note} onChangeText={setNote} placeholderTextColor={colors.text3} style={fi} />
+            </>
+          )}
           {(m.type === 'birthday' || m.type === 'anniversary' || m.type === 'memorial') && (
             <AlertsEditor value={alerts} onChange={setAlerts} />
           )}

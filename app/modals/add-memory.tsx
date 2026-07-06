@@ -54,8 +54,12 @@ export default function AddMemoryModal() {
   function pickType(t: string) { setType(t); setEmoji(DEF_EMOJIS[t]||'⭐'); }
 
   function submit() {
-    if (!name.trim()||!date) { showToast('⚠️', 'Missing info', 'Please enter a name and date.'); return; }
     const lifelog = type === 'lifelog';
+    if (!name.trim()) {
+      showToast('⚠️', 'Missing info', lifelog ? 'Please name your life log.' : 'Please enter a name and date.');
+      return;
+    }
+    if (!lifelog && !date) { showToast('⚠️', 'Missing info', 'Please enter a name and date.'); return; }
     // Resolve the log shape: a preset carries its kind/target; custom is a count
     // unless the user set a target number (→ an X-of-Y collection).
     let logKind: 'count' | 'collection' = 'count';
@@ -71,25 +75,21 @@ export default function AddMemoryModal() {
       }
     }
     const newId = addMemory({
-      type:type as any, name:name.trim(), emoji, originDate:date, yearUnknown,
-      // A collection log starts empty (items are picked in); a count log seeds its
-      // first occurrence from the date.
-      entries: lifelog && logKind === 'count' ? [{date,note:note.trim()}] : [],
+      type:type as any, name:name.trim(), emoji,
+      // A life log is a CONTAINER — no container-level date. Dates live on entries.
+      originDate: lifelog ? '' : date,
+      yearUnknown: lifelog ? false : yearUnknown,
+      entries: [], // containers always start empty
       logKind: lifelog ? logKind : undefined,
       logPreset: lifelog ? logPreset : undefined,
       logTarget: lifelog ? logTarget : undefined,
-      note: type!=='lifelog' ? note.trim() : '',
-      // Reminders only apply to the recurring types (birthday/anniversary).
-      fav: false, alerts: type==='lifelog' ? [] : alerts,
+      note: lifelog ? '' : note.trim(),
+      // Reminders only apply to the recurring types (birthday/anniversary/memorial).
+      fav: false, alerts: lifelog ? [] : alerts,
     });
-    // A preset collection (named universe) → jump straight into the item picker
-    // so the user can start adding items immediately, instead of a dead-end card.
-    const hasUniverse = lifelog && logKind === 'collection' && !!(logPreset && PRESET_BY_ID[logPreset]?.universe);
-    if (hasUniverse) {
-      router.replace({ pathname: '/modals/log-entry', params: { id: newId } });
-    } else {
-      router.back();
-    }
+    // Creating a life log lands you in its detail view, ready to add entries.
+    if (lifelog) router.replace({ pathname: '/modals/lifelog-detail', params: { id: newId } });
+    else router.back();
   }
 
   return (
@@ -157,14 +157,23 @@ export default function AddMemoryModal() {
 
           <FL label="Name" />
           <TextInput value={name} onChangeText={setName}
-            placeholder="e.g. First Half Dome Hike…" placeholderTextColor={colors.text3} style={fi} />
-          <DateTimeField mode="date" label={DATE_LABELS[type]||'Date'} value={date} onChange={setDate} />
-          <Toggle label="I don't know the year" value={yearUnknown} onChange={setYearUnknown} />
-          {yearUnknown && (
-            <Text style={{ fontSize:12, color:colors.text3, marginTop:-6, marginBottom:14, marginLeft:2 }}>
-              Only the month and day are used — the year won't be shown.
-            </Text>
+            placeholder={type==='lifelog' ? 'e.g. Countries Visited' : 'e.g. First Half Dome Hike…'}
+            placeholderTextColor={colors.text3} style={fi} />
+
+          {/* A life log is a CONTAINER — no date / unknown-year / note here.
+              Those are per-ENTRY concerns handled inside the log's detail view. */}
+          {type !== 'lifelog' && (
+            <>
+              <DateTimeField mode="date" label={DATE_LABELS[type]||'Date'} value={date} onChange={setDate} />
+              <Toggle label="I don't know the year" value={yearUnknown} onChange={setYearUnknown} />
+              {yearUnknown && (
+                <Text style={{ fontSize:12, color:colors.text3, marginTop:-6, marginBottom:14, marginLeft:2 }}>
+                  Only the month and day are used — the year won't be shown.
+                </Text>
+              )}
+            </>
           )}
+
           <FL label="Icon" />
           <View style={{ flexDirection:'row', flexWrap:'wrap', gap:6, marginBottom:14 }}>
             {MEM_EMOJIS.map(em => (
@@ -177,15 +186,22 @@ export default function AddMemoryModal() {
               </TouchableOpacity>
             ))}
           </View>
-          <FL label="Note (optional)" />
-          <TextInput value={note} onChangeText={setNote}
-            placeholder="Add a note…" placeholderTextColor={colors.text3} style={fi} />
+
+          {type !== 'lifelog' && (
+            <>
+              <FL label="Note (optional)" />
+              <TextInput value={note} onChangeText={setNote}
+                placeholder="Add a note…" placeholderTextColor={colors.text3} style={fi} />
+            </>
+          )}
           {(type === 'birthday' || type === 'anniversary' || type === 'memorial') && (
             <AlertsEditor value={alerts} onChange={setAlerts} />
           )}
           <TouchableOpacity onPress={submit}
             style={{ backgroundColor:colors.rose, borderRadius:14, padding:15, alignItems:'center' }}>
-            <Text style={{ color:'#fff', fontSize:15, fontWeight:'700' }}>Save Memory →</Text>
+            <Text style={{ color:'#fff', fontSize:15, fontWeight:'700' }}>
+              {type==='lifelog' ? 'Create Life Log →' : 'Save Memory →'}
+            </Text>
           </TouchableOpacity>
           <View style={{ height:40 }} />
         </ScrollView>

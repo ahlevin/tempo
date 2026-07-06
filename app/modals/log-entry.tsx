@@ -7,7 +7,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { useStore } from '../../store/useStore';
 import { DatePrecision } from '../../store/types';
 import { DateTimeField } from '../../components/DateTimeField';
-import { presetUniverse } from '../../constants/lifelogs';
+import { logUniverse, isCollectionLog } from '../../utils/lifelog';
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const PRECISIONS: { id: DatePrecision; label: string }[] = [
@@ -19,32 +19,40 @@ const PRECISIONS: { id: DatePrecision; label: string }[] = [
 
 export default function LogEntryModal() {
   const { colors } = useTheme();
-  const { id, past } = useLocalSearchParams<{ id: string; past: string }>();
-  const memories    = useStore(s => s.memories);
-  const addLogEntry = useStore(s => s.addLogEntry);
+  const { id, edit } = useLocalSearchParams<{ id: string; edit?: string }>();
+  const memories       = useStore(s => s.memories);
+  const addLogEntry    = useStore(s => s.addLogEntry);
+  const updateLogEntry = useStore(s => s.updateLogEntry);
   const m = memories.find(x => x.id === id);
 
+  const editIndex = edit != null && edit !== '' ? parseInt(edit, 10) : -1;
+  const isEdit = editIndex >= 0;
+  const editing = m && isEdit ? m.entries[editIndex] : undefined;
+
+  const universe = m ? logUniverse(m) : undefined;
+  const isPicker = !!m && isCollectionLog(m) && !!universe;
+
   const now = new Date();
-  const [precision, setPrecision] = useState<DatePrecision>('full');
-  const [usePast, setUsePast] = useState(past === '1');
-  const [date,    setDate]    = useState(format(now, 'yyyy-MM-dd')); // full-date value
-  const [year,    setYear]    = useState(String(now.getFullYear()));
-  const [month,   setMonth]   = useState(now.getMonth());            // 0-11
-  const [note,    setNote]    = useState('');
-  const [item,    setItem]    = useState('');   // selected collection item
-  const [query,   setQuery]   = useState('');
-  const [addedCount, setAddedCount] = useState(0); // items added this sitting
+  const initPrec = editing?.datePrecision ?? 'full';
+  const [precision, setPrecision] = useState<DatePrecision>(initPrec);
+  const [usePast, setUsePast] = useState(isEdit ? (initPrec === 'full' && !!editing?.date) : false);
+  const [date,  setDate]  = useState(editing?.date && initPrec === 'full' ? editing.date : format(now, 'yyyy-MM-dd'));
+  const [year,  setYear]  = useState(editing?.date ? editing.date.slice(0, 4) : String(now.getFullYear()));
+  const [month, setMonth] = useState(editing?.date && editing.date.length >= 7 ? parseInt(editing.date.slice(5, 7), 10) - 1 : now.getMonth());
+  const [note,  setNote]  = useState(editing?.note ?? '');
+  const [label, setLabel] = useState(!isPicker ? (editing?.item ?? '') : ''); // count/custom label
+  const [item,  setItem]  = useState(isPicker ? (editing?.item ?? '') : '');  // collection item
+  const [query, setQuery] = useState('');
+  const [addedCount, setAddedCount] = useState(0);
 
-  const universe = m ? presetUniverse(m.logPreset) : undefined;
-  const isPicker = !!m && m.logKind === 'collection' && !!universe;
-
-  // Remaining = the universe minus items already logged (no duplicates).
+  // Remaining = universe minus already-logged, but the entry being edited keeps its own item.
   const remaining = useMemo(() => {
     if (!isPicker || !universe || !m) return [];
     const logged = new Set(m.entries.map(e => e.item).filter(Boolean));
+    if (editing?.item) logged.delete(editing.item);
     const q = query.trim().toLowerCase();
     return universe.filter(x => !logged.has(x) && (!q || x.toLowerCase().includes(q)));
-  }, [isPicker, universe, m, query]);
+  }, [isPicker, universe, m, query, editing]);
 
   const fi = { backgroundColor:colors.glass, borderWidth:1,
     borderColor:colors.border, borderRadius:12, padding:12,
@@ -64,24 +72,33 @@ export default function LogEntryModal() {
     return usePast ? date : format(new Date(), 'yyyy-MM-dd');
   }
 
-  // Count log: single entry then close.
+  function entryPayload() {
+    const chosenItem = isPicker ? item : label.trim();
+    return { date: buildDate(), note: note.trim(), datePrecision: precision,
+      item: chosenItem || undefined };
+  }
+
+  // Add (count / custom collection): create then close.
   function logCount() {
-    addLogEntry(id, { date: buildDate(), note: note.trim(), datePrecision: precision });
+    addLogEntry(id, entryPayload());
+    router.back();
+  }
+  // Add (collection w/ universe): log the item and STAY (multi-add); the list
+  // recomputes from the store so the item drops off (no duplicates).
+  function addOne() {
+    if (!item) return;
+    addLogEntry(id, entryPayload());
+    setAddedCount(c => c + 1);
+    setItem(''); setNote(''); setQuery('');
+  }
+  // Edit an existing entry.
+  function saveEdit() {
+    if (isPicker && !item) return;
+    updateLogEntry(id, editIndex, entryPayload());
     router.back();
   }
 
-  // Collection log: add the selected item and STAY in the picker (multi-add), so
-  // the user can back-fill many in one sitting. `remaining` recomputes from the
-  // store, so the just-added item drops off automatically (no duplicates).
-  function addOne() {
-    if (!item) return;
-    addLogEntry(id, { date: buildDate(), note: note.trim(), datePrecision: precision, item });
-    setAddedCount(c => c + 1);
-    // Clear the per-item bits; keep the chosen precision/date so repeated adds are fast.
-    setItem('');
-    setNote('');
-    setQuery('');
-  }
+  const headerTitle = isEdit ? 'Edit entry' : (isPicker ? 'Add to' : 'Log') + `: ${m.emoji} ${m.name}`;
 
   return (
     <SafeAreaView style={{ flex:1, backgroundColor:colors.surf2 }} edges={['bottom']}>
@@ -91,7 +108,7 @@ export default function LogEntryModal() {
         <View style={{ flexDirection:'row', justifyContent:'space-between',
           alignItems:'center', paddingHorizontal:20, paddingVertical:12 }}>
           <Text style={{ fontSize:18, fontWeight:'700', color:colors.text1 }} numberOfLines={1}>
-            {isPicker ? 'Add to' : 'Log'}: {m.emoji} {m.name}
+            {headerTitle}
           </Text>
           <TouchableOpacity onPress={() => router.back()}>
             <Text style={{ fontSize:16, color:colors.text3 }}>✕</Text>
@@ -106,7 +123,7 @@ export default function LogEntryModal() {
               <View style={{ flexDirection:'row', alignItems:'center', justifyContent:'space-between', marginBottom:8 }}>
                 <Text style={{ fontSize:11, fontWeight:'600', color:colors.text3,
                   textTransform:'uppercase', letterSpacing:0.5 }}>
-                  Pick one · {loggedCount} of {universe.length} logged
+                  {isEdit ? 'Change item' : 'Pick one'} · {loggedCount} of {universe.length} logged
                 </Text>
                 {addedCount > 0 && (
                   <View style={{ backgroundColor: colors.isDark ? 'rgba(62,207,178,0.16)' : colors.tint, borderRadius:10, paddingVertical:3, paddingHorizontal:9 }}>
@@ -138,6 +155,16 @@ export default function LogEntryModal() {
                   })}
                 </ScrollView>
               </View>
+            </>
+          )}
+
+          {/* Count / custom-collection: optional Name / Label (e.g. "Mission Peak"). */}
+          {!isPicker && (
+            <>
+              <Text style={{ fontSize:11, fontWeight:'600', color:colors.text3,
+                textTransform:'uppercase', letterSpacing:0.5, marginBottom:6 }}>Name / label (optional)</Text>
+              <TextInput value={label} onChangeText={setLabel}
+                placeholder="e.g. Mission Peak" placeholderTextColor={colors.text3} style={fi} />
             </>
           )}
 
@@ -203,7 +230,13 @@ export default function LogEntryModal() {
           </Text>
           <TextInput value={note} onChangeText={setNote}
             placeholder="How was it?…" placeholderTextColor={colors.text3} style={fi} />
-          {isPicker ? (
+
+          {isEdit ? (
+            <TouchableOpacity onPress={saveEdit} disabled={isPicker && !item}
+              style={{ backgroundColor:colors.teal, borderRadius:14, padding:15, alignItems:'center', opacity: (isPicker && !item) ? 0.5 : 1 }}>
+              <Text style={{ color: colors.isDark ? '#0A0A0F' : '#fff', fontSize:15, fontWeight:'700' }}>Save changes</Text>
+            </TouchableOpacity>
+          ) : isPicker ? (
             <>
               {/* Add-another loop: logs the selected item and stays in the picker. */}
               <TouchableOpacity onPress={addOne} disabled={!item}
