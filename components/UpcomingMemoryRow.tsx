@@ -50,8 +50,15 @@ export function UpcomingMemoryRow({ memory: m }: { memory: Memory }) {
             <AlertBadge count={m.alerts?.length} />
           </View>
           <Text style={{ fontSize: 11, color: colors.text3, marginTop: 2 }}>
-            <Text style={{ color, fontWeight: '700' }}>{context}</Text>
-            <Text> · {dateStr}</Text>
+            {m.yearUnknown ? (
+              // Year unknown: no "Turning N" — just the month/day of the next one.
+              <Text style={{ color, fontWeight: '700' }}>{dateStr}</Text>
+            ) : (
+              <>
+                <Text style={{ color, fontWeight: '700' }}>{context}</Text>
+                <Text> · {dateStr}</Text>
+              </>
+            )}
           </Text>
         </View>
         <View style={{ alignItems: 'center' }}>

@@ -52,6 +52,9 @@ export interface Memory {
   name: string;
   emoji: string;
   originDate: string;
+  /** True when only the month/day is known. Suppresses age/years everywhere;
+   *  the countdown to the next annual occurrence still works from month/day. */
+  yearUnknown: boolean;
   entries: LogEntry[];
   note: string;
   fav: boolean;

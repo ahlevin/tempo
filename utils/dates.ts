@@ -172,6 +172,19 @@ export function fmtShort(dateStr: string): string {
   return isValidDate(d) ? format(d, 'MMM d, yyyy') : '';
 }
 
+// Month + day only, no year — for memories whose birth/anniversary year is
+// unknown. Full month name, e.g. "March 15".
+export function fmtMonthDay(dateStr: string): string {
+  const d = toDate(dateStr);
+  return isValidDate(d) ? format(d, 'MMMM d') : '';
+}
+
+// Compact month + day, no year, e.g. "Mar 15".
+export function fmtShortNoYear(dateStr: string): string {
+  const d = toDate(dateStr);
+  return isValidDate(d) ? format(d, 'MMM d') : '';
+}
+
 // Event-aware display: timed events append the time, all-day events show date only.
 // Compact, e.g. "Fri, Jun 26 · 7:00 PM" or "Fri, Jun 26".
 export function fmtDateTime(iso: string, allDay: boolean): string {

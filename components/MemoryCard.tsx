@@ -10,7 +10,7 @@ import { AlertBadge } from './AlertBadge';
 import { lightCardShadow } from '../constants/colors';
 import {
   yearsMonthsDays, nextAnnual, daysSince, daysUntil, daysBetween,
-  ordinal, fmtShort, fmtFull,
+  ordinal, fmtShort, fmtFull, fmtMonthDay, fmtShortNoYear,
 } from '../utils/dates';
 
 const TYPE_COLOR_KEY: Record<Memory['type'], 'rose' | 'accent' | 'teal'> = {
@@ -87,7 +87,9 @@ export function MemoryCard({ memory: m }: { memory: Memory }) {
               <Text style={{ fontSize: 15, fontWeight: '700', color: colors.text1, maxWidth: '80%' }} numberOfLines={1}>{m.name}</Text>
               {(m.type === 'birthday' || m.type === 'anniversary') && <AlertBadge count={m.alerts?.length} />}
             </View>
-            <Text style={{ fontSize: 11, color: colors.text3, marginTop: 2 }}>{fmtShort(m.originDate)}</Text>
+            <Text style={{ fontSize: 11, color: colors.text3, marginTop: 2 }}>
+              {m.yearUnknown ? fmtShortNoYear(m.originDate) : fmtShort(m.originDate)}
+            </Text>
           </View>
           <FavStar active={m.fav} onToggle={() => toggleMemoryFav(m.id)} />
         </View>
@@ -119,9 +121,36 @@ function BigNumber({ value, label, color }: { value: number; label: string; colo
   );
 }
 
+// Shown in place of the big age/years number when the year is unknown: the
+// month + day (no year, no age), with the countdown preserved below.
+function BigDate({ value, label, color }: { value: string; label: string; color: string }) {
+  const { colors } = useTheme();
+  return (
+    <View style={{ alignItems: 'center', paddingVertical: 18 }}>
+      <Text style={{ fontSize: 34, fontWeight: '800', color, letterSpacing: -1 }}>
+        {value}
+      </Text>
+      <Text style={{ fontSize: 11, color: colors.text3, textTransform: 'uppercase', letterSpacing: 1, marginTop: 4 }}>
+        {label}
+      </Text>
+    </View>
+  );
+}
+
 function BirthdayBody({ m, r, color }: { m: Memory; r: YMD; color: string }) {
   const { colors } = useTheme();
   const nb = nextAnnual(m.originDate);
+  // Year unknown → no age, no year-dependent stats. Show the month/day and keep
+  // the countdown to the next birthday.
+  if (m.yearUnknown) {
+    return (
+      <>
+        <BigDate value={fmtMonthDay(m.originDate)} label="birthday" color={color} />
+        <Bridge color={color}
+          text={`Next on ${fmtShortNoYear(nb)} — ${daysUntil(nb)} days away`} />
+      </>
+    );
+  }
   return (
     <>
       <BigNumber value={r.y} label="years old" color={color} />
@@ -139,6 +168,17 @@ function BirthdayBody({ m, r, color }: { m: Memory; r: YMD; color: string }) {
 function AnniversaryBody({ m, r, color }: { m: Memory; r: YMD; color: string }) {
   const { colors } = useTheme();
   const nb = nextAnnual(m.originDate);
+  // Year unknown → no "Nth anniversary", no year-dependent stats. Show the
+  // month/day and keep the countdown to the next anniversary.
+  if (m.yearUnknown) {
+    return (
+      <>
+        <BigDate value={fmtMonthDay(m.originDate)} label="anniversary" color={color} />
+        <Bridge color={color}
+          text={`Next on ${fmtShortNoYear(nb)} — ${daysUntil(nb)} days away`} />
+      </>
+    );
+  }
   return (
     <>
       <BigNumber value={r.y} label={r.y === 1 ? 'year' : 'years'} color={color} />

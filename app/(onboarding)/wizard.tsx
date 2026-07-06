@@ -8,6 +8,7 @@ import { TIMEZONES } from '../../constants/data';
 import { useStore } from '../../store/useStore';
 import { UserPrefs } from '../../store/types';
 import { DateTimeField } from '../../components/DateTimeField';
+import { Toggle } from '../../components/FormControls';
 import { useToast } from '../../components/Toast';
 
 const STEPS = ['Your name', 'Time zone', 'First countdown', 'Daily quote'];
@@ -48,6 +49,7 @@ export default function OnboardingWizard() {
   const [evName,   setEvName]   = useState('');
   const [evDate,   setEvDate]   = useState(format(addDays(new Date(), 30), 'yyyy-MM-dd'));
   const [dateTouched, setDateTouched] = useState(false);
+  const [yearUnknown, setYearUnknown] = useState(false);
   const [quote,    setQuote]    = useState<UserPrefs['quotePref']>(prefs.quotePref);
 
   // Events count forward (default ~a month out); birthdays/anniversaries count to
@@ -81,7 +83,7 @@ export default function OnboardingWizard() {
         addMemory({
           type: itemType, name: evName.trim(),
           emoji: itemType === 'birthday' ? '🎂' : '💍',
-          originDate: evDate, entries: [], note: '', fav: false, alerts: [],
+          originDate: evDate, yearUnknown, entries: [], note: '', fav: false, alerts: [],
         });
       }
     }
@@ -185,15 +187,19 @@ export default function OnboardingWizard() {
               <DateTimeField mode="date" label={dateLabel} value={evDate}
                 onChange={(d) => { setEvDate(d); setDateTouched(true); }} />
               {itemType !== 'event' && (
-                <View style={{ flexDirection: 'row', gap: 8, marginTop: -6, marginBottom: 8,
-                  padding: 12, borderRadius: 12, backgroundColor: colors.isDark ? 'rgba(124,106,245,0.08)' : colors.tint,
-                  borderWidth: 1, borderColor: colors.isDark ? 'rgba(124,106,245,0.2)' : colors.border }}>
-                  <Text style={{ fontSize: 15 }}>🔁</Text>
-                  <Text style={{ flex: 1, fontSize: 12, color: colors.text2, lineHeight: 17 }}>
-                    Enter the original {itemType === 'birthday' ? 'birth date (e.g. the birth year)' : 'wedding date'}.
-                    sayZay counts down to the next one every year and shows the {itemType === 'birthday' ? 'age' : 'years'} automatically — no need to set recurrence.
-                  </Text>
-                </View>
+                <>
+                  <Toggle label="I don't know the year" value={yearUnknown} onChange={setYearUnknown} />
+                  <View style={{ flexDirection: 'row', gap: 8, marginTop: -6, marginBottom: 8,
+                    padding: 12, borderRadius: 12, backgroundColor: colors.isDark ? 'rgba(124,106,245,0.08)' : colors.tint,
+                    borderWidth: 1, borderColor: colors.isDark ? 'rgba(124,106,245,0.2)' : colors.border }}>
+                    <Text style={{ fontSize: 15 }}>🔁</Text>
+                    <Text style={{ flex: 1, fontSize: 12, color: colors.text2, lineHeight: 17 }}>
+                      {yearUnknown
+                        ? `Just the month and day — sayZay counts down to the next ${itemType} every year. The year and ${itemType === 'birthday' ? 'age' : 'years'} won't be shown.`
+                        : `Enter the original ${itemType === 'birthday' ? 'birth date (e.g. the birth year)' : 'wedding date'}. sayZay counts down to the next one every year and shows the ${itemType === 'birthday' ? 'age' : 'years'} automatically — no need to set recurrence.`}
+                    </Text>
+                  </View>
+                </>
               )}
               <TouchableOpacity onPress={() => setStep(step + 1)} style={{ alignSelf: 'center', paddingVertical: 10, marginTop: 4 }}>
                 <Text style={{ fontSize: 14, fontWeight: '700', color: colors.text3 }}>Skip for now</Text>

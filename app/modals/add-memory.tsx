@@ -10,6 +10,7 @@ import { useStore } from '../../store/useStore';
 import { Alert as AlertType } from '../../store/types';
 import { DateTimeField } from '../../components/DateTimeField';
 import { AlertsEditor } from '../../components/AlertsEditor';
+import { Toggle } from '../../components/FormControls';
 
 const DATE_LABELS: Record<string,string> = {
   birthday:'Date of Birth', anniversary:'Anniversary Date',
@@ -32,6 +33,7 @@ export default function AddMemoryModal() {
   const [date,  setDate]  = useState(format(subDays(new Date(), 1), 'yyyy-MM-dd'));
   const [emoji, setEmoji] = useState(DEF_EMOJIS[initialType] || '⭐');
   const [note,  setNote]  = useState('');
+  const [yearUnknown, setYearUnknown] = useState(false);
   const [alerts, setAlerts] = useState<AlertType[]>([]);
 
   const fi = { backgroundColor:colors.glass, borderWidth:1,
@@ -43,7 +45,7 @@ export default function AddMemoryModal() {
   function submit() {
     if (!name.trim()||!date) { showToast('⚠️', 'Missing info', 'Please enter a name and date.'); return; }
     addMemory({
-      type:type as any, name:name.trim(), emoji, originDate:date,
+      type:type as any, name:name.trim(), emoji, originDate:date, yearUnknown,
       entries: type==='lifelog' ? [{date,note:note.trim()}] : [],
       note: type!=='lifelog' ? note.trim() : '',
       // Reminders only apply to the recurring types (birthday/anniversary).
@@ -87,6 +89,12 @@ export default function AddMemoryModal() {
           <TextInput value={name} onChangeText={setName}
             placeholder="e.g. First Half Dome Hike…" placeholderTextColor={colors.text3} style={fi} />
           <DateTimeField mode="date" label={DATE_LABELS[type]||'Date'} value={date} onChange={setDate} />
+          <Toggle label="I don't know the year" value={yearUnknown} onChange={setYearUnknown} />
+          {yearUnknown && (
+            <Text style={{ fontSize:12, color:colors.text3, marginTop:-6, marginBottom:14, marginLeft:2 }}>
+              Only the month and day are used — the year won't be shown.
+            </Text>
+          )}
           <FL label="Icon" />
           <View style={{ flexDirection:'row', flexWrap:'wrap', gap:6, marginBottom:14 }}>
             {MEM_EMOJIS.map(em => (

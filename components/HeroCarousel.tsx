@@ -4,7 +4,7 @@ import Svg, { Circle } from 'react-native-svg';
 import { CatColors, dayCountColor } from '../constants/colors';
 import { useTheme } from '../contexts/ThemeContext';
 import { useStore } from '../store/useStore';
-import { nextOccurrence, daysUntil, msUntil, pctElapsed, eventProgress, recurLabel, nextAnnual, yearsMonthsDays, ordinal, fmtDateTimeFull } from '../utils/dates';
+import { nextOccurrence, daysUntil, msUntil, pctElapsed, eventProgress, recurLabel, nextAnnual, yearsMonthsDays, ordinal, fmtDateTimeFull, fmtMonthDay } from '../utils/dates';
 
 const W = Dimensions.get('window').width - 32;
 const CIRC = 301.6;
@@ -212,7 +212,9 @@ function MemoryCard({ memory: m }: { memory: any }) {
     const labelColor = colors.isDark ? color : colors.accent;
     const bigColor   = colors.isDark ? color : dayCountColor(colors, days);
     const wday  = new Date(nb + 'T00:00:00').toLocaleDateString('en-US', { weekday:'long' });
-    const dstr  = new Date(nb + 'T00:00:00').toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' });
+    // Year unknown → the next-occurrence date drops the year (no fake year printed).
+    const dstr  = new Date(nb + 'T00:00:00').toLocaleDateString('en-US',
+      m.yearUnknown ? { month:'long', day:'numeric' } : { month:'long', day:'numeric', year:'numeric' });
     return (
       <View style={{ width:W, backgroundColor: colors.isDark ? '#1E0F1A' : colors.surf, borderRadius:24, padding:22,
         borderWidth:1, borderColor: colors.isDark ? (isBday ? 'rgba(232,80,122,0.28)' : 'rgba(124,106,245,0.28)') : colors.border }}>
@@ -223,7 +225,9 @@ function MemoryCard({ memory: m }: { memory: any }) {
           {m.emoji} {m.name}
         </Text>
         <Text style={{ fontSize:14, fontWeight:'600', color:labelColor, marginBottom:14 }}>
-          {isBday ? `Turning ${num}` : `${ordinal(num)} Anniversary`}
+          {m.yearUnknown
+            ? fmtMonthDay(m.originDate)
+            : (isBday ? `Turning ${num}` : `${ordinal(num)} Anniversary`)}
         </Text>
         <View style={{ alignItems:'center', paddingVertical:10 }}>
           <Text style={{ fontSize:64, fontWeight:'800', color:bigColor, letterSpacing:-2, fontVariant:['tabular-nums'] }}>{days}</Text>
