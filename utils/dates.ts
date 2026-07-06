@@ -166,7 +166,15 @@ export function daysBetween(fromStr: string, toStr: string): number {
 }
 
 export function ordinal(n: number): string {
-  return n + (n === 1 ? 'st' : n === 2 ? 'nd' : n === 3 ? 'rd' : 'th');
+  const abs = Math.abs(n) % 100;
+  // 11/12/13 (and 111/112/113 …) are always "th"; otherwise 1→st, 2→nd, 3→rd.
+  if (abs >= 11 && abs <= 13) return n + 'th';
+  switch (abs % 10) {
+    case 1:  return n + 'st';
+    case 2:  return n + 'nd';
+    case 3:  return n + 'rd';
+    default: return n + 'th';
+  }
 }
 
 export function fmtDisplay(dateStr: string): string {

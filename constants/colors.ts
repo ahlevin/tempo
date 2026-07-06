@@ -135,3 +135,10 @@ export function catBg(colors: Palette, id: string): string {
   const c = CatColorMap[id];
   return hexToRgba(c ? c.dark : '#7C6AF5', 0.12);
 }
+
+// Tinted background for the hero days-tile. Light: the neutral Yacht Club tint;
+// dark: the (already theme-resolved) accent hex at ~14% opacity.
+export function heroTintBg(colors: Palette, accentHex: string): string {
+  if (!colors.isDark) return colors.tint;
+  return /^#[0-9a-fA-F]{6}$/.test(accentHex) ? hexToRgba(accentHex, 0.14) : hexToRgba('#7C6AF5', 0.14);
+}
