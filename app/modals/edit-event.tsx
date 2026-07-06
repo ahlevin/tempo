@@ -22,7 +22,6 @@ export default function EditEventModal() {
   const events      = useStore(s => s.events);
   const updateEvent = useStore(s => s.updateEvent);
   const deleteEvent = useStore(s => s.deleteEvent);
-  const convertEventToMemory = useStore(s => s.convertEventToMemory);
   const attachEventToLog     = useStore(s => s.attachEventToLog);
   const confirm     = useConfirm();
   const { showToast } = useToast();
@@ -61,19 +60,6 @@ export default function EditEventModal() {
   async function del() {
     const ok = await confirm({ title:`Delete "${event!.name}"?`, message:'This cannot be undone.', confirmLabel:'Delete', destructive:true });
     if (ok) { deleteEvent(id); router.back(); }
-  }
-
-  const CONVERT_TO: { type: 'birthday'|'anniversary'|'memorial'|'lifelog'; label: string; emoji: string }[] = [
-    { type:'birthday',    label:'Birthday',    emoji:'🎂' },
-    { type:'anniversary', label:'Anniversary', emoji:'💑' },
-    { type:'memorial',    label:'Memorial',    emoji:'🕊️' },
-    { type:'lifelog',     label:'Life Log',    emoji:'📓' },
-  ];
-  async function convert(t: typeof CONVERT_TO[number]) {
-    const ok = await confirm({ title:`Convert to ${t.label}?`,
-      message:`"${event!.name}" will move to your ${t.label === 'Life Log' ? 'Life Log' : t.label + 's'}. Its date, note, reminders, and star are kept.`,
-      confirmLabel:'Convert' });
-    if (ok) { convertEventToMemory(id, t.type); router.back(); }
   }
 
   // Move this standalone event INTO a life log as a single future-dated entry
@@ -157,18 +143,6 @@ export default function EditEventModal() {
             style={{ backgroundColor:colors.accent, borderRadius:14, padding:15, alignItems:'center', marginBottom:12 }}>
             <Text style={{ color:'#fff', fontSize:15, fontWeight:'700' }}>Save Changes →</Text>
           </TouchableOpacity>
-
-          <FL label="Change type" />
-          <View style={{ flexDirection:'row', flexWrap:'wrap', gap:7, marginBottom:16 }}>
-            {CONVERT_TO.map(t => (
-              <TouchableOpacity key={t.type} onPress={() => convert(t)}
-                style={{ flexDirection:'row', alignItems:'center', gap:6, paddingVertical:9, paddingHorizontal:12,
-                  borderRadius:11, borderWidth:1, borderColor:colors.border, backgroundColor:colors.glass }}>
-                <Text style={{ fontSize:15 }}>{t.emoji}</Text>
-                <Text style={{ fontSize:13, fontWeight:'600', color:colors.text2 }}>{t.label}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
 
           {/* Move this event into a life log (becomes a future-dated entry;
               single source of truth — the event row is removed). */}

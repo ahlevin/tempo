@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
-import { format } from 'date-fns';
+import { format, addDays } from 'date-fns';
 import { Event, Goal, Memory, UserPrefs, Alert, Recurrence } from './types';
 import { DEFAULT_HOLIDAY_IDS } from '../constants/holidays';
 import {
@@ -63,7 +63,7 @@ interface TempoStore {
   deleteLogEntry: (memId: string, index: number) => void;
   // Cross-type: a standalone event <-> a life-log entry (single source of truth).
   attachEventToLog: (eventId: string, logId: string, entry: import('./types').LogEntry) => void;
-  detachEntryToEvent: (memId: string, index: number) => void;
+  detachEntryToEvent: (memId: string, index: number) => string | null;
   // Cross-type conversion. Events and memories are different tables, so a
   // cross-table convert DELETEs the old row and CREATEs the new one (id preserved).
   convertEventToMemory: (id: string, targetType: Memory['type']) => void;
@@ -351,14 +351,17 @@ export const useStore = create<TempoStore>()(
         detachEntryToEvent: (memId, index) => {
           const m = get().memories.find(x => x.id === memId);
           const e = m?.entries[index];
-          if (!m || !e) return;
+          if (!m || !e) return null;
           const id = uuid();
-          const d = e.date || today();
+          // Preserve the entry's date; fall back to a valid upcoming date so the
+          // recreated event is never dateless (which would drop it out of Countdowns).
+          const d = e.date || format(addDays(new Date(), 30), 'yyyy-MM-dd');
           const event: Event = {
             id, name: e.item || m.name, emoji: m.emoji, cat: 'parties',
             allDay: true, start: `${d}T00:00:00`, end: null, date: d,
             created: today(), fav: false, note: e.note ?? '', recur: null, alerts: [],
           };
+          // Add the event AND drop the entry in one atomic set, then sync both.
           // The log is KEPT even if now empty, so re-attaching later finds it.
           set(s => ({
             events: [...s.events, event],
@@ -366,6 +369,7 @@ export const useStore = create<TempoStore>()(
           }));
           enqueue({ kind: 'upsert', table: 'events', id });
           enqueue({ kind: 'upsert', table: 'memories', id: memId });
+          return id;
         },
         convertEventToMemory: (id, targetType) => {
           const e = get().events.find(x => x.id === id);

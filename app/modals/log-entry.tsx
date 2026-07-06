@@ -8,6 +8,7 @@ import { useStore } from '../../store/useStore';
 import { DatePrecision } from '../../store/types';
 import { DateTimeField } from '../../components/DateTimeField';
 import { useConfirm } from '../../components/ConfirmDialog';
+import { useToast } from '../../components/Toast';
 import { logUniverse, isCollectionLog, isUpcomingEntry } from '../../utils/lifelog';
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -26,6 +27,7 @@ export default function LogEntryModal() {
   const updateLogEntry = useStore(s => s.updateLogEntry);
   const detachEntryToEvent = useStore(s => s.detachEntryToEvent);
   const confirm = useConfirm();
+  const { showToast } = useToast();
   const m = memories.find(x => x.id === id);
 
   const editIndex = edit != null && edit !== '' ? parseInt(edit, 10) : -1;
@@ -105,7 +107,11 @@ export default function LogEntryModal() {
     const ok = await confirm({ title: 'Remove from life log?',
       message: `"${editing?.item || m!.name}" becomes a standalone countdown event again. Its date and note are kept; nothing is deleted.`,
       confirmLabel: 'Remove' });
-    if (ok) { detachEntryToEvent(id, editIndex); router.back(); }
+    if (ok) {
+      const newId = detachEntryToEvent(id, editIndex);
+      if (newId) showToast('📅', 'Back on Countdowns', `"${editing?.item || m!.name}" is a standalone countdown again.`);
+      router.back();
+    }
   }
   // Only upcoming (future-dated) entries can be detached back to an event.
   const canDetach = isEdit && !!editing && isUpcomingEntry(editing);
