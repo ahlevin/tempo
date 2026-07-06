@@ -50,14 +50,26 @@ function previousOccurrence(next: Date, freq: Recurrence['freq']): Date {
 // % elapsed through an event's CURRENT countdown period, for the ring/progress bar.
 //  - Recurring: from the previous occurrence to the next (fills across the cycle,
 //    so a yearly event 76 days out reads ~79%, not ~1% from its created date).
-//  - One-time: from creation to the start date.
+//  - One-time: from the earlier of (created date, one year before the event) to
+//    the event. So the window is at most a year — a trip 13 days out reads ~96%,
+//    not a few % just because it was created recently — but stretches longer when
+//    the user planned more than a year ahead.
 export function eventProgress(event: Event): number {
   const target = toDate(nextOccurrence(event));
   if (!isValidDate(target)) return 0;
-  const start = event.recur
-    ? previousOccurrence(target, event.recur.freq)
-    : toDate(event.created);
+
+  let start: Date;
+  if (event.recur) {
+    start = previousOccurrence(target, event.recur.freq);
+  } else {
+    const oneYearBefore = addYears(target, -1);
+    const created = toDate(event.created);
+    // start = min(created, oneYearBefore); fall back to oneYearBefore if created
+    // is missing/invalid.
+    start = isValidDate(created) && created < oneYearBefore ? created : oneYearBefore;
+  }
   if (!isValidDate(start)) return 0;
+
   const s = start.getTime(), e = target.getTime();
   if (e <= s) return 0;
   return Math.round(Math.min(100, Math.max(0, ((Date.now() - s) / (e - s)) * 100)));
