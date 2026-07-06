@@ -16,6 +16,29 @@ import { Event, Goal, Memory, UserPrefs, LogEntry } from '../store/types';
 const datePart = (s: string) => s.slice(0, 10);
 const naive = (s: string | null | undefined) => (s ? s.slice(0, 19) : null);
 
+// Postgres DATE/timestamptz columns reject "" — they need a valid value or NULL.
+// These coerce empty/invalid app strings (e.g. a life-log container's blank
+// originDate) to NULL so the upsert never sends "".
+
+// A DATE column: the "YYYY-MM-DD" prefix if valid, else NULL.
+const dateCol = (s: string | null | undefined): string | null => {
+  const d = (s ?? '').slice(0, 10);
+  return /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : null;
+};
+// A timestamptz derived from an app date ("YYYY-MM-DD" → midnight UTC), else NULL.
+const tsFromDate = (s: string | null | undefined): string | null => {
+  const d = dateCol(s);
+  return d ? `${d}T00:00:00Z` : null;
+};
+// A timestamptz from an app naive datetime ("YYYY-MM-DDTHH:mm:ss") — kept as-is
+// (wall-clock preserved on read), or promoted from a bare date, else NULL.
+const tsCol = (s: string | null | undefined): string | null => {
+  const v = (s ?? '').trim();
+  if (/^\d{4}-\d{2}-\d{2}T/.test(v)) return v;
+  const d = dateCol(v);
+  return d ? `${d}T00:00:00` : null;
+};
+
 // RFC4122 v4 — client-generated ids for optimistic inserts (DB columns are uuid).
 export function uuid(): string {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
@@ -53,13 +76,13 @@ export function eventToRow(e: Event, userId: string) {
     emoji: e.emoji,
     cat: e.cat,
     all_day: e.allDay,
-    start: e.start,
-    end: e.end,
+    start: tsCol(e.start),          // timestamptz — never ""
+    end: tsCol(e.end),              // nullable timestamptz
     fav: e.fav,
     note: e.note,
     recur: e.recur,
     alerts: e.alerts,
-    created_at: `${e.created}T00:00:00Z`,
+    created_at: tsFromDate(e.created),
   };
 }
 
@@ -91,11 +114,11 @@ export function goalToRow(g: Goal, userId: string) {
     current: g.current,
     unit: g.unit,
     step: g.step,
-    target_date: `${g.date}T00:00:00Z`,
+    target_date: tsFromDate(g.date),
     fav: g.fav,
     note: g.note,
     alerts: g.alerts,
-    created_at: `${g.created}T00:00:00Z`,
+    created_at: tsFromDate(g.created),
   };
 }
 
@@ -126,7 +149,7 @@ export function memoryToRow(m: Memory, userId: string) {
     type: m.type,
     name: m.name,
     emoji: m.emoji,
-    origin_date: m.originDate,
+    origin_date: dateCol(m.originDate),   // DATE — NULL for life-log containers, never ""
     year_unknown: m.yearUnknown,
     entries: m.entries,
     log_kind: m.logKind ?? 'count',
