@@ -26,6 +26,7 @@ export default function LogEntryModal() {
   const addLogEntry    = useStore(s => s.addLogEntry);
   const updateLogEntry = useStore(s => s.updateLogEntry);
   const detachEntryToEvent = useStore(s => s.detachEntryToEvent);
+  const deleteLogEntry = useStore(s => s.deleteLogEntry);
   const confirm = useConfirm();
   const { showToast } = useToast();
   const m = memories.find(x => x.id === id);
@@ -112,6 +113,15 @@ export default function LogEntryModal() {
       if (newId) showToast('📅', 'Back on Countdowns', `"${editing?.item || m!.name}" is a standalone countdown again.`);
       router.back();
     }
+  }
+  // Delete an attached upcoming item outright — one confirm, gone from BOTH
+  // Countdowns and the life log (they're the same underlying entry). No detach
+  // step: there is no standalone event to clean up, only this entry.
+  async function deleteEntry() {
+    const ok = await confirm({ title: `Delete "${editing?.item || m!.name}"?`,
+      message: 'This removes it from Countdowns and its life log. This cannot be undone.',
+      confirmLabel: 'Delete', destructive: true });
+    if (ok) { deleteLogEntry(id, editIndex); router.back(); }
   }
   // Only upcoming (future-dated) entries can be detached back to an event.
   const canDetach = isEdit && !!editing && isUpcomingEntry(editing);
@@ -258,8 +268,16 @@ export default function LogEntryModal() {
               {canDetach && (
                 <TouchableOpacity onPress={detach}
                   style={{ backgroundColor:colors.glass, borderWidth:1, borderColor:colors.border,
-                    borderRadius:14, padding:15, alignItems:'center' }}>
+                    borderRadius:14, padding:15, alignItems:'center', marginBottom:10 }}>
                   <Text style={{ color:colors.text1, fontSize:15, fontWeight:'700' }}>Remove from life log</Text>
+                </TouchableOpacity>
+              )}
+              {canDetach && (
+                <TouchableOpacity onPress={deleteEntry}
+                  style={{ backgroundColor:(colors.isDark ? 'rgba(232,80,122,0.15)' : 'rgba(197,0,26,0.10)'),
+                    borderWidth:1, borderColor:(colors.isDark ? 'rgba(232,80,122,0.4)' : 'rgba(197,0,26,0.25)'),
+                    borderRadius:14, padding:15, alignItems:'center' }}>
+                  <Text style={{ color:colors.rose, fontSize:15, fontWeight:'700' }}>Delete</Text>
                 </TouchableOpacity>
               )}
             </>
