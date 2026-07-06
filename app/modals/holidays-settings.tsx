@@ -2,6 +2,7 @@ import { ScrollView, View, Text, TouchableOpacity, Platform } from 'react-native
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useTheme } from '../../contexts/ThemeContext';
+import { CloseButton } from '../../components/CloseButton';
 import { useStore } from '../../store/useStore';
 import { Toggle } from '../../components/FormControls';
 import { catColor } from '../../constants/colors';
@@ -24,9 +25,7 @@ export default function HolidaysSettingsModal() {
       <View style={{ flexDirection:'row', justifyContent:'space-between',
         alignItems:'center', paddingHorizontal:20, paddingVertical:12 }}>
         <Text style={{ fontSize:18, fontWeight:'700', color:colors.text1 }}>Holidays 🎄</Text>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Text style={{ fontSize:16, color:colors.text3 }}>✕</Text>
-        </TouchableOpacity>
+        <CloseButton />
       </View>
 
       <ScrollView contentContainerStyle={{ padding:20, paddingBottom:60 }}

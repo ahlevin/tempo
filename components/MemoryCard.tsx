@@ -70,10 +70,11 @@ export function MemoryCard({ memory: m }: { memory: Memory }) {
   const border = colors.isDark ? TYPE_BORDER[m.type] : colors.border;
   const bg     = colors.isDark ? TYPE_BG[m.type] : colors.tint;
   const r      = yearsMonthsDays(m.originDate);
-  // Life logs open their detail view (entries + add); other memories open edit.
+  // Tap opens a read-only detail view (each has its own Edit button). Life logs
+  // use their richer detail (entries + add); other memories use detail-memory.
   const open = m.type === 'lifelog'
     ? () => router.push({ pathname: '/modals/lifelog-detail', params: { id: m.id } })
-    : () => router.push({ pathname: '/modals/edit-memory', params: { id: m.id } });
+    : () => router.push({ pathname: '/modals/detail-memory', params: { id: m.id } });
 
   return (
     <SwipeableRow onDelete={() => deleteMemory(m.id)} marginBottom={10}
@@ -98,12 +99,12 @@ export function MemoryCard({ memory: m }: { memory: Memory }) {
             </View>
             {/* Life logs have no container date (dates live on entries). */}
             {m.type !== 'lifelog' && (
-              <Text style={{ fontSize: 11, color: colors.text3, marginTop: 2 }}>
+              <Text style={{ fontSize: 13, color: colors.text2, marginTop: 2 }}>
                 {m.yearUnknown ? fmtShortNoYear(m.originDate) : fmtShort(m.originDate)}
               </Text>
             )}
             {!!m.note && m.type !== 'lifelog' && (
-              <Text style={{ fontSize: 11, color: colors.text2, marginTop: 2, fontStyle: 'italic' }} numberOfLines={1}>
+              <Text style={{ fontSize: 13, color: colors.text2, marginTop: 2, fontStyle: 'italic' }} numberOfLines={1}>
                 {m.note}
               </Text>
             )}
@@ -258,7 +259,7 @@ function LifelogSummary({ m, color }: { m: Memory; color: string }) {
           <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6 }}>
             <Text style={{ fontSize: 30, fontWeight: '800', color, fontVariant: ['tabular-nums'] }}>{count}</Text>
             <Text style={{ fontSize: 15, fontWeight: '600', color: colors.text2 }}>of {target}</Text>
-            {pct !== null && <Text style={{ fontSize: 13, color: colors.text3, marginLeft: 2 }}>· {pct}%</Text>}
+            {pct !== null && <Text style={{ fontSize: 13, color: colors.text2, marginLeft: 2 }}>· {pct}%</Text>}
           </View>
           <View style={{ height: 6, borderRadius: 3, backgroundColor: colors.track, marginTop: 8, overflow: 'hidden' }}>
             <View style={{ height: '100%', width: `${pct ?? 0}%` as DimensionValue, backgroundColor: color, borderRadius: 3 }} />
@@ -268,13 +269,13 @@ function LifelogSummary({ m, color }: { m: Memory; color: string }) {
         <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' }}>
           <Text style={{ fontSize: 30, fontWeight: '800', color, fontVariant: ['tabular-nums'] }}>{count}</Text>
           <Text style={{ fontSize: 15, fontWeight: '600', color: colors.text2 }}>{count === 1 ? 'time' : 'times'}</Text>
-          {last && <Text style={{ fontSize: 12, color: colors.text3, marginLeft: 4 }}>· last {fmtLogDate(last.date, last.datePrecision)}</Text>}
+          {last && <Text style={{ fontSize: 13, color: colors.text2, marginLeft: 4 }}>· last {fmtLogDate(last.date, last.datePrecision)}</Text>}
         </View>
       )}
       {upN > 0 && (
         <Text style={{ fontSize: 12, fontWeight: '600', color: colors.teal, marginTop: 8 }}>⏳ {upN} upcoming</Text>
       )}
-      <Text style={{ fontSize: 12, fontWeight: '600', color: colors.teal, marginTop: 12 }}>Tap to view & add ›</Text>
+      <Text style={{ fontSize: 13, fontWeight: '700', color: colors.teal, marginTop: 12 }}>Tap to view & add ›</Text>
     </View>
   );
 }

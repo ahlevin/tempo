@@ -38,7 +38,7 @@ export function UpcomingLogRow({ item }: { item: UpcomingLogItem }) {
       </View>
       <View style={{ flex: 1 }}>
         <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text1, maxWidth: '86%' }} numberOfLines={1}>{item.label}</Text>
-        <Text style={{ fontSize: 11, color: colors.text3, marginTop: 2 }}>
+        <Text style={{ fontSize: 13, color: colors.text2, marginTop: 2 }}>
           <Text style={{ color, fontWeight: '700' }}>Upcoming</Text>
           <Text> · {item.logName} · {dateStr}</Text>
         </Text>

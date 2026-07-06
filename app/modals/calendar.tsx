@@ -2,6 +2,7 @@ import { View, Text, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useTheme } from '../../contexts/ThemeContext';
+import { CloseButton } from '../../components/CloseButton';
 
 // Calendar now lives as a sub-screen linked from Profile (was its own tab).
 export default function CalendarScreen() {
@@ -11,9 +12,7 @@ export default function CalendarScreen() {
       <View style={{ flexDirection:'row', justifyContent:'space-between', alignItems:'center',
         paddingHorizontal:20, paddingVertical:14 }}>
         <Text style={{ fontSize:22, fontWeight:'700', color:colors.text1 }}>Calendar</Text>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Text style={{ fontSize:16, color:colors.text3 }}>✕</Text>
-        </TouchableOpacity>
+        <CloseButton />
       </View>
       <View style={{ flex:1, alignItems:'center', justifyContent:'center' }}>
         <Text style={{ fontSize:48, marginBottom:16 }}>📆</Text>

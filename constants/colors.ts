@@ -58,8 +58,12 @@ export const lightColors: Palette = {
   teal:    '#002C54', // remapped -> navy
   amber:   '#002C54', // remapped -> navy
   text1:   '#0E2237',
-  text2:   '#7C8B8B',
-  text3:   '#ACBEBE',
+  // text2 = secondary CONTENT (dates, subtitles, notes). Darkened to ~7:1 on the
+  // near-white bg so real content is legible (was #7C8B8B ≈ 3:1, too faint).
+  text2:   '#4C5A67',
+  // text3 = tiny decorative uppercase micro-labels ONLY ("DAYS", stat captions).
+  // Nudged a touch darker than the old #ACBEBE for legibility; never for content.
+  text3:   '#8595A0',
   tint:    '#E3EAF1',
   track:   '#DFE4E8',
   tile:    '#E3EAF1',

@@ -2,6 +2,7 @@ import { ScrollView, View, Text, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useTheme } from '../../contexts/ThemeContext';
+import { CloseButton } from '../../components/CloseButton';
 import { dayCountColor, lightCardShadow, catColor } from '../../constants/colors';
 import { useStore } from '../../store/useStore';
 import { SwipeableRow } from '../../components/SwipeableRow';
@@ -36,16 +37,14 @@ export default function FavoritesScreen() {
       <View style={{ flexDirection:'row', justifyContent:'space-between', alignItems:'center',
         paddingHorizontal:20, paddingVertical:14 }}>
         <Text style={{ fontSize:22, fontWeight:'700', color:colors.text1 }}>Favorites</Text>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Text style={{ fontSize:16, color:colors.text3 }}>✕</Text>
-        </TouchableOpacity>
+        <CloseButton />
       </View>
       <ScrollView contentContainerStyle={{ paddingHorizontal:16, paddingBottom:60 }}
         showsVerticalScrollIndicator={false}>
         {empty && (
           <View style={{ alignItems:'center', paddingVertical:60 }}>
             <Text style={{ fontSize:40, marginBottom:12 }}>⭐</Text>
-            <Text style={{ color:colors.text3, fontSize:15, textAlign:'center' }}>
+            <Text style={{ color:colors.text2, fontSize:15, textAlign:'center' }}>
               No favorites yet.{'\n'}Tap ☆ on any event, goal, memory, or holiday.
             </Text>
           </View>
@@ -61,7 +60,7 @@ export default function FavoritesScreen() {
                 <SwipeableRow key={e.id} onDelete={() => deleteEvent(e.id)}
                   confirmTitle="Delete Event" confirmMessage={`Delete "${e.name}"? This can't be undone.`}>
                 <TouchableOpacity activeOpacity={0.8}
-                  onPress={() => router.push({ pathname:'/modals/edit-event', params:{ id:e.id } })}
+                  onPress={() => router.push({ pathname:'/modals/detail-event', params:{ id:e.id } })}
                   style={{ backgroundColor:colors.surf, borderRadius:18,
                   borderWidth:1, borderColor:colors.border, padding:14,
                   marginBottom:8, flexDirection:'row', alignItems:'center', gap:12,
@@ -69,7 +68,7 @@ export default function FavoritesScreen() {
                   <Text style={{ fontSize:22 }}>{e.emoji}</Text>
                   <View style={{ flex:1 }}>
                     <Text style={{ fontSize:14, fontWeight:'600', color:colors.text1 }}>{e.name}</Text>
-                    <Text style={{ fontSize:11, color:colors.text3, marginTop:2 }}>
+                    <Text style={{ fontSize:13, color:colors.text2, marginTop:2 }}>
                       {fmtDateTime(nd, e.allDay)}
                     </Text>
                   </View>
@@ -101,7 +100,7 @@ export default function FavoritesScreen() {
                 <Text style={{ fontSize:22 }}>{h.emoji}</Text>
                 <View style={{ flex:1 }}>
                   <Text style={{ fontSize:14, fontWeight:'600', color:colors.text1 }}>{h.name}</Text>
-                  <Text style={{ fontSize:11, color:colors.text3, marginTop:2 }}>Holiday · repeats yearly</Text>
+                  <Text style={{ fontSize:13, color:colors.text2, marginTop:2 }}>Holiday · repeats yearly</Text>
                 </View>
                 <View style={{ alignItems:'flex-end', gap:4 }}>
                   <Text style={{ fontSize:20, fontWeight:'800', color:hcolor }}>{h.days}</Text>
@@ -124,7 +123,7 @@ export default function FavoritesScreen() {
                 <SwipeableRow key={g.id} onDelete={() => deleteGoal(g.id)}
                   confirmTitle="Delete Goal" confirmMessage={`Delete "${g.name}"? This can't be undone.`}>
                 <TouchableOpacity activeOpacity={0.8}
-                  onPress={() => router.push({ pathname:'/modals/edit-goal', params:{ id:g.id } })}
+                  onPress={() => router.push({ pathname:'/modals/detail-goal', params:{ id:g.id } })}
                   style={{ backgroundColor:colors.surf, borderRadius:18,
                   borderWidth:1, borderColor: colors.isDark ? 'rgba(62,207,178,0.2)' : colors.border,
                   padding:14, marginBottom:8, ...(colors.isDark ? null : lightCardShadow) }}>

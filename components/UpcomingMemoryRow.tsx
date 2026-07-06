@@ -38,7 +38,8 @@ export function UpcomingMemoryRow({ memory: m }: { memory: Memory }) {
   const dateStr = new Date(nb + 'T00:00:00').toLocaleDateString('en-US',
     { weekday: 'short', month: 'short', day: 'numeric' });
 
-  const edit = () => router.push({ pathname: '/modals/edit-memory', params: { id: m.id } });
+  // Tap opens the read-only detail view (which has its own Edit button).
+  const edit = () => router.push({ pathname: '/modals/detail-memory', params: { id: m.id } });
 
   return (
     <SwipeableRow onDelete={() => deleteMemory(m.id)}
@@ -57,7 +58,7 @@ export function UpcomingMemoryRow({ memory: m }: { memory: Memory }) {
             <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text1, maxWidth: '80%' }} numberOfLines={1}>{m.name}</Text>
             <AlertBadge count={m.alerts?.length} />
           </View>
-          <Text style={{ fontSize: 11, color: colors.text3, marginTop: 2 }}>
+          <Text style={{ fontSize: 13, color: colors.text2, marginTop: 2 }}>
             {m.yearUnknown ? (
               // Year unknown: no "Turning N" — just the month/day of the next one.
               <Text style={{ color, fontWeight: '700' }}>{dateStr}</Text>

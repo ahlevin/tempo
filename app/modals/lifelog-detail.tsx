@@ -2,6 +2,7 @@ import { ScrollView, View, Text, TouchableOpacity, DimensionValue } from 'react-
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useTheme } from '../../contexts/ThemeContext';
+import { CloseButton } from '../../components/CloseButton';
 import { useStore } from '../../store/useStore';
 import type { LogEntry } from '../../store/types';
 import { useConfirm } from '../../components/ConfirmDialog';
@@ -69,9 +70,7 @@ export default function LifelogDetailModal() {
         <TouchableOpacity onPress={editLog} style={{ marginRight:14 }}>
           <Text style={{ fontSize:14, fontWeight:'600', color:teal }}>Edit</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Text style={{ fontSize:16, color:colors.text3 }}>✕</Text>
-        </TouchableOpacity>
+        <CloseButton />
       </View>
 
       <ScrollView contentContainerStyle={{ paddingHorizontal:16, paddingBottom:60 }}
@@ -83,13 +82,13 @@ export default function LifelogDetailModal() {
               <View style={{ flexDirection:'row', alignItems:'baseline', gap:6 }}>
                 <Text style={{ fontSize:34, fontWeight:'800', color:teal, fontVariant:['tabular-nums'] }}>{count}</Text>
                 <Text style={{ fontSize:16, fontWeight:'600', color:colors.text2 }}>of {target}</Text>
-                {pct !== null && <Text style={{ fontSize:14, color:colors.text3, marginLeft:2 }}>· {pct}%</Text>}
+                {pct !== null && <Text style={{ fontSize:14, color:colors.text2, marginLeft:2 }}>· {pct}%</Text>}
               </View>
               <View style={{ height:8, borderRadius:4, backgroundColor:colors.track, marginTop:10, overflow:'hidden' }}>
                 <View style={{ height:'100%', width:`${pct ?? 0}%` as DimensionValue, backgroundColor:teal, borderRadius:4 }} />
               </View>
               {upN > 0 && (
-                <Text style={{ fontSize:12, color:colors.text3, marginTop:8 }}>{count} visited · {upN} upcoming</Text>
+                <Text style={{ fontSize:13, color:colors.text2, marginTop:8 }}>{count} visited · {upN} upcoming</Text>
               )}
             </>
           ) : (
@@ -97,10 +96,10 @@ export default function LifelogDetailModal() {
               <View style={{ flexDirection:'row', alignItems:'baseline', gap:6, flexWrap:'wrap' }}>
                 <Text style={{ fontSize:34, fontWeight:'800', color:teal, fontVariant:['tabular-nums'] }}>{count}</Text>
                 <Text style={{ fontSize:16, fontWeight:'600', color:colors.text2 }}>{count === 1 ? 'time' : 'times'}</Text>
-                {lastDated && <Text style={{ fontSize:13, color:colors.text3, marginLeft:4 }}>· last {fmtLogDate(lastDated.date, lastDated.datePrecision)}</Text>}
+                {lastDated && <Text style={{ fontSize:13, color:colors.text2, marginLeft:4 }}>· last {fmtLogDate(lastDated.date, lastDated.datePrecision)}</Text>}
               </View>
               {upN > 0 && (
-                <Text style={{ fontSize:12, color:colors.text3, marginTop:6 }}>{count} completed · {upN} upcoming</Text>
+                <Text style={{ fontSize:13, color:colors.text2, marginTop:6 }}>{count} completed · {upN} upcoming</Text>
               )}
               {dated.length > 0 && (
                 <View style={{ flexDirection:'row', gap:16, marginTop:10 }}>
@@ -149,14 +148,16 @@ export default function LifelogDetailModal() {
                         </View>
                       )}
                     </View>
-                    {!!secondary && <Text style={{ fontSize:11, color:colors.text3, marginTop:1 }}>{secondary}</Text>}
-                    {!!entry.note && <Text style={{ fontSize:12, color:colors.text2, marginTop:2 }} numberOfLines={2}>{entry.note}</Text>}
+                    {!!secondary && <Text style={{ fontSize:13, color:colors.text2, marginTop:1 }}>{secondary}</Text>}
+                    {!!entry.note && <Text style={{ fontSize:13, color:colors.text2, marginTop:2 }} numberOfLines={2}>{entry.note}</Text>}
                   </View>
-                  <TouchableOpacity onPress={() => editEntry(index)} hitSlop={{ top:8, bottom:8, left:8, right:8 }}>
-                    <Text style={{ fontSize:15 }}>✏️</Text>
+                  <TouchableOpacity onPress={() => editEntry(index)} hitSlop={{ top:8, bottom:8, left:8, right:8 }}
+                    style={{ width:40, height:40, alignItems:'center', justifyContent:'center' }}>
+                    <Text style={{ fontSize:17 }}>✏️</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity onPress={() => removeEntry(index, entry)} hitSlop={{ top:8, bottom:8, left:8, right:8 }}>
-                    <Text style={{ fontSize:15, color: up ? teal : colors.rose }}>{up ? '↩︎' : '✕'}</Text>
+                  <TouchableOpacity onPress={() => removeEntry(index, entry)} hitSlop={{ top:8, bottom:8, left:8, right:8 }}
+                    style={{ width:40, height:40, alignItems:'center', justifyContent:'center' }}>
+                    <Text style={{ fontSize:18, color: up ? teal : colors.rose }}>{up ? '↩︎' : '✕'}</Text>
                   </TouchableOpacity>
                 </View>
               );

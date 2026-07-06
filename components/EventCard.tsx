@@ -22,7 +22,8 @@ export function EventCard({ event: e }: { event: Event }) {
   const rl     = recurLabel(e);
   const dstr   = fmtDateTime(nd, e.allDay);
 
-  const edit = () => router.push({ pathname: '/modals/edit-event', params: { id: e.id } });
+  // Tap opens the read-only detail view (which has its own Edit button).
+  const edit = () => router.push({ pathname: '/modals/detail-event', params: { id: e.id } });
 
   return (
     <SwipeableRow onDelete={() => deleteEvent(e.id)}
@@ -55,9 +56,9 @@ export function EventCard({ event: e }: { event: Event }) {
           )}
           <AlertBadge count={e.alerts.length} />
         </View>
-        <Text style={{ fontSize: 11, color: colors.text3, marginTop: 2 }}>{dstr}</Text>
+        <Text style={{ fontSize: 13, color: colors.text2, marginTop: 2 }}>{dstr}</Text>
         {!!e.note && (
-          <Text style={{ fontSize: 11, color: colors.text2, marginTop: 2, fontStyle: 'italic' }} numberOfLines={1}>
+          <Text style={{ fontSize: 13, color: colors.text2, marginTop: 2, fontStyle: 'italic' }} numberOfLines={1}>
             {e.note}
           </Text>
         )}

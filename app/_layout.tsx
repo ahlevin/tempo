@@ -121,6 +121,9 @@ function RootNavigator() {
         <Stack.Screen name="modals/add-event"   options={{ presentation: 'modal' }} />
         <Stack.Screen name="modals/add-goal"    options={{ presentation: 'modal' }} />
         <Stack.Screen name="modals/add-memory"  options={{ presentation: 'modal' }} />
+        <Stack.Screen name="modals/detail-event"  options={{ presentation: 'modal' }} />
+        <Stack.Screen name="modals/detail-goal"   options={{ presentation: 'modal' }} />
+        <Stack.Screen name="modals/detail-memory" options={{ presentation: 'modal' }} />
         <Stack.Screen name="modals/edit-event"  options={{ presentation: 'modal' }} />
         <Stack.Screen name="modals/edit-goal"   options={{ presentation: 'modal' }} />
         <Stack.Screen name="modals/edit-memory" options={{ presentation: 'modal' }} />

@@ -2,6 +2,7 @@ import { ScrollView, View, Text, TouchableOpacity, KeyboardAvoidingView, Platfor
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useTheme } from '../../contexts/ThemeContext';
+import { CloseButton } from '../../components/CloseButton';
 import { useStore } from '../../store/useStore';
 import { Alert as AlertType } from '../../store/types';
 import { AlertsEditor } from '../../components/AlertsEditor';
@@ -43,9 +44,7 @@ export default function HolidayDetailModal() {
         <View style={{ flexDirection:'row', justifyContent:'space-between',
           alignItems:'center', paddingHorizontal:20, paddingVertical:12 }}>
           <Text style={{ fontSize:18, fontWeight:'700', color:colors.text1 }}>Holiday</Text>
-          <TouchableOpacity onPress={() => router.back()}>
-            <Text style={{ fontSize:16, color:colors.text3 }}>✕</Text>
-          </TouchableOpacity>
+          <CloseButton />
         </View>
 
         <ScrollView contentContainerStyle={{ padding:20 }}

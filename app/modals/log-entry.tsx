@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { format } from 'date-fns';
 import { useTheme } from '../../contexts/ThemeContext';
+import { CloseButton } from '../../components/CloseButton';
 import { useStore } from '../../store/useStore';
 import { DatePrecision } from '../../store/types';
 import { DateTimeField } from '../../components/DateTimeField';
@@ -138,9 +139,7 @@ export default function LogEntryModal() {
           <Text style={{ fontSize:18, fontWeight:'700', color:colors.text1 }} numberOfLines={1}>
             {headerTitle}
           </Text>
-          <TouchableOpacity onPress={() => router.back()}>
-            <Text style={{ fontSize:16, color:colors.text3 }}>✕</Text>
-          </TouchableOpacity>
+          <CloseButton />
         </View>
 
         <ScrollView contentContainerStyle={{ padding:20 }} keyboardShouldPersistTaps="handled"

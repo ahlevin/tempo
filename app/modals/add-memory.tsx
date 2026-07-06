@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { format, subDays } from 'date-fns';
 import { useTheme } from '../../contexts/ThemeContext';
+import { CloseButton } from '../../components/CloseButton';
 import { MEM_EMOJIS, MEMORY_TYPES } from '../../constants/data';
 import { useStore } from '../../store/useStore';
 import { Alert as AlertType } from '../../store/types';
@@ -100,9 +101,7 @@ export default function AddMemoryModal() {
         <View style={{ flexDirection:'row', justifyContent:'space-between',
           alignItems:'center', paddingHorizontal:20, paddingVertical:12 }}>
           <Text style={{ fontSize:18, fontWeight:'700', color:colors.text1 }}>New Memory 🕰️</Text>
-          <TouchableOpacity onPress={() => router.back()}>
-            <Text style={{ fontSize:16, color:colors.text3 }}>✕</Text>
-          </TouchableOpacity>
+          <CloseButton />
         </View>
         <ScrollView contentContainerStyle={{ padding:20 }}
           showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">

@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { View, Text, ScrollView, Dimensions, TouchableOpacity, Platform } from 'react-native';
-import { useIsFocused } from 'expo-router';
-import { catColor, heroTintBg } from '../constants/colors';
+import { useIsFocused, router } from 'expo-router';
+import { catColor, heroTintBg, lightCardShadow } from '../constants/colors';
 import { CATEGORIES } from '../constants/data';
 import { visibleHolidays, HolidayItem } from '../constants/holidays';
 import { logCount, upcomingCount } from '../utils/lifelog';
@@ -43,7 +43,7 @@ function InfoColumn({ line1, line2, children }: { line1?: string; line2: string;
   return (
     <View style={{ flex: 1, justifyContent: 'center', gap: 8 }}>
       <View>
-        {!!line1 && <Text style={{ fontSize: 12, color: colors.text3, marginBottom: 2 }}>{line1}</Text>}
+        {!!line1 && <Text style={{ fontSize: 13, color: colors.text2, marginBottom: 2 }}>{line1}</Text>}
         <Text style={{ fontSize: 15, fontWeight: '700', color: colors.text1 }}>{line2}</Text>
       </View>
       {children}
@@ -81,17 +81,22 @@ function Secondary({ color, children }: { color: string; children: React.ReactNo
 
 // Shared card frame: themed surface + border, with the favorite star pinned
 // top-right on every card type.
-function HeroFrame({ bgDark, borderDark, fav, onFav, children }: {
-  bgDark: string; borderDark: string; fav: boolean; onFav: () => void; children: React.ReactNode;
+function HeroFrame({ bgDark, borderDark, fav, onFav, onPress, children }: {
+  bgDark: string; borderDark: string; fav: boolean; onFav: () => void; onPress?: () => void; children: React.ReactNode;
 }) {
   const { colors } = useTheme();
   return (
     <View style={{ width: W, minHeight: CARD_MIN_H, backgroundColor: colors.isDark ? bgDark : colors.surf,
-      borderRadius: 24, padding: 22, borderWidth: 1, borderColor: colors.isDark ? borderDark : colors.border }}>
+      borderRadius: 24, padding: 22, borderWidth: 1, borderColor: colors.isDark ? borderDark : colors.border,
+      ...(colors.isDark ? null : lightCardShadow) }}>
       <View style={{ position: 'absolute', top: 12, right: 12, zIndex: 2 }}>
         <FavStar active={fav} onToggle={onFav} />
       </View>
-      {children}
+      {/* The whole card opens the read-only detail view; nested controls (nudge,
+          star) keep their own taps. */}
+      <TouchableOpacity activeOpacity={onPress ? 0.85 : 1} onPress={onPress} disabled={!onPress}>
+        {children}
+      </TouchableOpacity>
     </View>
   );
 }
@@ -136,7 +141,8 @@ function EventCard({ event: e, active }: { event: any; active: boolean }) {
   const cat    = CATEGORIES.find(c => c.id === e.cat);
   const secondary = cat ? `${cat.emoji} ${cat.short}` : 'Countdown';
   return (
-    <HeroFrame bgDark="#1A1830" borderDark="rgba(124,106,245,0.22)" fav={e.fav} onFav={() => toggleFav(e.id)}>
+    <HeroFrame bgDark="#1A1830" borderDark="rgba(124,106,245,0.22)" fav={e.fav} onFav={() => toggleFav(e.id)}
+      onPress={() => router.push({ pathname: '/modals/detail-event', params: { id: e.id } })}>
       <Eyebrow color={accent}>{rl ? '🔁 ' + rl : 'Next Up'}</Eyebrow>
       <CardName>{e.emoji} {e.name}</CardName>
       <Secondary color={accent}>{secondary}</Secondary>
@@ -161,7 +167,8 @@ function GoalCard({ goal: g }: { goal: any }) {
   const dstr = target.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 
   return (
-    <HeroFrame bgDark="#0F1E1A" borderDark="rgba(62,207,178,0.25)" fav={g.fav} onFav={() => toggleFav(g.id)}>
+    <HeroFrame bgDark="#0F1E1A" borderDark="rgba(62,207,178,0.25)" fav={g.fav} onFav={() => toggleFav(g.id)}
+      onPress={() => router.push({ pathname: '/modals/detail-goal', params: { id: g.id } })}>
       <Eyebrow color={colors.teal}>Active Goal</Eyebrow>
       <CardName>{g.emoji} {g.name}</CardName>
       <Secondary color={colors.teal}>Goal: {g.target.toLocaleString()} {g.unit}</Secondary>
@@ -227,7 +234,8 @@ function MemoryCard({ memory: m }: { memory: any }) {
     // dark accent hex drives the tile tint; light uses the neutral tint.
     const tileBg = heroTintBg(colors, dark);
     return (
-      <HeroFrame bgDark={cardBgDark} borderDark={borderDark} fav={m.fav} onFav={() => toggleFav(m.id)}>
+      <HeroFrame bgDark={cardBgDark} borderDark={borderDark} fav={m.fav} onFav={() => toggleFav(m.id)}
+        onPress={() => router.push({ pathname: '/modals/detail-memory', params: { id: m.id } })}>
         <Eyebrow color={accent}>{eyebrow}</Eyebrow>
         <CardName>{m.emoji} {m.name}</CardName>
         <Secondary color={accent}>{midLabel}</Secondary>
@@ -254,7 +262,8 @@ function MemoryCard({ memory: m }: { memory: any }) {
     : (isColl ? `${pct}% complete` : `${completed} logged`);
   const info2 = isColl ? `${completed} of ${m.logTarget} logged` : `${completed} logged`;
   return (
-    <HeroFrame bgDark="#0F1E1A" borderDark="rgba(62,207,178,0.28)" fav={m.fav} onFav={() => toggleFav(m.id)}>
+    <HeroFrame bgDark="#0F1E1A" borderDark="rgba(62,207,178,0.28)" fav={m.fav} onFav={() => toggleFav(m.id)}
+      onPress={() => router.push({ pathname: '/modals/lifelog-detail', params: { id: m.id } })}>
       <Eyebrow color={accent}>Life Log</Eyebrow>
       <CardName>{m.emoji} {m.name}</CardName>
       <Secondary color={accent}>{secondary}</Secondary>
@@ -275,7 +284,8 @@ function HolidayCard({ item }: { item: HolidayItem }) {
   const wday = new Date(item.dateISO + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long' });
   const dstr = new Date(item.dateISO + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
   return (
-    <HeroFrame bgDark="#0F1E14" borderDark="rgba(46,139,87,0.28)" fav={item.fav} onFav={() => setHolidayFav(item.id, !item.fav)}>
+    <HeroFrame bgDark="#0F1E14" borderDark="rgba(46,139,87,0.28)" fav={item.fav} onFav={() => setHolidayFav(item.id, !item.fav)}
+      onPress={() => router.push({ pathname: '/modals/holiday-detail', params: { id: item.id } })}>
       <Eyebrow color={accent}>Holiday Countdown</Eyebrow>
       <CardName>{item.emoji} {item.name}</CardName>
       <Secondary color={accent}>Repeats yearly</Secondary>
@@ -327,7 +337,7 @@ export function HeroCarousel() {
         alignItems:'center', marginBottom:8, borderWidth:1,
         borderColor:(colors.isDark ? 'rgba(255,255,255,0.08)' : colors.tint) }}>
         <Text style={{ fontSize:32, marginBottom:10 }}>⭐</Text>
-        <Text style={{ color:colors.text3, fontSize:14, textAlign:'center' }}>
+        <Text style={{ color:colors.text2, fontSize:14, textAlign:'center' }}>
           Star events, goals, or memories to pin them here.
         </Text>
       </View>

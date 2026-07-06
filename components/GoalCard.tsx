@@ -16,7 +16,8 @@ export function GoalCard({ goal: g }: { goal: Goal }) {
   const toggleFav  = useStore(s => s.toggleGoalFav);
   const nudgeGoal  = useStore(s => s.nudgeGoal);
   const deleteGoal = useStore(s => s.deleteGoal);
-  const edit = () => router.push({ pathname: '/modals/edit-goal', params: { id: g.id } });
+  // Tap the header opens the read-only detail view (which has its own Edit button).
+  const edit = () => router.push({ pathname: '/modals/detail-goal', params: { id: g.id } });
 
   const gp   = Math.round(Math.min(100, (g.current / g.target) * 100));
   const d    = daysUntil(g.date);
@@ -60,9 +61,9 @@ export function GoalCard({ goal: g }: { goal: Goal }) {
             )}
             <AlertBadge count={g.alerts?.length} />
           </View>
-          <Text style={{ fontSize: 11, color: colors.text3, marginTop: 2 }}>{dstr}</Text>
+          <Text style={{ fontSize: 13, color: colors.text2, marginTop: 2 }}>{dstr}</Text>
           {!!g.note && (
-            <Text style={{ fontSize: 11, color: colors.text2, marginTop: 2, fontStyle: 'italic' }} numberOfLines={1}>
+            <Text style={{ fontSize: 13, color: colors.text2, marginTop: 2, fontStyle: 'italic' }} numberOfLines={1}>
               {g.note}
             </Text>
           )}
@@ -83,7 +84,7 @@ export function GoalCard({ goal: g }: { goal: Goal }) {
                 {g.current.toLocaleString()} {g.unit}
               </Text>
             </TouchableOpacity>
-            <Text style={{ fontSize: 12, color: colors.text3 }}>{g.target.toLocaleString()} {g.unit}</Text>
+            <Text style={{ fontSize: 12, color: colors.text2 }}>{g.target.toLocaleString()} {g.unit}</Text>
           </View>
           <View style={{ height: 6, backgroundColor: colors.track, borderRadius: 3, overflow: 'hidden' }}>
             <View style={{ height: '100%', width: `${gp}%` as DimensionValue, backgroundColor: colors.teal, borderRadius: 3 }} />

@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { format, addHours } from 'date-fns';
 import { useTheme } from '../../contexts/ThemeContext';
+import { CloseButton } from '../../components/CloseButton';
 import { EMOJIS, CATEGORIES } from '../../constants/data';
 import { useStore } from '../../store/useStore';
 import { Recurrence, Alert as AlertType } from '../../store/types';
@@ -87,9 +88,7 @@ export default function EditEventModal() {
         <View style={{ flexDirection:'row', justifyContent:'space-between',
           alignItems:'center', paddingHorizontal:20, paddingVertical:12 }}>
           <Text style={{ fontSize:18, fontWeight:'700', color:colors.text1 }}>Edit Event</Text>
-          <TouchableOpacity onPress={() => router.back()}>
-            <Text style={{ fontSize:16, color:colors.text3 }}>✕</Text>
-          </TouchableOpacity>
+          <CloseButton />
         </View>
         <ScrollView contentContainerStyle={{ padding:20 }}
           showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">

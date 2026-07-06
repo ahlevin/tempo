@@ -33,7 +33,7 @@ export function HolidayRow({ item }: { item: HolidayItem }) {
       </View>
       <View style={{ flex: 1 }}>
         <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text1, maxWidth: '86%' }} numberOfLines={1}>{item.name}</Text>
-        <Text style={{ fontSize: 11, color: colors.text3, marginTop: 2 }}>
+        <Text style={{ fontSize: 13, color: colors.text2, marginTop: 2 }}>
           <Text style={{ color, fontWeight: '700' }}>Holiday</Text>
           <Text> · {dateStr}</Text>
         </Text>
