@@ -3,6 +3,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useStore } from '../../store/useStore';
+import type { LogEntry } from '../../store/types';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { fmtLogDate, daysSince, daysBetween } from '../../utils/dates';
 import { isCollectionLog, logUniverse, logCount, upcomingCount, isUpcomingEntry, sortedEntries, logNoun } from '../../utils/lifelog';
@@ -12,6 +13,7 @@ export default function LifelogDetailModal() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const memories       = useStore(s => s.memories);
   const deleteLogEntry = useStore(s => s.deleteLogEntry);
+  const detachEntryToEvent = useStore(s => s.detachEntryToEvent);
   const confirm        = useConfirm();
   const m = memories.find(x => x.id === id);
 
@@ -36,7 +38,20 @@ export default function LifelogDetailModal() {
   const editEntry = (index: number) => router.push({ pathname: '/modals/log-entry', params: { id: m.id, edit: String(index) } });
   const editLog = () => router.push({ pathname: '/modals/edit-memory', params: { id: m.id } });
 
-  async function removeEntry(index: number, label: string) {
+  // The ✕ on an entry does one of two very different things depending on the
+  // entry's state:
+  //  • UPCOMING (future-dated) — it's an attached countdown. Send it BACK to
+  //    Countdowns as a standalone event (detach), never destroy it.
+  //  • COMPLETED (past/dateless) — a normal logged occurrence; delete it.
+  async function removeEntry(index: number, entry: LogEntry) {
+    if (isUpcomingEntry(entry)) {
+      const ok = await confirm({ title: `Send "${entry.item || m!.name}" back to Countdowns?`,
+        message: 'It becomes a standalone countdown event again. Its date and note are kept; nothing is deleted.',
+        confirmLabel: 'Move' });
+      if (ok) detachEntryToEvent(m!.id, index);
+      return;
+    }
+    const label = entry.item || fmtLogDate(entry.date, entry.datePrecision);
     const ok = await confirm({ title: 'Remove entry?', message: label ? `Remove "${label}"?` : 'Remove this entry?', confirmLabel: 'Remove', destructive: true });
     if (ok) deleteLogEntry(m!.id, index);
   }
@@ -140,8 +155,8 @@ export default function LifelogDetailModal() {
                   <TouchableOpacity onPress={() => editEntry(index)} hitSlop={{ top:8, bottom:8, left:8, right:8 }}>
                     <Text style={{ fontSize:15 }}>✏️</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity onPress={() => removeEntry(index, entry.item || '')} hitSlop={{ top:8, bottom:8, left:8, right:8 }}>
-                    <Text style={{ fontSize:15, color:colors.rose }}>✕</Text>
+                  <TouchableOpacity onPress={() => removeEntry(index, entry)} hitSlop={{ top:8, bottom:8, left:8, right:8 }}>
+                    <Text style={{ fontSize:15, color: up ? teal : colors.rose }}>{up ? '↩︎' : '✕'}</Text>
                   </TouchableOpacity>
                 </View>
               );
