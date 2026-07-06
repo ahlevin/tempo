@@ -31,8 +31,10 @@ export default function AddEventModal() {
   const [alerts, setAlerts] = useState<AlertType[]>([]);
   // "Also log this in a Life Log" — turns the countdown into a future-dated
   // life-log ENTRY (the single source of truth; no separate event row).
+  // Default to attaching to an EXISTING log when the user has any.
   const [attachLog,   setAttachLog]   = useState(false);
-  const [logId,       setLogId]       = useState<string>(''); // '' = create new
+  const [mode,        setMode]        = useState<'existing' | 'new'>(lifelogs.length ? 'existing' : 'new');
+  const [selectedLogId, setSelectedLogId] = useState<string>(lifelogs[0]?.id ?? '');
   const [newLogName,  setNewLogName]  = useState('');
   const [newLogTarget,setNewLogTarget]= useState('');
 
@@ -44,8 +46,11 @@ export default function AddEventModal() {
       // ONE source of truth: add a future-dated entry to the chosen life log.
       // No standalone event is created — the entry graduates automatically once
       // its date passes (it stops being "future").
-      let targetId = logId;
-      if (!targetId) {
+      let targetId: string;
+      if (mode === 'existing' && lifelogs.length) {
+        if (!selectedLogId) { showToast('⚠️', 'Missing info', 'Pick a life log.'); return; }
+        targetId = selectedLogId;
+      } else {
         if (!newLogName.trim()) { showToast('⚠️', 'Missing info', 'Name the new life log.'); return; }
         const t = parseInt(newLogTarget, 10);
         targetId = addMemory({
@@ -144,30 +149,40 @@ export default function AddEventModal() {
           <Toggle label="📓 Also log this in a Life Log" value={attachLog} onChange={setAttachLog} />
           {attachLog && (
             <View style={{ marginBottom:14 }}>
-              <View style={{ flexDirection:'row', flexWrap:'wrap', gap:7, marginBottom:10 }}>
-                {lifelogs.map(l => {
-                  const sel = logId === l.id;
-                  return (
-                    <TouchableOpacity key={l.id} onPress={() => setLogId(l.id)}
-                      style={{ flexDirection:'row', alignItems:'center', gap:6, paddingVertical:8, paddingHorizontal:11,
-                        borderRadius:11, borderWidth:1.5,
-                        borderColor: sel ? colors.teal : colors.border,
-                        backgroundColor: sel ? (colors.isDark ? 'rgba(62,207,178,0.12)' : colors.tint) : colors.glass }}>
-                      <Text style={{ fontSize:15 }}>{l.emoji}</Text>
-                      <Text style={{ fontSize:12, fontWeight:'600', color: sel ? colors.teal : colors.text2 }}>{l.name}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
-                <TouchableOpacity onPress={() => setLogId('')}
-                  style={{ flexDirection:'row', alignItems:'center', gap:6, paddingVertical:8, paddingHorizontal:11,
-                    borderRadius:11, borderWidth:1.5,
-                    borderColor: logId === '' ? colors.teal : colors.border,
-                    backgroundColor: logId === '' ? (colors.isDark ? 'rgba(62,207,178,0.12)' : colors.tint) : colors.glass }}>
-                  <Text style={{ fontSize:15 }}>＋</Text>
-                  <Text style={{ fontSize:12, fontWeight:'600', color: logId === '' ? colors.teal : colors.text2 }}>New life log</Text>
-                </TouchableOpacity>
-              </View>
-              {logId === '' && (
+              <FL label="Add to which life log?" />
+              {/* Existing logs — always shown & selectable when the user has any. */}
+              {lifelogs.length > 0 ? (
+                <View style={{ gap:8, marginBottom:10 }}>
+                  {lifelogs.map(l => {
+                    const sel = mode === 'existing' && selectedLogId === l.id;
+                    return (
+                      <TouchableOpacity key={l.id} onPress={() => { setMode('existing'); setSelectedLogId(l.id); }}
+                        style={{ flexDirection:'row', alignItems:'center', gap:12, padding:12, borderRadius:12, borderWidth:1.5,
+                          borderColor: sel ? colors.teal : colors.border,
+                          backgroundColor: sel ? (colors.isDark ? 'rgba(62,207,178,0.12)' : colors.tint) : colors.glass }}>
+                        <Text style={{ fontSize:20 }}>{l.emoji}</Text>
+                        <Text style={{ flex:1, fontSize:14, fontWeight:'600', color: sel ? colors.teal : colors.text1 }} numberOfLines={1}>{l.name}</Text>
+                        {sel && <Text style={{ fontSize:16, color:colors.teal }}>✓</Text>}
+                      </TouchableOpacity>
+                    );
+                  })}
+                  {/* Create-new option */}
+                  <TouchableOpacity onPress={() => setMode('new')}
+                    style={{ flexDirection:'row', alignItems:'center', gap:12, padding:12, borderRadius:12, borderWidth:1.5,
+                      borderColor: mode === 'new' ? colors.teal : colors.border, borderStyle:'dashed',
+                      backgroundColor: mode === 'new' ? (colors.isDark ? 'rgba(62,207,178,0.12)' : colors.tint) : colors.glass }}>
+                    <Text style={{ fontSize:20 }}>＋</Text>
+                    <Text style={{ flex:1, fontSize:14, fontWeight:'600', color: mode === 'new' ? colors.teal : colors.text2 }}>Create new life log</Text>
+                    {mode === 'new' && <Text style={{ fontSize:16, color:colors.teal }}>✓</Text>}
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <Text style={{ fontSize:12, color:colors.text3, marginTop:-2, marginBottom:10, marginLeft:2 }}>
+                  No life logs yet — we'll create one for you.
+                </Text>
+              )}
+
+              {mode === 'new' && (
                 <>
                   <FL label="New life log name" />
                   <TextInput value={newLogName} onChangeText={setNewLogName}
@@ -178,7 +193,7 @@ export default function AddEventModal() {
                 </>
               )}
               <Text style={{ fontSize:12, color:colors.text3, marginLeft:2 }}>
-                Logs “{name.trim() || '…'}” on {allDay ? start.slice(0,10) : start.slice(0,10)}. It counts down until then, then reads as completed.
+                Logs “{name.trim() || '…'}” on {start.slice(0,10)}. It counts down until then, then reads as completed.
               </Text>
             </View>
           )}
