@@ -35,7 +35,9 @@ export function QuoteCard({ type }: { type: string }) {
   return (
     <View style={{
       borderRadius: 18, padding: 16, marginBottom: 14,
-      borderWidth: 1, borderColor: meta.border, backgroundColor: meta.bg,
+      borderWidth: 1,
+      borderColor: colors.isDark ? meta.border : colors.border,
+      backgroundColor: colors.isDark ? meta.bg : colors.surf2,
     }}>
       <View style={{ flexDirection:'row', alignItems:'center', justifyContent:'space-between', marginBottom:10 }}>
         <Text style={{ fontSize:10, fontWeight:'700', letterSpacing:1, textTransform:'uppercase', color:meta.color }}>
@@ -43,7 +45,7 @@ export function QuoteCard({ type }: { type: string }) {
         </Text>
         <TouchableOpacity onPress={rotate}
           style={{ width:26, height:26, borderRadius:13,
-            backgroundColor:'rgba(255,255,255,0.06)',
+            backgroundColor: colors.isDark ? 'rgba(255,255,255,0.06)' : colors.track,
             alignItems:'center', justifyContent:'center' }}>
           <Text style={{ fontSize:13, color:colors.text3 }}>↻</Text>
         </TouchableOpacity>

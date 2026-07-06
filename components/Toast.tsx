@@ -76,7 +76,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             }}>
             <View style={{
               width: 38, height: 38, borderRadius: 11,
-              backgroundColor: 'rgba(124,106,245,0.16)',
+              backgroundColor: colors.isDark ? 'rgba(124,106,245,0.16)' : colors.tint,
               alignItems: 'center', justifyContent: 'center',
             }}>
               <Text style={{ fontSize: 20 }}>{toast.icon}</Text>

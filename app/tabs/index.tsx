@@ -59,12 +59,19 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={{ flex:1, backgroundColor:colors.bg }} edges={['top']}>
       <View style={{ paddingHorizontal:20, paddingBottom:10 }}>
-        <Text style={{ fontSize:24, fontWeight:'700', color:colors.text1, letterSpacing:-0.5 }}>
-          sayZay<Text style={{ color:colors.accent }}>.</Text>
-        </Text>
-        <Text style={{ fontSize:12, color:colors.text3, marginTop:2 }}>
-          Countdowns &amp; Memories
-        </Text>
+        {/* Light "Yacht Club": the wordmark sits on a solid navy block so the
+            brand reads against the cool off-white. Dark keeps the plain header. */}
+        <View style={colors.isDark ? undefined : {
+          backgroundColor:'#002C54', borderRadius:16,
+          paddingHorizontal:16, paddingVertical:12, marginTop:4 }}>
+          <Text style={{ fontSize:24, fontWeight:'700',
+            color: colors.isDark ? colors.text1 : '#FFFFFF', letterSpacing:-0.5 }}>
+            sayZay<Text style={{ color: colors.isDark ? colors.accent : '#ACBEBE' }}>.</Text>
+          </Text>
+          <Text style={{ fontSize:12, color: colors.isDark ? colors.text3 : '#9FB3C8', marginTop:2 }}>
+            Countdowns &amp; Memories
+          </Text>
+        </View>
       </View>
 
       <ScrollView
@@ -86,10 +93,16 @@ export default function HomeScreen() {
           {FILTERS.map(f => (
             <TouchableOpacity key={f.id} onPress={() => setFilter(f.id)}
               style={{ paddingVertical:7, paddingHorizontal:14, borderRadius:20, borderWidth:1,
-                borderColor: filter===f.id ? 'rgba(124,106,245,0.4)' : colors.border,
-                backgroundColor: filter===f.id ? 'rgba(124,106,245,0.2)' : colors.glass }}>
+                borderColor: filter===f.id
+                  ? (colors.isDark ? 'rgba(124,106,245,0.4)' : colors.accent)
+                  : colors.border,
+                backgroundColor: filter===f.id
+                  ? (colors.isDark ? 'rgba(124,106,245,0.2)' : colors.accent)
+                  : (colors.isDark ? colors.glass : colors.surf) }}>
               <Text style={{ fontSize:12, fontWeight:'600',
-                color: filter===f.id ? colors.accent : colors.text2 }}>{f.label}</Text>
+                color: filter===f.id
+                  ? (colors.isDark ? colors.accent : '#FFFFFF')
+                  : (colors.isDark ? colors.text2 : colors.text1) }}>{f.label}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -126,15 +139,16 @@ export default function HomeScreen() {
           { icon:'📲', title:'Home Screen Widgets',   sub:'Glanceable countdowns at a glance' },
         ].map((card,i) => (
           <View key={i} style={{ flexDirection:'row', alignItems:'center', gap:14,
-            backgroundColor:'rgba(62,207,178,0.08)', borderWidth:1,
-            borderColor:'rgba(62,207,178,0.18)', borderRadius:18, padding:14, marginBottom:9 }}>
+            backgroundColor: colors.isDark ? 'rgba(62,207,178,0.08)' : colors.surf2, borderWidth:1,
+            borderColor: colors.isDark ? 'rgba(62,207,178,0.18)' : colors.border,
+            borderRadius:18, padding:14, marginBottom:9 }}>
             <Text style={{ fontSize:24 }}>{card.icon}</Text>
             <View style={{ flex:1 }}>
               <Text style={{ fontSize:14, fontWeight:'700', color:colors.text1 }}>{card.title}</Text>
               <Text style={{ fontSize:12, color:colors.text2, marginTop:2 }}>{card.sub}</Text>
             </View>
-            <View style={{ backgroundColor:'rgba(62,207,178,0.14)', borderWidth:1,
-              borderColor:'rgba(62,207,178,0.28)', borderRadius:20,
+            <View style={{ backgroundColor: colors.isDark ? 'rgba(62,207,178,0.14)' : colors.tint, borderWidth:1,
+              borderColor: colors.isDark ? 'rgba(62,207,178,0.28)' : colors.border, borderRadius:20,
               paddingVertical:5, paddingHorizontal:10 }}>
               <Text style={{ fontSize:12, fontWeight:'600', color:colors.teal }}>Soon</Text>
             </View>
@@ -145,9 +159,9 @@ export default function HomeScreen() {
       {/* FAB */}
       <TouchableOpacity onPress={() => setChooserOpen(true)}
         style={{ position:'absolute', bottom:90, right:20, width:54, height:54,
-          borderRadius:27, backgroundColor:colors.accent,
+          borderRadius:27, backgroundColor: colors.isDark ? colors.accent : colors.rose,
           alignItems:'center', justifyContent:'center',
-          shadowColor:colors.accent, shadowOffset:{width:0,height:8},
+          shadowColor: colors.isDark ? colors.accent : colors.rose, shadowOffset:{width:0,height:8},
           shadowOpacity:0.45, shadowRadius:16, elevation:8 }}>
         <Text style={{ fontSize:28, color:'#fff', lineHeight:32 }}>+</Text>
       </TouchableOpacity>
@@ -182,8 +196,8 @@ function EmptyPrompt({ icon, text, onPress }: { icon:string; text:string; onPres
         borderColor:colors.border, borderStyle:'dashed' }}>
       <Text style={{ fontSize:30, marginBottom:10 }}>{icon}</Text>
       <Text style={{ color:colors.text2, fontSize:14, textAlign:'center', lineHeight:20 }}>{text}</Text>
-      <View style={{ marginTop:12, backgroundColor:'rgba(124,106,245,0.15)', borderWidth:1,
-        borderColor:'rgba(124,106,245,0.3)', borderRadius:20, paddingVertical:7, paddingHorizontal:16 }}>
+      <View style={{ marginTop:12, backgroundColor: colors.isDark ? 'rgba(124,106,245,0.15)' : colors.tint, borderWidth:1,
+        borderColor: colors.isDark ? 'rgba(124,106,245,0.3)' : colors.border, borderRadius:20, paddingVertical:7, paddingHorizontal:16 }}>
         <Text style={{ color:colors.accent, fontSize:13, fontWeight:'700' }}>+ Add</Text>
       </View>
     </TouchableOpacity>

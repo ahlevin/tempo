@@ -28,7 +28,7 @@ export function AddChooser({ visible, onClose }: { visible: boolean; onClose: ()
         <Pressable onPress={(e) => e.stopPropagation()}
           style={{ backgroundColor: colors.surf2, borderTopLeftRadius: 24, borderTopRightRadius: 24,
             borderWidth: 1, borderColor: colors.border, paddingHorizontal: 16, paddingTop: 10, paddingBottom: 36 }}>
-          <View style={{ width: 40, height: 4, backgroundColor: 'rgba(255,255,255,0.14)', borderRadius: 2, alignSelf: 'center', marginBottom: 16 }} />
+          <View style={{ width: 40, height: 4, backgroundColor: colors.border, borderRadius: 2, alignSelf: 'center', marginBottom: 16 }} />
           <Text style={{ fontSize: 18, fontWeight: '800', color: colors.text1, marginBottom: 14, marginLeft: 6 }}>
             What would you like to add?
           </Text>
@@ -36,9 +36,9 @@ export function AddChooser({ visible, onClose }: { visible: boolean; onClose: ()
             <Pressable key={c.label} onPress={() => pick(c.go)}
               style={({ pressed }) => ({
                 flexDirection: 'row', alignItems: 'center', gap: 14, padding: 12, borderRadius: 14, marginBottom: 6,
-                backgroundColor: pressed ? 'rgba(255,255,255,0.05)' : 'transparent',
+                backgroundColor: pressed ? colors.tile : 'transparent',
               })}>
-              <View style={{ width: 44, height: 44, borderRadius: 13, backgroundColor: c.tint, alignItems: 'center', justifyContent: 'center' }}>
+              <View style={{ width: 44, height: 44, borderRadius: 13, backgroundColor: colors.isDark ? c.tint : colors.tint, alignItems: 'center', justifyContent: 'center' }}>
                 <Text style={{ fontSize: 22 }}>{c.icon}</Text>
               </View>
               <View style={{ flex: 1 }}>

@@ -2,10 +2,11 @@ import { ScrollView, View, Text, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useTheme } from '../../contexts/ThemeContext';
+import { dayCountColor, lightCardShadow } from '../../constants/colors';
 import { useStore } from '../../store/useStore';
 import { SwipeableRow } from '../../components/SwipeableRow';
 import { MemoryCard } from '../../components/MemoryCard';
-import { nextOccurrence, daysUntil, urgencyColor, fmtDateTime } from '../../utils/dates';
+import { nextOccurrence, daysUntil, fmtDateTime } from '../../utils/dates';
 
 export default function FavoritesScreen() {
   const { colors } = useTheme();
@@ -44,7 +45,7 @@ export default function FavoritesScreen() {
             {favEvents.map(e => {
               const nd = nextOccurrence(e);
               const d  = daysUntil(nd);
-              const uc = urgencyColor(d);
+              const uc = dayCountColor(colors, d);
               return (
                 <SwipeableRow key={e.id} onDelete={() => deleteEvent(e.id)}
                   confirmTitle="Delete Event" confirmMessage={`Delete "${e.name}"? This can't be undone.`}>
@@ -87,8 +88,8 @@ export default function FavoritesScreen() {
                 <TouchableOpacity activeOpacity={0.8}
                   onPress={() => router.push({ pathname:'/modals/edit-goal', params:{ id:g.id } })}
                   style={{ backgroundColor:colors.surf, borderRadius:18,
-                  borderWidth:1, borderColor:'rgba(62,207,178,0.2)',
-                  padding:14, marginBottom:8 }}>
+                  borderWidth:1, borderColor: colors.isDark ? 'rgba(62,207,178,0.2)' : colors.border,
+                  padding:14, marginBottom:8, ...(colors.isDark ? null : lightCardShadow) }}>
                   <View style={{ flexDirection:'row', alignItems:'center', gap:12, marginBottom:8 }}>
                     <Text style={{ fontSize:22 }}>{g.emoji}</Text>
                     <View style={{ flex:1 }}>
@@ -99,7 +100,7 @@ export default function FavoritesScreen() {
                       <Text style={{ fontSize:16 }}>⭐</Text>
                     </TouchableOpacity>
                   </View>
-                  <View style={{ height:6, backgroundColor:'rgba(255,255,255,0.07)',
+                  <View style={{ height:6, backgroundColor:colors.track,
                     borderRadius:3, overflow:'hidden' }}>
                     <View style={{ height:'100%', width:`${pct}%`,
                       backgroundColor:colors.teal, borderRadius:3 }} />

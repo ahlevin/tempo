@@ -53,14 +53,14 @@ export function DateTimeField({ value, onChange, mode = 'date', label }: Props) 
             if (isValidDate(toDate(next))) onChange(next);
           },
           style: {
-            backgroundColor: 'rgba(255,255,255,0.06)',
-            border: '1px solid rgba(255,255,255,0.1)',
+            backgroundColor: colors.glass,
+            border: `1px solid ${colors.border}`,
             borderRadius: 12,
             padding: 12,
             color: colors.text1,
             fontSize: 15,
             width: '100%',
-            colorScheme: 'dark',
+            colorScheme: colors.isDark ? 'dark' : 'light',
             outline: 'none',
             boxSizing: 'border-box',
           },
@@ -98,8 +98,8 @@ export function DateTimeField({ value, onChange, mode = 'date', label }: Props) 
     <View style={{ marginBottom: 14 }}>
       {!!label && <FieldLabel text={label} />}
       <Pressable onPress={() => { setAndroidStep('date'); setShow(true); }}
-        style={{ backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1,
-          borderColor: 'rgba(255,255,255,0.1)', borderRadius: 12, padding: 12 }}>
+        style={{ backgroundColor: colors.glass, borderWidth: 1,
+          borderColor: colors.border, borderRadius: 12, padding: 12 }}>
         <Text style={{ color: colors.text1, fontSize: 15 }}>{display}</Text>
       </Pressable>
       {show && (

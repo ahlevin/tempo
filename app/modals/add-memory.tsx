@@ -34,8 +34,8 @@ export default function AddMemoryModal() {
   const [note,  setNote]  = useState('');
   const [alerts, setAlerts] = useState<AlertType[]>([]);
 
-  const fi = { backgroundColor:'rgba(255,255,255,0.06)', borderWidth:1,
-    borderColor:'rgba(255,255,255,0.1)', borderRadius:12, padding:12,
+  const fi = { backgroundColor:colors.glass, borderWidth:1,
+    borderColor:colors.border, borderRadius:12, padding:12,
     color:colors.text1, fontSize:15, marginBottom:14 };
 
   function pickType(t: string) { setType(t); setEmoji(DEF_EMOJIS[t]||'⭐'); }
@@ -55,7 +55,7 @@ export default function AddMemoryModal() {
   return (
     <SafeAreaView style={{ flex:1, backgroundColor:colors.surf2 }} edges={['bottom']}>
       <KeyboardAvoidingView style={{ flex:1 }} behavior={Platform.OS==='ios'?'padding':undefined}>
-        <View style={{ width:40, height:4, backgroundColor:'rgba(255,255,255,0.14)',
+        <View style={{ width:40, height:4, backgroundColor:colors.border,
           borderRadius:2, alignSelf:'center', marginTop:10, marginBottom:4 }} />
         <View style={{ flexDirection:'row', justifyContent:'space-between',
           alignItems:'center', paddingHorizontal:20, paddingVertical:12 }}>
@@ -73,7 +73,7 @@ export default function AddMemoryModal() {
                 style={{ flexDirection:'row', alignItems:'center', gap:7,
                   paddingVertical:10, paddingHorizontal:12, borderRadius:11, borderWidth:1.5,
                   borderColor: type===t.id ? colors.accent : colors.border,
-                  backgroundColor: type===t.id ? 'rgba(124,106,245,0.1)' : colors.glass }}>
+                  backgroundColor: type===t.id ? (colors.isDark ? 'rgba(124,106,245,0.1)' : colors.tint) : colors.glass }}>
                 <Text style={{ fontSize:18 }}>{t.icon}</Text>
                 <View>
                   <Text style={{ fontSize:12, fontWeight:'600',
@@ -93,7 +93,7 @@ export default function AddMemoryModal() {
               <TouchableOpacity key={em} onPress={() => setEmoji(em)}
                 style={{ width:44, height:44, borderRadius:10, borderWidth:2,
                   borderColor: em===emoji ? colors.rose : 'transparent',
-                  backgroundColor: em===emoji ? 'rgba(232,80,122,0.15)' : 'rgba(255,255,255,0.055)',
+                  backgroundColor: em===emoji ? (colors.isDark ? 'rgba(232,80,122,0.15)' : colors.tint) : colors.glass,
                   alignItems:'center', justifyContent:'center' }}>
                 <Text style={{ fontSize:20 }}>{em}</Text>
               </TouchableOpacity>

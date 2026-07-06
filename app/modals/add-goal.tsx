@@ -23,8 +23,8 @@ export default function AddGoalModal() {
   const [emoji,  setEmoji]  = useState('🎯');
   const [alerts, setAlerts] = useState<AlertType[]>([]);
 
-  const fi = { backgroundColor:'rgba(255,255,255,0.06)', borderWidth:1,
-    borderColor:'rgba(255,255,255,0.1)', borderRadius:12, padding:12,
+  const fi = { backgroundColor:colors.glass, borderWidth:1,
+    borderColor:colors.border, borderRadius:12, padding:12,
     color:colors.text1, fontSize:15, marginBottom:14 };
 
   function submit() {
@@ -37,7 +37,7 @@ export default function AddGoalModal() {
   return (
     <SafeAreaView style={{ flex:1, backgroundColor:colors.surf2 }} edges={['bottom']}>
       <KeyboardAvoidingView style={{ flex:1 }} behavior={Platform.OS==='ios'?'padding':undefined}>
-        <View style={{ width:40, height:4, backgroundColor:'rgba(255,255,255,0.14)',
+        <View style={{ width:40, height:4, backgroundColor:colors.border,
           borderRadius:2, alignSelf:'center', marginTop:10, marginBottom:4 }} />
         <View style={{ flexDirection:'row', justifyContent:'space-between',
           alignItems:'center', paddingHorizontal:20, paddingVertical:12 }}>
@@ -69,7 +69,7 @@ export default function AddGoalModal() {
               <TouchableOpacity key={em} onPress={() => setEmoji(em)}
                 style={{ width:44, height:44, borderRadius:10, borderWidth:2,
                   borderColor: em===emoji ? colors.teal : 'transparent',
-                  backgroundColor: em===emoji ? 'rgba(62,207,178,0.15)' : 'rgba(255,255,255,0.055)',
+                  backgroundColor: em===emoji ? (colors.isDark ? 'rgba(62,207,178,0.15)' : colors.tint) : colors.glass,
                   alignItems:'center', justifyContent:'center' }}>
                 <Text style={{ fontSize:20 }}>{em}</Text>
               </TouchableOpacity>

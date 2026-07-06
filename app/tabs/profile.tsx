@@ -49,9 +49,9 @@ export default function ProfileScreen() {
                 style={{ flexDirection:'row', alignItems:'center', gap:14, padding:14,
                   borderRadius:14, borderWidth:1.5,
                   borderColor: sel ? colors.accent : colors.border,
-                  backgroundColor: sel ? 'rgba(124,106,245,0.1)' : colors.glass }}>
+                  backgroundColor: sel ? (colors.isDark ? 'rgba(124,106,245,0.1)' : colors.tint) : colors.glass }}>
                 <View style={{ width:44, height:44, borderRadius:13,
-                  backgroundColor:'rgba(124,106,245,0.12)',
+                  backgroundColor: colors.isDark ? 'rgba(124,106,245,0.12)' : colors.tint,
                   alignItems:'center', justifyContent:'center' }}>
                   <Text style={{ fontSize:22 }}>{opt.icon}</Text>
                 </View>
@@ -78,7 +78,7 @@ export default function ProfileScreen() {
                 style={{ flex:1, flexDirection:'row', alignItems:'center', justifyContent:'center', gap:8,
                   paddingVertical:14, borderRadius:14, borderWidth:1.5,
                   borderColor: sel ? colors.accent : colors.border,
-                  backgroundColor: sel ? 'rgba(124,106,245,0.12)' : colors.glass }}>
+                  backgroundColor: sel ? (colors.isDark ? 'rgba(124,106,245,0.12)' : colors.tint) : colors.glass }}>
                 <Text style={{ fontSize:18 }}>{opt.icon}</Text>
                 <Text style={{ fontSize:15, fontWeight:'700',
                   color: sel ? colors.accent : colors.text1 }}>{opt.label}</Text>
@@ -93,9 +93,9 @@ export default function ProfileScreen() {
           borderColor:colors.border, overflow:'hidden', marginBottom:28 }}>
           <TouchableOpacity onPress={() => { setLocOpen(!locOpen); setTzOpen(false); }}
             style={{ flexDirection:'row', alignItems:'center', gap:14, padding:14,
-              borderBottomWidth: locOpen ? 1 : 0, borderBottomColor:'rgba(255,255,255,0.05)' }}>
+              borderBottomWidth: locOpen ? 1 : 0, borderBottomColor:colors.tile }}>
             <View style={{ width:36, height:36, borderRadius:10,
-              backgroundColor:'rgba(62,207,178,0.13)',
+              backgroundColor: colors.isDark ? 'rgba(62,207,178,0.13)' : colors.tint,
               alignItems:'center', justifyContent:'center' }}>
               <Text style={{ fontSize:18 }}>📍</Text>
             </View>
@@ -112,8 +112,8 @@ export default function ProfileScreen() {
               <TextInput value={locVal} onChangeText={setLocVal}
                 placeholder="City, State or ZIP"
                 placeholderTextColor={colors.text3}
-                style={{ backgroundColor:'rgba(255,255,255,0.04)', borderWidth:1,
-                  borderColor:'rgba(255,255,255,0.08)', borderRadius:10,
+                style={{ backgroundColor:colors.tile, borderWidth:1,
+                  borderColor:colors.border, borderRadius:10,
                   padding:10, color:colors.text1, fontSize:14 }} />
               <TouchableOpacity
                 onPress={() => { updatePrefs({ location: locVal }); setLocOpen(false); }}
@@ -127,7 +127,7 @@ export default function ProfileScreen() {
           <TouchableOpacity onPress={() => { setTzOpen(!tzOpen); setLocOpen(false); }}
             style={{ flexDirection:'row', alignItems:'center', gap:14, padding:14 }}>
             <View style={{ width:36, height:36, borderRadius:10,
-              backgroundColor:'rgba(124,106,245,0.15)',
+              backgroundColor: colors.isDark ? 'rgba(124,106,245,0.15)' : colors.tint,
               alignItems:'center', justifyContent:'center' }}>
               <Text style={{ fontSize:18 }}>🕐</Text>
             </View>
@@ -145,8 +145,8 @@ export default function ProfileScreen() {
                 <TouchableOpacity key={tz.value}
                   onPress={() => { updatePrefs({ timezone: tz.value }); setTzOpen(false); }}
                   style={{ padding:10, borderRadius:9, borderWidth:1,
-                    borderColor: prefs.timezone === tz.value ? colors.accent : 'rgba(255,255,255,0.06)',
-                    backgroundColor: prefs.timezone === tz.value ? 'rgba(124,106,245,0.15)' : 'rgba(255,255,255,0.03)' }}>
+                    borderColor: prefs.timezone === tz.value ? colors.accent : colors.glass,
+                    backgroundColor: prefs.timezone === tz.value ? (colors.isDark ? 'rgba(124,106,245,0.15)' : colors.tint) : colors.tile }}>
                   <Text style={{ fontSize:13,
                     color: prefs.timezone === tz.value ? colors.accent : colors.text2 }}>
                     {tz.label}
@@ -160,10 +160,11 @@ export default function ProfileScreen() {
         <SLabel label="Account" />
         <TouchableOpacity onPress={() => signOut()}
           style={{ flexDirection:'row', alignItems:'center', gap:14, padding:14,
-            borderRadius:14, borderWidth:1, borderColor:'rgba(232,80,122,0.3)',
-            backgroundColor:'rgba(232,80,122,0.1)', marginBottom:28 }}>
+            borderRadius:14, borderWidth:1,
+            borderColor: colors.isDark ? 'rgba(232,80,122,0.3)' : 'rgba(197,0,26,0.30)',
+            backgroundColor: colors.isDark ? 'rgba(232,80,122,0.1)' : 'rgba(197,0,26,0.08)', marginBottom:28 }}>
           <View style={{ width:44, height:44, borderRadius:13,
-            backgroundColor:'rgba(232,80,122,0.15)', alignItems:'center', justifyContent:'center' }}>
+            backgroundColor: colors.isDark ? 'rgba(232,80,122,0.15)' : 'rgba(197,0,26,0.12)', alignItems:'center', justifyContent:'center' }}>
             <Text style={{ fontSize:20 }}>🚪</Text>
           </View>
           <View style={{ flex:1 }}>

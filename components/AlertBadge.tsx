@@ -11,7 +11,7 @@ export function AlertBadge({ count }: { count: number | undefined }) {
   if (!count || count <= 0) return null;
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2,
-      backgroundColor: 'rgba(240,160,75,0.14)', borderRadius: 8, paddingVertical: 2, paddingHorizontal: 6 }}>
+      backgroundColor: colors.isDark ? 'rgba(240,160,75,0.14)' : colors.tint, borderRadius: 8, paddingVertical: 2, paddingHorizontal: 6 }}>
       <Text style={{ fontSize: 9 }}>🔔</Text>
       <Text style={{ fontSize: 9, fontWeight: '700', color: colors.amber }}>{count}</Text>
     </View>

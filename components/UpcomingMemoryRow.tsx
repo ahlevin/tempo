@@ -6,7 +6,7 @@ import { Memory } from '../store/types';
 import { SwipeableRow } from './SwipeableRow';
 import { FavStar } from './FavStar';
 import { AlertBadge } from './AlertBadge';
-import { lightCardShadow } from '../constants/colors';
+import { lightCardShadow, dayCountColor } from '../constants/colors';
 import { nextAnnual, daysUntil, yearsMonthsDays, ordinal } from '../utils/dates';
 
 // A compact "Upcoming" list row for a recurring birthday/anniversary memory.
@@ -21,8 +21,11 @@ export function UpcomingMemoryRow({ memory: m }: { memory: Memory }) {
   const nb     = nextAnnual(m.originDate);
   const d      = daysUntil(nb);
   const r      = yearsMonthsDays(m.originDate);
-  const color  = isBday ? colors.rose : colors.accent;
-  const bg     = isBday ? 'rgba(232,80,122,0.12)' : 'rgba(124,106,245,0.12)';
+  // Decorative accent for the "Turning N" label / emoji circle. In light,
+  // rose = crimson (reserved for urgency), so the birthday accent routes to navy.
+  const color  = colors.isDark && isBday ? colors.rose : colors.accent;
+  const bg     = colors.isDark ? (isBday ? 'rgba(232,80,122,0.12)' : 'rgba(124,106,245,0.12)') : colors.tint;
+  const dcColor = dayCountColor(colors, d);
   const context = isBday ? `Turning ${r.y + 1}` : `${ordinal(r.y + 1)} anniversary`;
   const dateStr = new Date(nb + 'T00:00:00').toLocaleDateString('en-US',
     { weekday: 'short', month: 'short', day: 'numeric' });
@@ -37,7 +40,7 @@ export function UpcomingMemoryRow({ memory: m }: { memory: Memory }) {
           borderColor: colors.border, padding: 14, paddingLeft: 16,
           marginBottom: 8, flexDirection: 'row', alignItems: 'center', gap: 12,
           ...(colors.isDark ? null : lightCardShadow) }}>
-        <View style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, backgroundColor: color, borderRadius: 2 }} />
+        {colors.isDark && <View style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, backgroundColor: color, borderRadius: 2 }} />}
         <View style={{ width: 42, height: 42, borderRadius: 12, backgroundColor: bg, alignItems: 'center', justifyContent: 'center' }}>
           <Text style={{ fontSize: 20 }}>{m.emoji}</Text>
         </View>
@@ -53,7 +56,7 @@ export function UpcomingMemoryRow({ memory: m }: { memory: Memory }) {
         </View>
         <View style={{ alignItems: 'center' }}>
           <View style={{ alignItems: 'flex-end' }}>
-            <Text style={{ fontSize: 20, fontWeight: '800', color }}>{d}</Text>
+            <Text style={{ fontSize: 20, fontWeight: '800', color: dcColor }}>{d}</Text>
             <Text style={{ fontSize: 9, color: colors.text3, textTransform: 'uppercase' }}>{d === 1 ? 'day' : 'days'}</Text>
           </View>
           <FavStar active={m.fav} onToggle={() => toggleMemoryFav(m.id)} />

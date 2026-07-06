@@ -26,7 +26,7 @@ const TYPE_BG: Record<Memory['type'], string> = {
 function Stat({ value, label, color }: { value: string | number; label: string; color: string }) {
   const { colors } = useTheme();
   return (
-    <View style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 12, padding: 10 }}>
+    <View style={{ flex: 1, backgroundColor: colors.tile, borderRadius: 12, padding: 10 }}>
       <Text style={{ fontSize: 17, fontWeight: '800', color, fontVariant: ['tabular-nums'] }}>{value}</Text>
       <Text style={{ fontSize: 9, color: colors.text3, textTransform: 'uppercase', letterSpacing: 0.4, marginTop: 2 }}>
         {label}
@@ -40,7 +40,7 @@ function Bridge({ text, color }: { text: string; color: string }) {
   return (
     <View style={{
       marginTop: 12, paddingVertical: 9, paddingHorizontal: 12, borderRadius: 12,
-      backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1, borderColor: colors.border,
+      backgroundColor: colors.tile, borderWidth: 1, borderColor: colors.border,
     }}>
       <Text style={{ fontSize: 12, fontWeight: '600', color, paddingRight: 56 }}>{text}</Text>
     </View>
@@ -58,9 +58,11 @@ export function MemoryCard({ memory: m }: { memory: Memory }) {
   // Legacy/unknown types (e.g. a removed 'milestone' row) render nothing.
   if (!KNOWN_TYPES.has(m.type)) return null;
 
-  const color  = colors[TYPE_COLOR_KEY[m.type]];
-  const border = TYPE_BORDER[m.type];
-  const bg     = TYPE_BG[m.type];
+  // Light "Yacht Club": all decorative type colors route to navy (rose is
+  // reserved for crimson urgency); borders/backgrounds use the neutral tokens.
+  const color  = colors.isDark ? colors[TYPE_COLOR_KEY[m.type]] : colors.accent;
+  const border = colors.isDark ? TYPE_BORDER[m.type] : colors.border;
+  const bg     = colors.isDark ? TYPE_BG[m.type] : colors.tint;
   const r      = yearsMonthsDays(m.originDate);
   const edit = () => router.push({ pathname: '/modals/edit-memory', params: { id: m.id } });
 
@@ -185,7 +187,7 @@ function LifelogBody({
       <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
         <TouchableOpacity
           onPress={(ev) => { ev.stopPropagation(); router.push({ pathname: '/modals/log-entry', params: { id: m.id, past: '0' } }); }}
-          style={{ flex: 1, paddingVertical: 11, borderRadius: 12, backgroundColor: 'rgba(62,207,178,0.16)', alignItems: 'center' }}>
+          style={{ flex: 1, paddingVertical: 11, borderRadius: 12, backgroundColor: colors.isDark ? 'rgba(62,207,178,0.16)' : colors.tint, alignItems: 'center' }}>
           <Text style={{ fontSize: 13, fontWeight: '700', color: colors.teal }}>+ Log today</Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -203,7 +205,7 @@ function LifelogBody({
           </Text>
           {visible.map(({ entry, num, gap }) => (
             <View key={entry.date + num} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 10 }}>
-              <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: 'rgba(62,207,178,0.16)', alignItems: 'center', justifyContent: 'center', marginTop: 1 }}>
+              <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: colors.isDark ? 'rgba(62,207,178,0.16)' : colors.tint, alignItems: 'center', justifyContent: 'center', marginTop: 1 }}>
                 <Text style={{ fontSize: 11, fontWeight: '800', color: colors.teal }}>{num}</Text>
               </View>
               <View style={{ flex: 1 }}>

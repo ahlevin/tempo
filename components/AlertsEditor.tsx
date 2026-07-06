@@ -42,23 +42,23 @@ export function AlertsEditor({
         <View style={{ marginBottom:14 }}>
           {alerts.map((a,i) => (
             <View key={i} style={{ flexDirection:'row', alignItems:'center', gap:7,
-              backgroundColor:'rgba(255,255,255,0.04)', borderWidth:1,
-              borderColor:'rgba(255,255,255,0.07)', borderRadius:10,
+              backgroundColor:colors.tile, borderWidth:1,
+              borderColor:colors.track, borderRadius:10,
               padding:9, marginBottom:7 }}>
               <Text>🔔</Text>
               <TextInput value={a.value}
                 onChangeText={v => setAlerts(prev => prev.map((x,j) => j===i?{...x,value:v}:x))}
                 keyboardType="number-pad"
-                style={{ width:48, backgroundColor:'rgba(255,255,255,0.07)',
+                style={{ width:48, backgroundColor:colors.track,
                   borderRadius:7, padding:5, color:colors.text1, fontSize:13,
                   fontWeight:'700', textAlign:'center', borderWidth:1,
-                  borderColor:'rgba(255,255,255,0.12)' }} />
+                  borderColor:colors.border }} />
               <View style={{ flex:1 }}>
                 {UNITS.map(u => (
                   <TouchableOpacity key={u}
                     onPress={() => setAlerts(prev => prev.map((x,j) => j===i?{...x,unit:u}:x))}
                     style={{ padding:5, borderRadius:6,
-                      backgroundColor: a.unit===u ? 'rgba(124,106,245,0.2)' : 'transparent' }}>
+                      backgroundColor: a.unit===u ? (colors.isDark ? 'rgba(124,106,245,0.2)' : colors.tint) : 'transparent' }}>
                     <Text style={{ fontSize:12,
                       color: a.unit===u ? colors.accent : colors.text2 }}>{u} before</Text>
                   </TouchableOpacity>
@@ -67,7 +67,7 @@ export function AlertsEditor({
               <TouchableOpacity
                 onPress={() => setAlerts(prev => prev.filter((_,j) => j!==i))}
                 style={{ width:24, height:24, borderRadius:12,
-                  backgroundColor:'rgba(232,80,122,0.12)',
+                  backgroundColor: colors.isDark ? 'rgba(232,80,122,0.12)' : 'rgba(197,0,26,0.10)',
                   alignItems:'center', justifyContent:'center' }}>
                 <Text style={{ color:colors.rose, fontSize:13 }}>✕</Text>
               </TouchableOpacity>
@@ -76,7 +76,7 @@ export function AlertsEditor({
           <TouchableOpacity
             onPress={() => setAlerts(prev => [...prev, { value:'1', unit:'hours' }])}
             style={{ padding:8, borderRadius:9, borderWidth:1.5,
-              borderColor:'rgba(124,106,245,0.3)', borderStyle:'dashed', alignItems:'center' }}>
+              borderColor: colors.isDark ? 'rgba(124,106,245,0.3)' : colors.accent, borderStyle:'dashed', alignItems:'center' }}>
             <Text style={{ fontSize:12, fontWeight:'600', color:colors.accent }}>+ Add Alert</Text>
           </TouchableOpacity>
         </View>

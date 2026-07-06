@@ -123,7 +123,7 @@ export default function OnboardingWizard() {
           {STEPS.map((_, i) => (
             <View key={i} style={{ height: 6, borderRadius: 3,
               width: i === step ? 26 : 6,
-              backgroundColor: i <= step ? colors.accent : 'rgba(255,255,255,0.15)' }} />
+              backgroundColor: i <= step ? colors.accent : (colors.isDark ? 'rgba(255,255,255,0.15)' : colors.border) }} />
           ))}
         </View>
 
@@ -151,7 +151,7 @@ export default function OnboardingWizard() {
                   <TouchableOpacity key={t.value} onPress={() => setTz(t.value)}
                     style={{ padding: 13, borderRadius: 12, borderWidth: 1.5,
                       borderColor: sel ? colors.accent : colors.border,
-                      backgroundColor: sel ? 'rgba(124,106,245,0.12)' : colors.glass }}>
+                      backgroundColor: sel ? (colors.isDark ? 'rgba(124,106,245,0.12)' : colors.tint) : colors.glass }}>
                     <Text style={{ fontSize: 14, fontWeight: '600',
                       color: sel ? colors.accent : colors.text2 }}>{t.label}</Text>
                   </TouchableOpacity>
@@ -171,7 +171,7 @@ export default function OnboardingWizard() {
                       style={{ flex: 1, paddingVertical: 12, borderRadius: 12, borderWidth: 1.5,
                         alignItems: 'center', gap: 3,
                         borderColor: sel ? colors.accent : colors.border,
-                        backgroundColor: sel ? 'rgba(124,106,245,0.12)' : colors.glass }}>
+                        backgroundColor: sel ? (colors.isDark ? 'rgba(124,106,245,0.12)' : colors.tint) : colors.glass }}>
                       <Text style={{ fontSize: 20 }}>{t.emoji}</Text>
                       <Text style={{ fontSize: 12, fontWeight: '600',
                         color: sel ? colors.accent : colors.text2 }}>{t.label}</Text>
@@ -186,8 +186,8 @@ export default function OnboardingWizard() {
                 onChange={(d) => { setEvDate(d); setDateTouched(true); }} />
               {itemType !== 'event' && (
                 <View style={{ flexDirection: 'row', gap: 8, marginTop: -6, marginBottom: 8,
-                  padding: 12, borderRadius: 12, backgroundColor: 'rgba(124,106,245,0.08)',
-                  borderWidth: 1, borderColor: 'rgba(124,106,245,0.2)' }}>
+                  padding: 12, borderRadius: 12, backgroundColor: colors.isDark ? 'rgba(124,106,245,0.08)' : colors.tint,
+                  borderWidth: 1, borderColor: colors.isDark ? 'rgba(124,106,245,0.2)' : colors.border }}>
                   <Text style={{ fontSize: 15 }}>🔁</Text>
                   <Text style={{ flex: 1, fontSize: 12, color: colors.text2, lineHeight: 17 }}>
                     Enter the original {itemType === 'birthday' ? 'birth date (e.g. the birth year)' : 'wedding date'}.
@@ -210,9 +210,9 @@ export default function OnboardingWizard() {
                     style={{ flexDirection: 'row', alignItems: 'center', gap: 14, padding: 14,
                       borderRadius: 14, borderWidth: 1.5,
                       borderColor: sel ? colors.accent : colors.border,
-                      backgroundColor: sel ? 'rgba(124,106,245,0.1)' : colors.glass }}>
+                      backgroundColor: sel ? (colors.isDark ? 'rgba(124,106,245,0.1)' : colors.tint) : colors.glass }}>
                     <View style={{ width: 44, height: 44, borderRadius: 13,
-                      backgroundColor: 'rgba(124,106,245,0.12)', alignItems: 'center', justifyContent: 'center' }}>
+                      backgroundColor: colors.isDark ? 'rgba(124,106,245,0.12)' : colors.tint, alignItems: 'center', justifyContent: 'center' }}>
                       <Text style={{ fontSize: 22 }}>{opt.icon}</Text>
                     </View>
                     <View style={{ flex: 1 }}>

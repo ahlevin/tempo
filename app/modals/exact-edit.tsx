@@ -27,7 +27,7 @@ export default function ExactEditModal() {
   return (
     <SafeAreaView style={{ flex:1, backgroundColor:colors.surf2, justifyContent:'flex-end' }} edges={['bottom']}>
       <View style={{ padding:24, paddingBottom:40 }}>
-        <View style={{ width:40, height:4, backgroundColor:'rgba(255,255,255,0.14)',
+        <View style={{ width:40, height:4, backgroundColor:colors.border,
           borderRadius:2, alignSelf:'center', marginBottom:24 }} />
         <View style={{ alignItems:'center', marginBottom:24 }}>
           <Text style={{ fontSize:26, fontWeight:'800', color:colors.teal, marginBottom:4 }}>
@@ -39,12 +39,12 @@ export default function ExactEditModal() {
         </View>
         <TextInput value={value} onChangeText={setValue} keyboardType="numeric" autoFocus
           style={{ fontSize:36, fontWeight:'800', textAlign:'center',
-            backgroundColor:'rgba(62,207,178,0.08)', borderWidth:2,
-            borderColor:'rgba(62,207,178,0.3)', borderRadius:14,
+            backgroundColor: colors.isDark ? 'rgba(62,207,178,0.08)' : colors.tint, borderWidth:2,
+            borderColor: colors.isDark ? 'rgba(62,207,178,0.3)' : colors.accent, borderRadius:14,
             padding:16, color:colors.teal, marginBottom:16 }} />
         <TouchableOpacity onPress={submit}
           style={{ backgroundColor:colors.teal, borderRadius:14, padding:15, alignItems:'center' }}>
-          <Text style={{ color:'#0A0A0F', fontSize:16, fontWeight:'800' }}>Save Progress</Text>
+          <Text style={{ color: colors.isDark ? '#0A0A0F' : '#fff', fontSize:16, fontWeight:'800' }}>Save Progress</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={() => router.back()} style={{ marginTop:12, alignItems:'center' }}>
           <Text style={{ color:colors.text3, fontSize:14 }}>Cancel</Text>

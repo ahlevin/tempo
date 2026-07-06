@@ -21,10 +21,13 @@ export function FavStar({ active, onToggle }: { active: boolean; onToggle: () =>
       style={{
         width: 44, height: 44, borderRadius: 22, marginTop: 2,
         alignItems: 'center', justifyContent: 'center',
-        backgroundColor: active ? 'rgba(240,160,75,0.16)' : 'rgba(255,255,255,0.06)',
+        backgroundColor: active
+          ? (colors.isDark ? 'rgba(240,160,75,0.16)' : colors.tint)
+          : (colors.isDark ? 'rgba(255,255,255,0.06)' : colors.track),
       }}
     >
-      <Text style={{ fontSize: 22, lineHeight: 26, textAlign: 'center', color: active ? colors.amber : colors.text2 }}>
+      <Text style={{ fontSize: 22, lineHeight: 26, textAlign: 'center',
+        color: active ? colors.amber : (colors.isDark ? colors.text2 : colors.text3) }}>
         {active ? '★' : '☆'}
       </Text>
     </TouchableOpacity>

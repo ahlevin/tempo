@@ -41,7 +41,7 @@ export function RecurrenceEditor({
               <TouchableOpacity key={f} onPress={() => setFreq(f)}
                 style={{ flex:1, padding:8, borderRadius:9, borderWidth:1.5, alignItems:'center',
                   borderColor: freq===f ? colors.accent : colors.border,
-                  backgroundColor: freq===f ? 'rgba(124,106,245,0.15)' : colors.glass }}>
+                  backgroundColor: freq===f ? (colors.isDark ? 'rgba(124,106,245,0.15)' : colors.tint) : colors.glass }}>
                 <Text style={{ fontSize:11, fontWeight:'600',
                   color: freq===f ? colors.accent : colors.text2 }}>
                   {f.charAt(0).toUpperCase()+f.slice(1)}
@@ -58,7 +58,7 @@ export function RecurrenceEditor({
                     style={{ flex:1, aspectRatio:1, borderRadius:7, borderWidth:1.5,
                       alignItems:'center', justifyContent:'center',
                       borderColor: dow.includes(i) ? colors.accent : colors.border,
-                      backgroundColor: dow.includes(i) ? 'rgba(124,106,245,0.15)' : colors.glass }}>
+                      backgroundColor: dow.includes(i) ? (colors.isDark ? 'rgba(124,106,245,0.15)' : colors.tint) : colors.glass }}>
                     <Text style={{ fontSize:10, fontWeight:'700',
                       color: dow.includes(i) ? colors.accent : colors.text3 }}>{d}</Text>
                   </TouchableOpacity>

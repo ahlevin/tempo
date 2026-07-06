@@ -36,8 +36,8 @@ export default function EditEventModal() {
   const [recur,  setRecur]  = useState<Recurrence | null>(event?.recur ?? null);
   const [alerts, setAlerts] = useState<AlertType[]>(event?.alerts ?? []);
 
-  const fi = { backgroundColor:'rgba(255,255,255,0.06)', borderWidth:1,
-    borderColor:'rgba(255,255,255,0.1)', borderRadius:12, padding:12,
+  const fi = { backgroundColor:colors.glass, borderWidth:1,
+    borderColor:colors.border, borderRadius:12, padding:12,
     color:colors.text1, fontSize:15, marginBottom:14 };
 
   if (!event) { router.back(); return null; }
@@ -59,7 +59,7 @@ export default function EditEventModal() {
   return (
     <SafeAreaView style={{ flex:1, backgroundColor:colors.surf2 }} edges={['bottom']}>
       <KeyboardAvoidingView style={{ flex:1 }} behavior={Platform.OS==='ios'?'padding':undefined}>
-        <View style={{ width:40, height:4, backgroundColor:'rgba(255,255,255,0.14)',
+        <View style={{ width:40, height:4, backgroundColor:colors.border,
           borderRadius:2, alignSelf:'center', marginTop:10, marginBottom:4 }} />
         <View style={{ flexDirection:'row', justifyContent:'space-between',
           alignItems:'center', paddingHorizontal:20, paddingVertical:12 }}>
@@ -88,7 +88,7 @@ export default function EditEventModal() {
               <TouchableOpacity key={em} onPress={() => setEmoji(em)}
                 style={{ width:44, height:44, borderRadius:10, borderWidth:2,
                   borderColor: em===emoji ? colors.accent : 'transparent',
-                  backgroundColor: em===emoji ? 'rgba(124,106,245,0.15)' : 'rgba(255,255,255,0.055)',
+                  backgroundColor: em===emoji ? (colors.isDark ? 'rgba(124,106,245,0.15)' : colors.tint) : colors.glass,
                   alignItems:'center', justifyContent:'center' }}>
                 <Text style={{ fontSize:20 }}>{em}</Text>
               </TouchableOpacity>
@@ -100,7 +100,7 @@ export default function EditEventModal() {
               <TouchableOpacity key={c.id} onPress={() => setCat(c.id)}
                 style={{ paddingVertical:9, paddingHorizontal:12, borderRadius:11, borderWidth:1,
                   borderColor: cat===c.id ? colors.accent : colors.border,
-                  backgroundColor: cat===c.id ? 'rgba(124,106,245,0.12)' : colors.glass }}>
+                  backgroundColor: cat===c.id ? (colors.isDark ? 'rgba(124,106,245,0.12)' : colors.tint) : colors.glass }}>
                 <Text style={{ fontSize:13, fontWeight:'600',
                   color: cat===c.id ? colors.accent : colors.text2 }}>{c.label}</Text>
               </TouchableOpacity>
@@ -116,8 +116,8 @@ export default function EditEventModal() {
             <Text style={{ color:'#fff', fontSize:15, fontWeight:'700' }}>Save Changes →</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={del}
-            style={{ backgroundColor:'rgba(232,80,122,0.15)', borderWidth:1,
-              borderColor:'rgba(232,80,122,0.3)', borderRadius:14, padding:15, alignItems:'center' }}>
+            style={{ backgroundColor:(colors.isDark ? 'rgba(232,80,122,0.15)' : 'rgba(197,0,26,0.10)'), borderWidth:1,
+              borderColor:(colors.isDark ? 'rgba(232,80,122,0.3)' : 'rgba(197,0,26,0.30)'), borderRadius:14, padding:15, alignItems:'center' }}>
             <Text style={{ color:colors.rose, fontSize:15, fontWeight:'700' }}>Delete Event</Text>
           </TouchableOpacity>
           <View style={{ height:40 }} />
@@ -138,11 +138,11 @@ function Toggle({ label, value, onChange }: { label:string; value:boolean; onCha
   return (
     <TouchableOpacity onPress={() => onChange(!value)}
       style={{ flexDirection:'row', alignItems:'center', justifyContent:'space-between',
-        backgroundColor:'rgba(255,255,255,0.04)', borderWidth:1,
-        borderColor:'rgba(255,255,255,0.08)', borderRadius:11, padding:12, marginBottom:12 }}>
+        backgroundColor:colors.tile, borderWidth:1,
+        borderColor:colors.border, borderRadius:11, padding:12, marginBottom:12 }}>
       <Text style={{ fontSize:14, fontWeight:'600', color:colors.text1 }}>{label}</Text>
       <View style={{ width:40, height:22, borderRadius:11,
-        backgroundColor: value ? colors.accent : 'rgba(255,255,255,0.1)',
+        backgroundColor: value ? colors.accent : colors.border,
         justifyContent:'center', paddingHorizontal:2 }}>
         <View style={{ width:18, height:18, borderRadius:9, backgroundColor:'#fff',
           alignSelf: value ? 'flex-end' : 'flex-start' }} />
