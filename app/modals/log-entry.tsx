@@ -33,6 +33,7 @@ export default function LogEntryModal() {
   const [note,    setNote]    = useState('');
   const [item,    setItem]    = useState('');   // selected collection item
   const [query,   setQuery]   = useState('');
+  const [addedCount, setAddedCount] = useState(0); // items added this sitting
 
   const universe = m ? presetUniverse(m.logPreset) : undefined;
   const isPicker = !!m && m.logKind === 'collection' && !!universe;
@@ -63,11 +64,23 @@ export default function LogEntryModal() {
     return usePast ? date : format(new Date(), 'yyyy-MM-dd');
   }
 
-  function submit() {
-    if (isPicker && !item) return; // must pick an item first
-    addLogEntry(id, { date: buildDate(), note: note.trim(), datePrecision: precision,
-      ...(isPicker ? { item } : {}) });
+  // Count log: single entry then close.
+  function logCount() {
+    addLogEntry(id, { date: buildDate(), note: note.trim(), datePrecision: precision });
     router.back();
+  }
+
+  // Collection log: add the selected item and STAY in the picker (multi-add), so
+  // the user can back-fill many in one sitting. `remaining` recomputes from the
+  // store, so the just-added item drops off automatically (no duplicates).
+  function addOne() {
+    if (!item) return;
+    addLogEntry(id, { date: buildDate(), note: note.trim(), datePrecision: precision, item });
+    setAddedCount(c => c + 1);
+    // Clear the per-item bits; keep the chosen precision/date so repeated adds are fast.
+    setItem('');
+    setNote('');
+    setQuery('');
   }
 
   return (
@@ -90,10 +103,17 @@ export default function LogEntryModal() {
 
           {isPicker && universe && (
             <>
-              <Text style={{ fontSize:11, fontWeight:'600', color:colors.text3,
-                textTransform:'uppercase', letterSpacing:0.5, marginBottom:8 }}>
-                Pick one · {loggedCount} of {universe.length} logged
-              </Text>
+              <View style={{ flexDirection:'row', alignItems:'center', justifyContent:'space-between', marginBottom:8 }}>
+                <Text style={{ fontSize:11, fontWeight:'600', color:colors.text3,
+                  textTransform:'uppercase', letterSpacing:0.5 }}>
+                  Pick one · {loggedCount} of {universe.length} logged
+                </Text>
+                {addedCount > 0 && (
+                  <View style={{ backgroundColor: colors.isDark ? 'rgba(62,207,178,0.16)' : colors.tint, borderRadius:10, paddingVertical:3, paddingHorizontal:9 }}>
+                    <Text style={{ fontSize:11, fontWeight:'700', color:colors.teal }}>{addedCount} added</Text>
+                  </View>
+                )}
+              </View>
               <TextInput value={query} onChangeText={setQuery}
                 placeholder="Search…" placeholderTextColor={colors.text3} style={fi} />
               <View style={{ maxHeight:240, borderWidth:1, borderColor:colors.border, borderRadius:12,
@@ -183,13 +203,30 @@ export default function LogEntryModal() {
           </Text>
           <TextInput value={note} onChangeText={setNote}
             placeholder="How was it?…" placeholderTextColor={colors.text3} style={fi} />
-          <TouchableOpacity onPress={submit} disabled={isPicker && !item}
-            style={{ backgroundColor:colors.teal, borderRadius:14, padding:15, alignItems:'center',
-              opacity: (isPicker && !item) ? 0.5 : 1 }}>
-            <Text style={{ color: colors.isDark ? '#0A0A0F' : '#fff', fontSize:15, fontWeight:'700' }}>
-              {isPicker ? (item ? `Add ${item} →` : 'Pick an item') : 'Log It →'}
-            </Text>
-          </TouchableOpacity>
+          {isPicker ? (
+            <>
+              {/* Add-another loop: logs the selected item and stays in the picker. */}
+              <TouchableOpacity onPress={addOne} disabled={!item}
+                style={{ backgroundColor:colors.teal, borderRadius:14, padding:15, alignItems:'center',
+                  opacity: item ? 1 : 0.5, marginBottom:10 }}>
+                <Text style={{ color: colors.isDark ? '#0A0A0F' : '#fff', fontSize:15, fontWeight:'700' }}>
+                  {item ? `Add ${item} · add another` : 'Pick an item above'}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => router.back()}
+                style={{ backgroundColor:colors.glass, borderWidth:1, borderColor:colors.border,
+                  borderRadius:14, padding:15, alignItems:'center' }}>
+                <Text style={{ color:colors.text1, fontSize:15, fontWeight:'700' }}>
+                  {addedCount > 0 ? `Done · ${addedCount} added` : 'Done'}
+                </Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <TouchableOpacity onPress={logCount}
+              style={{ backgroundColor:colors.teal, borderRadius:14, padding:15, alignItems:'center' }}>
+              <Text style={{ color: colors.isDark ? '#0A0A0F' : '#fff', fontSize:15, fontWeight:'700' }}>Log It →</Text>
+            </TouchableOpacity>
+          )}
           <View style={{ height:40 }} />
         </ScrollView>
       </KeyboardAvoidingView>

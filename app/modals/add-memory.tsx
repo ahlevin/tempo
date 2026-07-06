@@ -70,7 +70,7 @@ export default function AddMemoryModal() {
         if (t > 0) { logKind = 'collection'; logTarget = t; }
       }
     }
-    addMemory({
+    const newId = addMemory({
       type:type as any, name:name.trim(), emoji, originDate:date, yearUnknown,
       // A collection log starts empty (items are picked in); a count log seeds its
       // first occurrence from the date.
@@ -82,7 +82,14 @@ export default function AddMemoryModal() {
       // Reminders only apply to the recurring types (birthday/anniversary).
       fav: false, alerts: type==='lifelog' ? [] : alerts,
     });
-    router.back();
+    // A preset collection (named universe) → jump straight into the item picker
+    // so the user can start adding items immediately, instead of a dead-end card.
+    const hasUniverse = lifelog && logKind === 'collection' && !!(logPreset && PRESET_BY_ID[logPreset]?.universe);
+    if (hasUniverse) {
+      router.replace({ pathname: '/modals/log-entry', params: { id: newId } });
+    } else {
+      router.back();
+    }
   }
 
   return (

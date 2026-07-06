@@ -54,7 +54,7 @@ interface TempoStore {
   nudgeGoal: (id: string, dir: 1 | -1) => void;
   setGoalProgress: (id: string, value: number) => void;
   toggleGoalFav: (id: string) => void;
-  addMemory: (m: Omit<Memory, 'id'>) => void;
+  addMemory: (m: Omit<Memory, 'id'>) => string;
   updateMemory: (id: string, patch: Partial<Memory>) => void;
   deleteMemory: (id: string) => void;
   toggleMemoryFav: (id: string) => void;
@@ -303,6 +303,7 @@ export const useStore = create<TempoStore>()(
           const id = uuid();
           set(s => ({ memories: [...s.memories, { ...m, id }] }));
           enqueue({ kind: 'upsert', table: 'memories', id });
+          return id;
         },
         updateMemory: (id, patch) => {
           set(s => ({ memories: s.memories.map(m => m.id === id ? { ...m, ...patch } : m) }));
