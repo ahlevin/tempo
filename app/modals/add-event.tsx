@@ -6,6 +6,7 @@ import { router } from 'expo-router';
 import { format, addDays } from 'date-fns';
 import { useTheme } from '../../contexts/ThemeContext';
 import { EMOJIS, CATEGORIES } from '../../constants/data';
+import { COLLECTION_PRESETS, COUNT_PRESETS, PRESET_BY_ID, presetUniverse } from '../../constants/lifelogs';
 import { useStore } from '../../store/useStore';
 import { Recurrence, Alert as AlertType } from '../../store/types';
 import { DateTimeField } from '../../components/DateTimeField';
@@ -30,13 +31,28 @@ export default function AddEventModal() {
   const [recur,  setRecur]  = useState<Recurrence | null>(null);
   const [alerts, setAlerts] = useState<AlertType[]>([]);
   // "Also log this in a Life Log" — turns the countdown into a future-dated
-  // life-log ENTRY (the single source of truth; no separate event row).
-  // Default to attaching to an EXISTING log when the user has any.
-  const [attachLog,   setAttachLog]   = useState(false);
-  const [mode,        setMode]        = useState<'existing' | 'new'>(lifelogs.length ? 'existing' : 'new');
+  // life-log ENTRY (the single source of truth; no separate event row). Three
+  // paths: pick a PRESET type, an EXISTING log, or a CUSTOM new one.
+  const [attachLog, setAttachLog] = useState(false);
+  const [pathMode, setPathMode]   = useState<'preset' | 'existing' | 'custom'>(lifelogs.length ? 'existing' : 'preset');
+  const [selectedPreset,    setSelectedPreset]    = useState<string>(''); // preset path
+  const [presetTargetLogId, setPresetTargetLogId] = useState<string>(''); // '' = new of that preset, else an existing match
   const [selectedLogId, setSelectedLogId] = useState<string>(lifelogs[0]?.id ?? '');
   const [newLogName,  setNewLogName]  = useState('');
   const [newLogTarget,setNewLogTarget]= useState('');
+
+  const presetMatches = (pid: string) => lifelogs.filter(l => l.logPreset === pid);
+  function pickPreset(pid: string) {
+    setSelectedPreset(pid);
+    // If they already have log(s) of this preset, default to the first (add to it).
+    setPresetTargetLogId(presetMatches(pid)[0]?.id ?? '');
+  }
+  // For a collection, snap the entry name to the universe's canonical spelling
+  // (e.g. "france" → "France") when it matches; otherwise keep it as a label.
+  function canonItem(universe: string[] | undefined, label: string): string {
+    if (!universe) return label;
+    return universe.find(u => u.toLowerCase() === label.toLowerCase()) ?? label;
+  }
 
   function submit() {
     if (!name.trim()) { showToast('⚠️', 'Missing info', 'Please enter a name.'); return; }
@@ -47,9 +63,29 @@ export default function AddEventModal() {
       // No standalone event is created — the entry graduates automatically once
       // its date passes (it stops being "future").
       let targetId: string;
-      if (mode === 'existing' && lifelogs.length) {
+      let universe: string[] | undefined;
+
+      if (pathMode === 'preset') {
+        if (!selectedPreset) { showToast('⚠️', 'Missing info', 'Pick a life-log type.'); return; }
+        const p = PRESET_BY_ID[selectedPreset];
+        if (presetTargetLogId) {
+          // Attach to an existing log of this preset.
+          targetId = presetTargetLogId;
+          universe = presetUniverse(lifelogs.find(l => l.id === presetTargetLogId)?.logPreset);
+        } else {
+          // Create a fresh log from the preset.
+          targetId = addMemory({
+            type: 'lifelog', name: p.name, emoji: p.emoji, originDate: '',
+            yearUnknown: false, entries: [],
+            logKind: p.kind, logPreset: p.id, logTarget: p.target,
+            note: '', fav: false, alerts: [],
+          });
+          universe = p.universe;
+        }
+      } else if (pathMode === 'existing') {
         if (!selectedLogId) { showToast('⚠️', 'Missing info', 'Pick a life log.'); return; }
         targetId = selectedLogId;
+        universe = presetUniverse(lifelogs.find(l => l.id === selectedLogId)?.logPreset);
       } else {
         if (!newLogName.trim()) { showToast('⚠️', 'Missing info', 'Name the new life log.'); return; }
         const t = parseInt(newLogTarget, 10);
@@ -60,8 +96,10 @@ export default function AddEventModal() {
           logTarget: t > 0 ? t : undefined,
           note: '', fav: false, alerts: [],
         });
+        universe = undefined;
       }
-      addLogEntry(targetId, { date: startIso.slice(0, 10), note: note.trim(), item: name.trim(), datePrecision: 'full' });
+
+      addLogEntry(targetId, { date: startIso.slice(0, 10), note: note.trim(), item: canonItem(universe, name.trim()), datePrecision: 'full' });
       router.back();
       return;
     }
@@ -149,14 +187,80 @@ export default function AddEventModal() {
           <Toggle label="📓 Also log this in a Life Log" value={attachLog} onChange={setAttachLog} />
           {attachLog && (
             <View style={{ marginBottom:14 }}>
-              <FL label="Add to which life log?" />
-              {/* Existing logs — always shown & selectable when the user has any. */}
-              {lifelogs.length > 0 ? (
-                <View style={{ gap:8, marginBottom:10 }}>
+              {/* Segmented control: three ways to choose the target log. */}
+              <View style={{ flexDirection:'row', gap:6, marginBottom:12 }}>
+                {([
+                  { id:'preset',   label:'From a type' },
+                  ...(lifelogs.length ? [{ id:'existing', label:'Existing log' }] : []),
+                  { id:'custom',   label:'Custom' },
+                ] as { id: typeof pathMode; label: string }[]).map(seg => {
+                  const sel = pathMode === seg.id;
+                  return (
+                    <TouchableOpacity key={seg.id} onPress={() => setPathMode(seg.id)}
+                      style={{ flex:1, paddingVertical:9, borderRadius:10, borderWidth:1.5, alignItems:'center',
+                        borderColor: sel ? colors.teal : colors.border,
+                        backgroundColor: sel ? (colors.isDark ? 'rgba(62,207,178,0.12)' : colors.tint) : colors.glass }}>
+                      <Text style={{ fontSize:12, fontWeight:'700', color: sel ? colors.teal : colors.text2 }}>{seg.label}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              {/* PATH 1 — from a preset type */}
+              {pathMode === 'preset' && (
+                <>
+                  <FL label="Collections" />
+                  <View style={{ flexDirection:'row', flexWrap:'wrap', gap:7, marginBottom:12 }}>
+                    {COLLECTION_PRESETS.map(p => (
+                      <PresetChip key={p.id} p={p} selected={selectedPreset===p.id} onPress={() => pickPreset(p.id)} />
+                    ))}
+                  </View>
+                  <FL label="Counts" />
+                  <View style={{ flexDirection:'row', flexWrap:'wrap', gap:7, marginBottom:12 }}>
+                    {COUNT_PRESETS.map(p => (
+                      <PresetChip key={p.id} p={p} selected={selectedPreset===p.id} onPress={() => pickPreset(p.id)} />
+                    ))}
+                  </View>
+
+                  {/* Existing-vs-new prompt when the user already has this preset. */}
+                  {selectedPreset !== '' && presetMatches(selectedPreset).length > 0 && (
+                    <View style={{ backgroundColor:colors.glass, borderWidth:1, borderColor:colors.border, borderRadius:12, padding:12, marginBottom:6 }}>
+                      <Text style={{ fontSize:12, color:colors.text2, marginBottom:8 }}>
+                        You already have {presetMatches(selectedPreset).length === 1 ? 'this' : `${presetMatches(selectedPreset).length}`} — add to it, or start a new one?
+                      </Text>
+                      {presetMatches(selectedPreset).map(l => {
+                        const sel = presetTargetLogId === l.id;
+                        return (
+                          <TouchableOpacity key={l.id} onPress={() => setPresetTargetLogId(l.id)}
+                            style={{ flexDirection:'row', alignItems:'center', gap:10, padding:10, borderRadius:10, borderWidth:1.5, marginBottom:6,
+                              borderColor: sel ? colors.teal : colors.border,
+                              backgroundColor: sel ? (colors.isDark ? 'rgba(62,207,178,0.12)' : colors.tint) : colors.surf }}>
+                            <Text style={{ fontSize:16 }}>{l.emoji}</Text>
+                            <Text style={{ flex:1, fontSize:13, fontWeight:'600', color: sel ? colors.teal : colors.text1 }} numberOfLines={1}>Add to “{l.name}”</Text>
+                            {sel && <Text style={{ fontSize:15, color:colors.teal }}>✓</Text>}
+                          </TouchableOpacity>
+                        );
+                      })}
+                      <TouchableOpacity onPress={() => setPresetTargetLogId('')}
+                        style={{ flexDirection:'row', alignItems:'center', gap:10, padding:10, borderRadius:10, borderWidth:1.5, borderStyle:'dashed',
+                          borderColor: presetTargetLogId === '' ? colors.teal : colors.border,
+                          backgroundColor: presetTargetLogId === '' ? (colors.isDark ? 'rgba(62,207,178,0.12)' : colors.tint) : colors.surf }}>
+                        <Text style={{ fontSize:16 }}>＋</Text>
+                        <Text style={{ flex:1, fontSize:13, fontWeight:'600', color: presetTargetLogId === '' ? colors.teal : colors.text2 }}>Create a new “{PRESET_BY_ID[selectedPreset].name}”</Text>
+                        {presetTargetLogId === '' && <Text style={{ fontSize:15, color:colors.teal }}>✓</Text>}
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </>
+              )}
+
+              {/* PATH 2 — an existing life log */}
+              {pathMode === 'existing' && (
+                <View style={{ gap:8 }}>
                   {lifelogs.map(l => {
-                    const sel = mode === 'existing' && selectedLogId === l.id;
+                    const sel = selectedLogId === l.id;
                     return (
-                      <TouchableOpacity key={l.id} onPress={() => { setMode('existing'); setSelectedLogId(l.id); }}
+                      <TouchableOpacity key={l.id} onPress={() => setSelectedLogId(l.id)}
                         style={{ flexDirection:'row', alignItems:'center', gap:12, padding:12, borderRadius:12, borderWidth:1.5,
                           borderColor: sel ? colors.teal : colors.border,
                           backgroundColor: sel ? (colors.isDark ? 'rgba(62,207,178,0.12)' : colors.tint) : colors.glass }}>
@@ -166,33 +270,23 @@ export default function AddEventModal() {
                       </TouchableOpacity>
                     );
                   })}
-                  {/* Create-new option */}
-                  <TouchableOpacity onPress={() => setMode('new')}
-                    style={{ flexDirection:'row', alignItems:'center', gap:12, padding:12, borderRadius:12, borderWidth:1.5,
-                      borderColor: mode === 'new' ? colors.teal : colors.border, borderStyle:'dashed',
-                      backgroundColor: mode === 'new' ? (colors.isDark ? 'rgba(62,207,178,0.12)' : colors.tint) : colors.glass }}>
-                    <Text style={{ fontSize:20 }}>＋</Text>
-                    <Text style={{ flex:1, fontSize:14, fontWeight:'600', color: mode === 'new' ? colors.teal : colors.text2 }}>Create new life log</Text>
-                    {mode === 'new' && <Text style={{ fontSize:16, color:colors.teal }}>✓</Text>}
-                  </TouchableOpacity>
                 </View>
-              ) : (
-                <Text style={{ fontSize:12, color:colors.text3, marginTop:-2, marginBottom:10, marginLeft:2 }}>
-                  No life logs yet — we'll create one for you.
-                </Text>
               )}
 
-              {mode === 'new' && (
+              {/* PATH 3 — custom new log */}
+              {pathMode === 'custom' && (
                 <>
                   <FL label="New life log name" />
                   <TextInput value={newLogName} onChangeText={setNewLogName}
-                    placeholder="e.g. Countries Visited" placeholderTextColor={colors.text3} style={fi} />
+                    placeholder="e.g. Coffee shops tried" placeholderTextColor={colors.text3} style={fi} />
                   <FL label="Target (optional)" />
                   <TextInput value={newLogTarget} onChangeText={setNewLogTarget} keyboardType="numeric"
-                    placeholder="e.g. 195 — leave blank for a simple count" placeholderTextColor={colors.text3} style={fi} />
+                    placeholder="e.g. 50 — leave blank for a simple count" placeholderTextColor={colors.text3} style={fi} />
+                  <Text style={{ fontSize:11, color:colors.text3, marginTop:-8, marginBottom:8, marginLeft:2 }}>Uses the event icon {emoji} as its emoji.</Text>
                 </>
               )}
-              <Text style={{ fontSize:12, color:colors.text3, marginLeft:2 }}>
+
+              <Text style={{ fontSize:12, color:colors.text3, marginTop:6, marginLeft:2 }}>
                 Logs “{name.trim() || '…'}” on {start.slice(0,10)}. It counts down until then, then reads as completed.
               </Text>
             </View>
@@ -224,6 +318,21 @@ function FL({ label }: { label: string }) {
   const { colors } = useTheme();
   return <Text style={{ fontSize:11, fontWeight:'600', color:colors.text3,
     textTransform:'uppercase', letterSpacing:0.5, marginBottom:6 }}>{label}</Text>;
+}
+
+function PresetChip({ p, selected, onPress }:
+  { p: { id: string; name: string; emoji: string }; selected: boolean; onPress: () => void }) {
+  const { colors } = useTheme();
+  return (
+    <TouchableOpacity onPress={onPress}
+      style={{ flexDirection:'row', alignItems:'center', gap:6, paddingVertical:8, paddingHorizontal:11,
+        borderRadius:11, borderWidth:1.5,
+        borderColor: selected ? colors.teal : colors.border,
+        backgroundColor: selected ? (colors.isDark ? 'rgba(62,207,178,0.12)' : colors.tint) : colors.glass }}>
+      <Text style={{ fontSize:15 }}>{p.emoji}</Text>
+      <Text style={{ fontSize:12, fontWeight:'600', color: selected ? colors.teal : colors.text2 }}>{p.name}</Text>
+    </TouchableOpacity>
+  );
 }
 
 function Toggle({ label, value, onChange }: { label:string; value:boolean; onChange:(v:boolean)=>void }) {
