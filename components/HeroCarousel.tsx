@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { View, Text, ScrollView, Dimensions, TouchableOpacity, Platform } from 'react-native';
 import { useIsFocused } from 'expo-router';
 import { catColor, heroTintBg } from '../constants/colors';
+import { CATEGORIES } from '../constants/data';
 import { useTheme } from '../contexts/ThemeContext';
 import { useTick } from '../contexts/TickContext';
 import { useStore } from '../store/useStore';
@@ -9,6 +10,9 @@ import { FavStar } from './FavStar';
 import { nextOccurrence, daysUntil, recurLabel, nextAnnual, yearsMonthsDays, ordinal, fmtMonthDay, toDate, isValidDate } from '../utils/dates';
 
 const W = Dimensions.get('window').width - 32;
+// Every hero card renders to this height so the carousel never resizes between
+// slides (some types have a secondary line under the name, some don't).
+const CARD_MIN_H = 258;
 
 // ---- Shared hero building blocks -----------------------------------------
 
@@ -63,6 +67,16 @@ function CardName({ children }: { children: React.ReactNode }) {
   );
 }
 
+// Secondary line under the name. Rendered on EVERY card type (with a sensible
+// per-type value) so the tile row starts at the same Y and heights match.
+function Secondary({ color, children }: { color: string; children: React.ReactNode }) {
+  return (
+    <Text numberOfLines={1} style={{ fontSize: 14, fontWeight: '600', color, marginTop: 2 }}>
+      {children}
+    </Text>
+  );
+}
+
 // Shared card frame: themed surface + border, with the favorite star pinned
 // top-right on every card type.
 function HeroFrame({ bgDark, borderDark, fav, onFav, children }: {
@@ -70,8 +84,8 @@ function HeroFrame({ bgDark, borderDark, fav, onFav, children }: {
 }) {
   const { colors } = useTheme();
   return (
-    <View style={{ width: W, backgroundColor: colors.isDark ? bgDark : colors.surf, borderRadius: 24, padding: 22,
-      borderWidth: 1, borderColor: colors.isDark ? borderDark : colors.border }}>
+    <View style={{ width: W, minHeight: CARD_MIN_H, backgroundColor: colors.isDark ? bgDark : colors.surf,
+      borderRadius: 24, padding: 22, borderWidth: 1, borderColor: colors.isDark ? borderDark : colors.border }}>
       <View style={{ position: 'absolute', top: 12, right: 12, zIndex: 2 }}>
         <FavStar active={fav} onToggle={onFav} />
       </View>
@@ -117,10 +131,13 @@ function EventCard({ event: e, active }: { event: any; active: boolean }) {
   const toggleFav = useStore(s => s.toggleEventFav);
   const accent = catColor(colors, e.cat);
   const rl     = recurLabel(e);
+  const cat    = CATEGORIES.find(c => c.id === e.cat);
+  const secondary = cat ? `${cat.emoji} ${cat.short}` : 'Countdown';
   return (
     <HeroFrame bgDark="#1A1830" borderDark="rgba(124,106,245,0.22)" fav={e.fav} onFav={() => toggleFav(e.id)}>
       <Eyebrow color={accent}>{rl ? '🔁 ' + rl : 'Next Up'}</Eyebrow>
       <CardName>{e.emoji} {e.name}</CardName>
+      <Secondary color={accent}>{secondary}</Secondary>
       {active
         ? <LiveEventRow e={e} accent={accent} />
         : <EventRow e={e} accent={accent} now={Date.now()} />}
@@ -145,6 +162,7 @@ function GoalCard({ goal: g }: { goal: any }) {
     <HeroFrame bgDark="#0F1E1A" borderDark="rgba(62,207,178,0.25)" fav={g.fav} onFav={() => toggleFav(g.id)}>
       <Eyebrow color={colors.teal}>Active Goal</Eyebrow>
       <CardName>{g.emoji} {g.name}</CardName>
+      <Secondary color={colors.teal}>Goal: {g.target.toLocaleString()} {g.unit}</Secondary>
       <View style={tileRow}>
         <HeroTile value={d} label={d === 1 ? 'Day Left' : 'Days Left'} accent={colors.teal} bg={heroTintBg(colors, colors.teal)} />
         <InfoColumn line1={wday} line2={dstr}>
@@ -210,7 +228,7 @@ function MemoryCard({ memory: m }: { memory: any }) {
       <HeroFrame bgDark={cardBgDark} borderDark={borderDark} fav={m.fav} onFav={() => toggleFav(m.id)}>
         <Eyebrow color={accent}>{eyebrow}</Eyebrow>
         <CardName>{m.emoji} {m.name}</CardName>
-        <Text style={{ fontSize: 14, fontWeight: '600', color: accent, marginTop: 2 }}>{midLabel}</Text>
+        <Secondary color={accent}>{midLabel}</Secondary>
         <View style={tileRow}>
           <HeroTile value={days} label={days === 1 ? 'Day Away' : 'Days Away'} accent={accent} bg={tileBg} />
           <InfoColumn line1={wday} line2={dstr} />
@@ -225,10 +243,16 @@ function MemoryCard({ memory: m }: { memory: any }) {
   const bigVal   = m.entries.length;
   const bigLabel = bigVal === 1 ? 'Time' : 'Times';
   const dstr = new Date(m.originDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  // Most recent entry date for the secondary line (keeps height uniform + useful).
+  const lastDate = (m.entries ?? []).map((en: any) => en.date).filter(Boolean).sort().pop();
+  const secondary = lastDate
+    ? `Last: ${new Date(lastDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
+    : 'No entries yet';
   return (
     <HeroFrame bgDark="#0F1E1A" borderDark="rgba(62,207,178,0.28)" fav={m.fav} onFav={() => toggleFav(m.id)}>
       <Eyebrow color={accent}>Life Log</Eyebrow>
       <CardName>{m.emoji} {m.name}</CardName>
+      <Secondary color={accent}>{secondary}</Secondary>
       <View style={tileRow}>
         <HeroTile value={bigVal} label={bigLabel} accent={accent} bg={heroTintBg(colors, dark)} />
         <InfoColumn line1="Since" line2={dstr} />
