@@ -36,16 +36,34 @@ export default function AddEventModal() {
   const [attachLog, setAttachLog] = useState(false);
   const [pathMode, setPathMode]   = useState<'preset' | 'existing' | 'custom'>(lifelogs.length ? 'existing' : 'preset');
   const [selectedPreset,    setSelectedPreset]    = useState<string>(''); // preset path
+  const [presetQualifier,   setPresetQualifier]   = useState<string>(''); // optional "sub-log" qualifier
   const [presetTargetLogId, setPresetTargetLogId] = useState<string>(''); // '' = new of that preset, else an existing match
   const [selectedLogId, setSelectedLogId] = useState<string>(lifelogs[0]?.id ?? '');
   const [newLogName,  setNewLogName]  = useState('');
   const [newLogTarget,setNewLogTarget]= useState('');
 
-  const presetMatches = (pid: string) => lifelogs.filter(l => l.logPreset === pid);
+  // The resolved life-log name: preset name, or "<preset> - <qualifier>" when
+  // a qualifier is given (e.g. "Hikes Completed - Half Dome").
+  const resolvedPresetName = (pid: string, qualifier: string) => {
+    const p = PRESET_BY_ID[pid];
+    const q = qualifier.trim();
+    return q ? `${p.name} - ${q}` : p.name;
+  };
+  // Existing logs matching the FULL resolved name (so general vs qualified logs
+  // are distinct: "Hikes Completed" ≠ "Hikes Completed - Half Dome").
+  const matchesFor = (pid: string, qualifier: string) =>
+    pid ? lifelogs.filter(l => l.logPreset === pid && l.name === resolvedPresetName(pid, qualifier)) : [];
+
   function pickPreset(pid: string) {
     setSelectedPreset(pid);
-    // If they already have log(s) of this preset, default to the first (add to it).
-    setPresetTargetLogId(presetMatches(pid)[0]?.id ?? '');
+    setPresetQualifier('');
+    // If a general log of this preset already exists, default to adding to it.
+    setPresetTargetLogId(matchesFor(pid, '')[0]?.id ?? '');
+  }
+  function changeQualifier(q: string) {
+    setPresetQualifier(q);
+    // Re-resolve matches for the new name; default to the match (or create-new).
+    setPresetTargetLogId(matchesFor(selectedPreset, q)[0]?.id ?? '');
   }
   // For a collection, snap the entry name to the universe's canonical spelling
   // (e.g. "france" → "France") when it matches; otherwise keep it as a label.
@@ -69,13 +87,14 @@ export default function AddEventModal() {
         if (!selectedPreset) { showToast('⚠️', 'Missing info', 'Pick a life-log type.'); return; }
         const p = PRESET_BY_ID[selectedPreset];
         if (presetTargetLogId) {
-          // Attach to an existing log of this preset.
+          // Attach to an existing (general or qualified) log of this preset.
           targetId = presetTargetLogId;
           universe = presetUniverse(lifelogs.find(l => l.id === presetTargetLogId)?.logPreset);
         } else {
-          // Create a fresh log from the preset.
+          // Create a fresh log from the preset, applying the optional qualifier.
+          // A qualified log keeps the preset's kind/universe/target/emoji.
           targetId = addMemory({
-            type: 'lifelog', name: p.name, emoji: p.emoji, originDate: '',
+            type: 'lifelog', name: resolvedPresetName(selectedPreset, presetQualifier), emoji: p.emoji, originDate: '',
             yearUnknown: false, entries: [],
             logKind: p.kind, logPreset: p.id, logTarget: p.target,
             note: '', fav: false, alerts: [],
@@ -222,35 +241,51 @@ export default function AddEventModal() {
                     ))}
                   </View>
 
-                  {/* Existing-vs-new prompt when the user already has this preset. */}
-                  {selectedPreset !== '' && presetMatches(selectedPreset).length > 0 && (
-                    <View style={{ backgroundColor:colors.glass, borderWidth:1, borderColor:colors.border, borderRadius:12, padding:12, marginBottom:6 }}>
-                      <Text style={{ fontSize:12, color:colors.text2, marginBottom:8 }}>
-                        You already have {presetMatches(selectedPreset).length === 1 ? 'this' : `${presetMatches(selectedPreset).length}`} — add to it, or start a new one?
-                      </Text>
-                      {presetMatches(selectedPreset).map(l => {
-                        const sel = presetTargetLogId === l.id;
-                        return (
-                          <TouchableOpacity key={l.id} onPress={() => setPresetTargetLogId(l.id)}
-                            style={{ flexDirection:'row', alignItems:'center', gap:10, padding:10, borderRadius:10, borderWidth:1.5, marginBottom:6,
-                              borderColor: sel ? colors.teal : colors.border,
-                              backgroundColor: sel ? (colors.isDark ? 'rgba(62,207,178,0.12)' : colors.tint) : colors.surf }}>
-                            <Text style={{ fontSize:16 }}>{l.emoji}</Text>
-                            <Text style={{ flex:1, fontSize:13, fontWeight:'600', color: sel ? colors.teal : colors.text1 }} numberOfLines={1}>Add to “{l.name}”</Text>
-                            {sel && <Text style={{ fontSize:15, color:colors.teal }}>✓</Text>}
-                          </TouchableOpacity>
-                        );
-                      })}
-                      <TouchableOpacity onPress={() => setPresetTargetLogId('')}
-                        style={{ flexDirection:'row', alignItems:'center', gap:10, padding:10, borderRadius:10, borderWidth:1.5, borderStyle:'dashed',
-                          borderColor: presetTargetLogId === '' ? colors.teal : colors.border,
-                          backgroundColor: presetTargetLogId === '' ? (colors.isDark ? 'rgba(62,207,178,0.12)' : colors.tint) : colors.surf }}>
-                        <Text style={{ fontSize:16 }}>＋</Text>
-                        <Text style={{ flex:1, fontSize:13, fontWeight:'600', color: presetTargetLogId === '' ? colors.teal : colors.text2 }}>Create a new “{PRESET_BY_ID[selectedPreset].name}”</Text>
-                        {presetTargetLogId === '' && <Text style={{ fontSize:15, color:colors.teal }}>✓</Text>}
-                      </TouchableOpacity>
-                    </View>
-                  )}
+                  {/* Optional qualifier → a specific sub-log of the same type. */}
+                  {selectedPreset !== '' && (() => {
+                    const matches = matchesFor(selectedPreset, presetQualifier);
+                    const finalName = resolvedPresetName(selectedPreset, presetQualifier);
+                    return (
+                      <>
+                        <FL label="Qualifier (optional)" />
+                        <TextInput value={presetQualifier} onChangeText={changeQualifier}
+                          placeholder="e.g. Half Dome" placeholderTextColor={colors.text3} style={fi} />
+                        <Text style={{ fontSize:11, color:colors.text3, marginTop:-8, marginBottom:10, marginLeft:2 }}>
+                          Leave blank for a general log, or name a specific one. Creates “{finalName}”.
+                        </Text>
+
+                        {/* Existing-vs-new prompt when a log with this exact name exists. */}
+                        {matches.length > 0 && (
+                          <View style={{ backgroundColor:colors.glass, borderWidth:1, borderColor:colors.border, borderRadius:12, padding:12, marginBottom:6 }}>
+                            <Text style={{ fontSize:12, color:colors.text2, marginBottom:8 }}>
+                              You already have this one — add to it, or start a new one?
+                            </Text>
+                            {matches.map(l => {
+                              const sel = presetTargetLogId === l.id;
+                              return (
+                                <TouchableOpacity key={l.id} onPress={() => setPresetTargetLogId(l.id)}
+                                  style={{ flexDirection:'row', alignItems:'center', gap:10, padding:10, borderRadius:10, borderWidth:1.5, marginBottom:6,
+                                    borderColor: sel ? colors.teal : colors.border,
+                                    backgroundColor: sel ? (colors.isDark ? 'rgba(62,207,178,0.12)' : colors.tint) : colors.surf }}>
+                                  <Text style={{ fontSize:16 }}>{l.emoji}</Text>
+                                  <Text style={{ flex:1, fontSize:13, fontWeight:'600', color: sel ? colors.teal : colors.text1 }} numberOfLines={1}>Add to “{l.name}”</Text>
+                                  {sel && <Text style={{ fontSize:15, color:colors.teal }}>✓</Text>}
+                                </TouchableOpacity>
+                              );
+                            })}
+                            <TouchableOpacity onPress={() => setPresetTargetLogId('')}
+                              style={{ flexDirection:'row', alignItems:'center', gap:10, padding:10, borderRadius:10, borderWidth:1.5, borderStyle:'dashed',
+                                borderColor: presetTargetLogId === '' ? colors.teal : colors.border,
+                                backgroundColor: presetTargetLogId === '' ? (colors.isDark ? 'rgba(62,207,178,0.12)' : colors.tint) : colors.surf }}>
+                              <Text style={{ fontSize:16 }}>＋</Text>
+                              <Text style={{ flex:1, fontSize:13, fontWeight:'600', color: presetTargetLogId === '' ? colors.teal : colors.text2 }}>Create a new “{finalName}”</Text>
+                              {presetTargetLogId === '' && <Text style={{ fontSize:15, color:colors.teal }}>✓</Text>}
+                            </TouchableOpacity>
+                          </View>
+                        )}
+                      </>
+                    );
+                  })()}
                 </>
               )}
 
