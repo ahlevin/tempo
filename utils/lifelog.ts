@@ -1,5 +1,6 @@
 import { Memory, LogEntry } from '../store/types';
 import { presetUniverse, PRESET_BY_ID } from '../constants/lifelogs';
+import { daysUntil } from './dates';
 
 // Shared life-log helpers (a life log is a container; dates live on entries).
 
@@ -11,10 +12,24 @@ export function logUniverse(m: Memory): string[] | undefined {
   return presetUniverse(m.logPreset);
 }
 
-/** Progress count: distinct named items for collections, else entry count. */
+/** An entry is UPCOMING when it has a full future date (hasn't happened yet).
+ *  Dateless/partial and past/today entries are treated as completed. */
+export function isUpcomingEntry(e: LogEntry): boolean {
+  return !!e.date && daysUntil(e.date) > 0;
+}
+
+/** Completed = everything that has already happened (past/today) or is dateless.
+ *  A future-dated entry (a planned trip, an event that hasn't occurred) is NOT
+ *  yet counted toward the "visited"/completed headline. */
 export function logCount(m: Memory): number {
-  if (isCollectionLog(m)) return new Set(m.entries.map(e => e.item).filter(Boolean)).size;
-  return m.entries.length;
+  const completed = m.entries.filter(e => !isUpcomingEntry(e));
+  if (isCollectionLog(m)) return new Set(completed.map(e => e.item).filter(Boolean)).size;
+  return completed.length;
+}
+
+/** How many entries are still upcoming (future-dated). */
+export function upcomingCount(m: Memory): number {
+  return m.entries.filter(isUpcomingEntry).length;
 }
 
 /** Entries with their original index, newest-dated first, dateless grouped last. */
@@ -28,6 +43,35 @@ export function sortedEntries(m: Memory): { entry: LogEntry; index: number }[] {
       if (!bd) return -1;
       return bd.localeCompare(ad); // date desc
     });
+}
+
+// A future-dated life-log entry surfaced as a derived countdown on the
+// Countdowns tab. Purely date-driven: once the date passes it's no longer
+// upcoming, so it silently drops off — no migration, no delete.
+export interface UpcomingLogItem {
+  memId: string;
+  index: number;   // position in memory.entries
+  logName: string; // parent life log's name
+  emoji: string;   // life log's emoji
+  label: string;   // entry item/label, or the log name if none
+  dateISO: string;
+  days: number;
+}
+
+export function upcomingLogItems(memories: Memory[]): UpcomingLogItem[] {
+  const out: UpcomingLogItem[] = [];
+  for (const m of memories) {
+    if (m.type !== 'lifelog') continue;
+    m.entries.forEach((e, index) => {
+      if (isUpcomingEntry(e)) {
+        out.push({
+          memId: m.id, index, logName: m.name, emoji: m.emoji,
+          label: e.item || m.name, dateISO: e.date, days: daysUntil(e.date),
+        });
+      }
+    });
+  }
+  return out.sort((a, b) => a.days - b.days);
 }
 
 // Singular noun for the "+ Add your first X" empty state.

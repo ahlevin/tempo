@@ -5,7 +5,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { useStore } from '../../store/useStore';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { fmtLogDate, daysSince, daysBetween } from '../../utils/dates';
-import { isCollectionLog, logUniverse, logCount, sortedEntries, logNoun } from '../../utils/lifelog';
+import { isCollectionLog, logUniverse, logCount, upcomingCount, isUpcomingEntry, sortedEntries, logNoun } from '../../utils/lifelog';
 
 export default function LifelogDetailModal() {
   const { colors } = useTheme();
@@ -21,11 +21,13 @@ export default function LifelogDetailModal() {
   const collection = isCollectionLog(m);
   const universe = logUniverse(m);
   const target = m.logTarget;
-  const count = logCount(m);
+  const count = logCount(m);        // COMPLETED only (excludes future-dated)
+  const upN = upcomingCount(m);     // future-dated entries not yet counted
   const pct = collection && target ? Math.min(100, Math.round((count / target) * 100)) : null;
 
   const rows = sortedEntries(m);
-  const dated = m.entries.filter(e => e.date).sort((a, b) => a.date.localeCompare(b.date));
+  // Stats from COMPLETED dated entries only (upcoming trips shouldn't skew them).
+  const dated = m.entries.filter(e => e.date && !isUpcomingEntry(e)).sort((a, b) => a.date.localeCompare(b.date));
   const lastDated = dated[dated.length - 1];
   const avgBetween = dated.length > 1 ? Math.round(daysBetween(dated[0].date, lastDated.date) / (dated.length - 1)) : null;
 
@@ -71,6 +73,9 @@ export default function LifelogDetailModal() {
               <View style={{ height:8, borderRadius:4, backgroundColor:colors.track, marginTop:10, overflow:'hidden' }}>
                 <View style={{ height:'100%', width:`${pct ?? 0}%` as DimensionValue, backgroundColor:teal, borderRadius:4 }} />
               </View>
+              {upN > 0 && (
+                <Text style={{ fontSize:12, color:colors.text3, marginTop:8 }}>{count} visited · {upN} upcoming</Text>
+              )}
             </>
           ) : (
             <>
@@ -79,6 +84,9 @@ export default function LifelogDetailModal() {
                 <Text style={{ fontSize:16, fontWeight:'600', color:colors.text2 }}>{count === 1 ? 'time' : 'times'}</Text>
                 {lastDated && <Text style={{ fontSize:13, color:colors.text3, marginLeft:4 }}>· last {fmtLogDate(lastDated.date, lastDated.datePrecision)}</Text>}
               </View>
+              {upN > 0 && (
+                <Text style={{ fontSize:12, color:colors.text3, marginTop:6 }}>{count} completed · {upN} upcoming</Text>
+              )}
               {dated.length > 0 && (
                 <View style={{ flexDirection:'row', gap:16, marginTop:10 }}>
                   <Stat value={daysSince(lastDated.date)} label="since last" color={teal} />
@@ -107,6 +115,7 @@ export default function LifelogDetailModal() {
               {collection ? 'Logged' : 'History'} · {m.entries.length}
             </Text>
             {rows.map(({ entry, index }) => {
+              const up = isUpcomingEntry(entry);
               const primary = entry.item || fmtLogDate(entry.date, entry.datePrecision);
               const secondary = entry.item ? fmtLogDate(entry.date, entry.datePrecision) : '';
               return (
@@ -114,10 +123,17 @@ export default function LifelogDetailModal() {
                   backgroundColor:colors.surf, borderRadius:14, borderWidth:1, borderColor:colors.border,
                   padding:12, marginBottom:8 }}>
                   <View style={{ width:26, height:26, borderRadius:13, backgroundColor: colors.isDark ? 'rgba(62,207,178,0.16)' : colors.tint, alignItems:'center', justifyContent:'center' }}>
-                    <Text style={{ fontSize:12, color:teal }}>{collection ? '✓' : '•'}</Text>
+                    <Text style={{ fontSize:12, color:teal }}>{up ? '⏳' : collection ? '✓' : '•'}</Text>
                   </View>
                   <View style={{ flex:1 }}>
-                    <Text style={{ fontSize:14, fontWeight:'600', color:colors.text1 }} numberOfLines={1}>{primary}</Text>
+                    <View style={{ flexDirection:'row', alignItems:'center', gap:6, flexWrap:'wrap' }}>
+                      <Text style={{ fontSize:14, fontWeight:'600', color:colors.text1, maxWidth:'78%' }} numberOfLines={1}>{primary}</Text>
+                      {up && (
+                        <View style={{ backgroundColor: colors.isDark ? 'rgba(62,207,178,0.16)' : colors.tint, borderRadius:8, paddingVertical:2, paddingHorizontal:7 }}>
+                          <Text style={{ fontSize:9, fontWeight:'800', color:teal, textTransform:'uppercase', letterSpacing:0.3 }}>Upcoming</Text>
+                        </View>
+                      )}
+                    </View>
                     {!!secondary && <Text style={{ fontSize:11, color:colors.text3, marginTop:1 }}>{secondary}</Text>}
                     {!!entry.note && <Text style={{ fontSize:12, color:colors.text2, marginTop:2 }} numberOfLines={2}>{entry.note}</Text>}
                   </View>

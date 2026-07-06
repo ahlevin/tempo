@@ -4,6 +4,7 @@ import { useIsFocused } from 'expo-router';
 import { catColor, heroTintBg } from '../constants/colors';
 import { CATEGORIES } from '../constants/data';
 import { visibleHolidays, HolidayItem } from '../constants/holidays';
+import { logCount, upcomingCount } from '../utils/lifelog';
 import { useTheme } from '../contexts/ThemeContext';
 import { useTick } from '../contexts/TickContext';
 import { useStore } from '../store/useStore';
@@ -238,22 +239,20 @@ function MemoryCard({ memory: m }: { memory: any }) {
     );
   }
 
-  // Life log → count, or "X of Y" for a collection with a target.
+  // Life log → count, or "X of Y" for a collection with a target. Counts are
+  // COMPLETED only (future-dated entries don't inflate the headline).
   const accent = colors.teal;
   const dark   = colors.isDark ? colors.teal : colors.accent;
   const isColl = (m.logKind === 'collection') && !!m.logTarget;
-  const distinct = new Set((m.entries ?? []).map((en: any) => en.item).filter(Boolean)).size;
-  const bigVal   = isColl ? distinct : m.entries.length;
+  const completed = logCount(m);
+  const upN = upcomingCount(m);
+  const bigVal   = completed;
   const bigLabel = isColl ? `of ${m.logTarget}` : (bigVal === 1 ? 'Time' : 'Times');
-  const pct = isColl ? Math.min(100, Math.round((distinct / m.logTarget) * 100)) : null;
-  // Life logs have no container date; use entry dates. Most recent for context.
-  const lastDate = (m.entries ?? []).map((en: any) => en.date).filter(Boolean).sort().pop();
-  const secondary = isColl
-    ? `${pct}% complete`
-    : (lastDate
-        ? `Last: ${new Date(lastDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
-        : 'No entries yet');
-  const info2 = isColl ? `${distinct} of ${m.logTarget} logged` : `${bigVal} logged`;
+  const pct = isColl ? Math.min(100, Math.round((completed / m.logTarget) * 100)) : null;
+  const secondary = upN > 0
+    ? `${completed} done · ${upN} upcoming`
+    : (isColl ? `${pct}% complete` : `${completed} logged`);
+  const info2 = isColl ? `${completed} of ${m.logTarget} logged` : `${completed} logged`;
   return (
     <HeroFrame bgDark="#0F1E1A" borderDark="rgba(62,207,178,0.28)" fav={m.fav} onFav={() => toggleFav(m.id)}>
       <Eyebrow color={accent}>Life Log</Eyebrow>

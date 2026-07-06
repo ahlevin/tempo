@@ -10,11 +10,13 @@ import { EventCard } from '../../components/EventCard';
 import { AddChooser } from '../../components/AddChooser';
 import { UpcomingMemoryRow } from '../../components/UpcomingMemoryRow';
 import { HolidayRow } from '../../components/HolidayRow';
+import { UpcomingLogRow } from '../../components/UpcomingLogRow';
 import { SectionHeader, EmptyPrompt } from '../../components/SectionUI';
 import { Event, Memory } from '../../store/types';
 import { CATEGORIES } from '../../constants/data';
 import { catColor } from '../../constants/colors';
 import { visibleHolidays, HolidayItem } from '../../constants/holidays';
+import { upcomingLogItems, UpcomingLogItem } from '../../utils/lifelog';
 import { nextOccurrence, nextAnnual, daysUntil } from '../../utils/dates';
 
 // Countdowns filter pills: All, the 7 event categories, and the 3 recurring
@@ -32,7 +34,8 @@ const FILTERS: { id: string; label: string; emoji: string }[] = [
 type UpcomingItem =
   | { kind: 'event'; data: Event }
   | { kind: 'memory'; data: Memory }
-  | { kind: 'holiday'; data: HolidayItem };
+  | { kind: 'holiday'; data: HolidayItem }
+  | { kind: 'logentry'; data: UpcomingLogItem };
 const upcomingDays = (it: UpcomingItem) =>
   it.kind === 'event' ? daysUntil(nextOccurrence(it.data))
   : it.kind === 'memory' ? daysUntil(nextAnnual(it.data.originDate))
@@ -71,6 +74,11 @@ export default function HomeScreen() {
   // Visible holidays (derived, never stored) show under "All" and the Holidays pill.
   if (isAll || filter === 'holidays') {
     visibleHolidays(prefs.holidays).forEach(h => upcoming.push({ kind: 'holiday', data: h }));
+  }
+  // Future-dated life-log entries surface as countdowns until their date passes
+  // (derived from the entry date — no stored event, auto-transitions to completed).
+  if (isAll) {
+    upcomingLogItems(memories).forEach(it => upcoming.push({ kind: 'logentry', data: it }));
   }
   upcoming.sort((a, b) => upcomingDays(a) - upcomingDays(b));
 
@@ -141,7 +149,9 @@ export default function HomeScreen() {
             ? <EventCard key={`e-${it.data.id}`} event={it.data} />
             : it.kind === 'memory'
             ? <UpcomingMemoryRow key={`m-${it.data.id}`} memory={it.data} />
-            : <HolidayRow key={`h-${it.data.id}`} item={it.data} />)}
+            : it.kind === 'holiday'
+            ? <HolidayRow key={`h-${it.data.id}`} item={it.data} />
+            : <UpcomingLogRow key={`l-${it.data.memId}-${it.data.index}`} item={it.data} />)}
       </ScrollView>
 
       {/* FAB */}

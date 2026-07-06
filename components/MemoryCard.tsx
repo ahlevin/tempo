@@ -7,10 +7,10 @@ import { SwipeableRow } from './SwipeableRow';
 import { FavStar } from './FavStar';
 import { AlertBadge } from './AlertBadge';
 import { lightCardShadow, catColor } from '../constants/colors';
-import { isCollectionLog, logCount } from '../utils/lifelog';
+import { isCollectionLog, logCount, upcomingCount } from '../utils/lifelog';
 import {
   yearsMonthsDays, nextAnnual, daysSince, daysUntil,
-  ordinal, fmtShort, fmtFull, fmtMonthDay, fmtShortNoYear, fmtLogDate,
+  ordinal, fmtShort, fmtMonthDay, fmtShortNoYear, fmtLogDate,
 } from '../utils/dates';
 
 // memorial's 'accent' key is a placeholder — its color is resolved via
@@ -245,9 +245,11 @@ function LifelogSummary({ m, color }: { m: Memory; color: string }) {
   const { colors } = useTheme();
   const collection = isCollectionLog(m);
   const target = m.logTarget;
-  const count = logCount(m);
+  const count = logCount(m);        // completed (excludes future-dated)
+  const upN = upcomingCount(m);
   const pct = collection && target ? Math.min(100, Math.round((count / target) * 100)) : null;
-  const dated = m.entries.filter(e => e.date).sort((a, b) => a.date.localeCompare(b.date));
+  // "last" ignores future-dated entries.
+  const dated = m.entries.filter(e => e.date && daysUntil(e.date) <= 0).sort((a, b) => a.date.localeCompare(b.date));
   const last = dated[dated.length - 1];
   return (
     <View style={{ marginTop: 12 }}>
@@ -268,6 +270,9 @@ function LifelogSummary({ m, color }: { m: Memory; color: string }) {
           <Text style={{ fontSize: 15, fontWeight: '600', color: colors.text2 }}>{count === 1 ? 'time' : 'times'}</Text>
           {last && <Text style={{ fontSize: 12, color: colors.text3, marginLeft: 4 }}>· last {fmtLogDate(last.date, last.datePrecision)}</Text>}
         </View>
+      )}
+      {upN > 0 && (
+        <Text style={{ fontSize: 12, fontWeight: '600', color: colors.teal, marginTop: 8 }}>⏳ {upN} upcoming</Text>
       )}
       <Text style={{ fontSize: 12, fontWeight: '600', color: colors.teal, marginTop: 12 }}>Tap to view & add ›</Text>
     </View>
