@@ -44,7 +44,7 @@ interface TempoStore {
   clearForSignOut: () => void;
   flushOutbox: () => Promise<void>;
 
-  addEvent: (e: Omit<Event, 'id' | 'created'>) => void;
+  addEvent: (e: Omit<Event, 'id' | 'created'>) => string;
   updateEvent: (id: string, patch: Partial<Event>) => void;
   deleteEvent: (id: string) => void;
   toggleEventFav: (id: string) => void;
@@ -266,6 +266,7 @@ export const useStore = create<TempoStore>()(
           const id = uuid();
           set(s => ({ events: [...s.events, { ...e, id, created: today() }] }));
           enqueue({ kind: 'upsert', table: 'events', id });
+          return id;
         },
         updateEvent: (id, patch) => {
           set(s => ({ events: s.events.map(e => e.id === id ? { ...e, ...patch } : e) }));
@@ -351,24 +352,24 @@ export const useStore = create<TempoStore>()(
         detachEntryToEvent: (memId, index) => {
           const m = get().memories.find(x => x.id === memId);
           const e = m?.entries[index];
-          if (!m || !e) return null;
-          const id = uuid();
-          // Preserve the entry's date; fall back to a valid upcoming date so the
+          if (!m || !e) { slog(`detach: SKIPPED — entry not found (mem=${memId} idx=${index})`); return null; }
+          // Preserve the entry's label/date/note. Works identically for COUNT and
+          // COLLECTION entries: the event name is the entry's item (e.g. the country)
+          // or, if absent, the log name. Fall back to a valid upcoming date so the
           // recreated event is never dateless (which would drop it out of Countdowns).
+          const name = (e.item && e.item.trim()) || m.name;
           const d = e.date || format(addDays(new Date(), 30), 'yyyy-MM-dd');
-          const event: Event = {
-            id, name: e.item || m.name, emoji: m.emoji, cat: 'parties',
+          // Create the event through the SAME proven primitive as "New Countdown"
+          // (guarantees the events upsert is enqueued for every entry type), THEN
+          // drop the entry from the log. Two writes, exactly one per table.
+          const id = get().addEvent({
+            name, emoji: m.emoji, cat: 'parties',
             allDay: true, start: `${d}T00:00:00`, end: null, date: d,
-            created: today(), fav: false, note: e.note ?? '', recur: null, alerts: [],
-          };
-          // Add the event AND drop the entry in one atomic set, then sync both.
+            fav: false, note: e.note ?? '', recur: null, alerts: [],
+          });
+          slog(`detach: created event ${id} ("${name}") from ${e.item ? 'collection' : 'count'} entry; removing entry`);
           // The log is KEPT even if now empty, so re-attaching later finds it.
-          set(s => ({
-            events: [...s.events, event],
-            memories: s.memories.map(x => x.id === memId ? { ...x, entries: x.entries.filter((_, i) => i !== index) } : x),
-          }));
-          enqueue({ kind: 'upsert', table: 'events', id });
-          enqueue({ kind: 'upsert', table: 'memories', id: memId });
+          get().deleteLogEntry(memId, index);
           return id;
         },
         convertEventToMemory: (id, targetType) => {
