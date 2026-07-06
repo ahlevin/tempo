@@ -11,6 +11,8 @@ import { Event, Goal, Memory, UserPrefs, LogEntry } from '../store/types';
 //  - Event.created / Goal.created come from created_at (date portion).
 //  - Goal.date <-> goals.target_date, Memory.originDate <-> memories.origin_date.
 //  - "end" is a reserved word; as a JSON key via PostgREST it is handled fine.
+//  - DATE/timestamptz columns are coerced to NULL (never "") via dateCol/tsCol
+//    below, so dateless life-log containers (blank originDate) upsert cleanly.
 // ---------------------------------------------------------------------------
 
 const datePart = (s: string) => s.slice(0, 10);
