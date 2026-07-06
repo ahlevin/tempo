@@ -238,17 +238,22 @@ function MemoryCard({ memory: m }: { memory: any }) {
     );
   }
 
-  // Life log → count of entries.
+  // Life log → count, or "X of Y" for a collection with a target.
   const accent = colors.teal;
   const dark   = colors.isDark ? colors.teal : colors.accent;
-  const bigVal   = m.entries.length;
-  const bigLabel = bigVal === 1 ? 'Time' : 'Times';
+  const isColl = (m.logKind === 'collection') && !!m.logTarget;
+  const distinct = new Set((m.entries ?? []).map((en: any) => en.item).filter(Boolean)).size;
+  const bigVal   = isColl ? distinct : m.entries.length;
+  const bigLabel = isColl ? `of ${m.logTarget}` : (bigVal === 1 ? 'Time' : 'Times');
+  const pct = isColl ? Math.min(100, Math.round((distinct / m.logTarget) * 100)) : null;
   const dstr = new Date(m.originDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
   // Most recent entry date for the secondary line (keeps height uniform + useful).
   const lastDate = (m.entries ?? []).map((en: any) => en.date).filter(Boolean).sort().pop();
-  const secondary = lastDate
-    ? `Last: ${new Date(lastDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
-    : 'No entries yet';
+  const secondary = isColl
+    ? `${pct}% complete`
+    : (lastDate
+        ? `Last: ${new Date(lastDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
+        : 'No entries yet');
   return (
     <HeroFrame bgDark="#0F1E1A" borderDark="rgba(62,207,178,0.28)" fav={m.fav} onFav={() => toggleFav(m.id)}>
       <Eyebrow color={accent}>Life Log</Eyebrow>

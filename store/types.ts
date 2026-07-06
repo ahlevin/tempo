@@ -46,6 +46,9 @@ export interface Goal {
 export interface LogEntry {
   date: string;
   note: string;
+  /** For COLLECTION life logs: the named thing logged (e.g. a country). Absent
+   *  on plain count entries (backward compatible). */
+  item?: string;
 }
 
 export interface Memory {
@@ -58,6 +61,12 @@ export interface Memory {
    *  the countdown to the next annual occurrence still works from month/day. */
   yearUnknown: boolean;
   entries: LogEntry[];
+  // Life-log shaping (ignored by birthday/anniversary/memorial):
+  //  - 'count' (default): tally of occurrences (entries.length)
+  //  - 'collection': progress toward a universe/target (distinct items of Y)
+  logKind?: 'count' | 'collection';
+  logPreset?: string;   // preset id (constants/lifelogs.ts), or undefined for custom
+  logTarget?: number;   // the "Y" (universe size or custom target) for collections
   note: string;
   fav: boolean;
   alerts: Alert[];

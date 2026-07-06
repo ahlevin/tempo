@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { GestureResponderEvent, Text, TouchableOpacity, View } from 'react-native';
+import { DimensionValue, GestureResponderEvent, Text, TouchableOpacity, View } from 'react-native';
 import { router } from 'expo-router';
 import { useTheme } from '../contexts/ThemeContext';
 import { useStore } from '../store/useStore';
@@ -8,6 +8,7 @@ import { SwipeableRow } from './SwipeableRow';
 import { FavStar } from './FavStar';
 import { AlertBadge } from './AlertBadge';
 import { lightCardShadow, catColor } from '../constants/colors';
+import { presetUniverse } from '../constants/lifelogs';
 import {
   yearsMonthsDays, nextAnnual, daysSince, daysUntil, daysBetween,
   ordinal, fmtShort, fmtFull, fmtMonthDay, fmtShortNoYear,
@@ -57,7 +58,7 @@ export function MemoryCard({ memory: m }: { memory: Memory }) {
   const { colors } = useTheme();
   const deleteMemory    = useStore(s => s.deleteMemory);
   const toggleMemoryFav = useStore(s => s.toggleMemoryFav);
-  const [showAll, setShowAll] = useState(false);
+  const [expanded, setExpanded] = useState(false);
 
   // Legacy/unknown types (e.g. a removed 'milestone' row) render nothing.
   if (!KNOWN_TYPES.has(m.type)) return null;
@@ -110,7 +111,7 @@ export function MemoryCard({ memory: m }: { memory: Memory }) {
         {m.type === 'anniversary' && <AnniversaryBody m={m} r={r} color={color} />}
         {m.type === 'memorial'    && <MemorialBody m={m} r={r} color={color} />}
         {m.type === 'lifelog'     && (
-          <LifelogBody m={m} color={color} showAll={showAll} onToggle={() => setShowAll(v => !v)} />
+          <LifelogBody m={m} color={color} expanded={expanded} onToggleExpand={() => setExpanded(v => !v)} />
         )}
       </TouchableOpacity>
     </View>
@@ -235,83 +236,156 @@ function MemorialBody({ m, r, color }: { m: Memory; r: YMD; color: string }) {
   );
 }
 
+// Life logs render COLLAPSED by default: a one-line summary (count · last, or
+// "X of Y" with a progress bar for collections). A chevron expands the detail
+// (dated timeline for counts; logged items for collections). The card's own tap
+// still opens edit — inner controls stopPropagation.
 function LifelogBody({
-  m, color, showAll, onToggle,
-}: { m: Memory; color: string; showAll: boolean; onToggle: () => void }) {
+  m, color, expanded, onToggleExpand,
+}: { m: Memory; color: string; expanded: boolean; onToggleExpand: () => void }) {
   const { colors } = useTheme();
-  // Chronological (oldest → newest) so we can compute gaps; display newest first.
+  const kind = m.logKind ?? 'count';
+  const universe = presetUniverse(m.logPreset);
+  const target = m.logTarget;
+  const isCollection = kind === 'collection';
+
   const chrono = [...m.entries].sort((a, b) => a.date.localeCompare(b.date));
-  const count  = chrono.length;
-  const first  = chrono[0];
-  const last   = chrono[count - 1];
+  const last = chrono[chrono.length - 1];
 
-  const sinceLast = count ? daysSince(last.date) : 0;
-  const sinceFirst = count ? daysSince(first.date) : 0;
-  const avgBetween = count > 1 ? Math.round(daysBetween(first.date, last.date) / (count - 1)) : null;
+  // For collections, count distinct named items and remember when each was first logged.
+  const itemDate = new Map<string, string>();
+  for (const e of chrono) if (e.item && !itemDate.has(e.item)) itemDate.set(e.item, e.date);
+  const count = isCollection ? itemDate.size : m.entries.length;
+  const pct = isCollection && target ? Math.min(100, Math.round((count / target) * 100)) : null;
 
-  const rows = chrono
-    .map((e, i) => ({ entry: e, num: i + 1, gap: i === 0 ? null : daysBetween(chrono[i - 1].date, e.date) }))
-    .reverse(); // newest first
-  const visible = showAll ? rows : rows.slice(0, 3);
+  const openAdd = (past: string) => router.push({ pathname: '/modals/log-entry', params: { id: m.id, past } });
 
   return (
     <>
-      <BigNumber value={count} label={count === 1 ? 'time' : 'times'} color={color} />
-      {count > 0 && (
-        <View style={{ flexDirection: 'row', gap: 8 }}>
-          <Stat value={sinceLast} label="since last" color={color} />
-          <Stat value={sinceFirst} label="days since first" color={colors.text1} />
-          <Stat value={avgBetween === null ? '—' : avgBetween} label="avg between" color={colors.text1} />
-        </View>
-      )}
-
-      {/* Log buttons */}
-      <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
-        <TouchableOpacity
-          onPress={(ev) => { ev.stopPropagation(); router.push({ pathname: '/modals/log-entry', params: { id: m.id, past: '0' } }); }}
-          style={{ flex: 1, paddingVertical: 11, borderRadius: 12, backgroundColor: colors.isDark ? 'rgba(62,207,178,0.16)' : colors.tint, alignItems: 'center' }}>
-          <Text style={{ fontSize: 13, fontWeight: '700', color: colors.teal }}>+ Log today</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={(ev) => { ev.stopPropagation(); router.push({ pathname: '/modals/log-entry', params: { id: m.id, past: '1' } }); }}
-          style={{ flex: 1, paddingVertical: 11, borderRadius: 12, backgroundColor: colors.glass, borderWidth: 1, borderColor: colors.border, alignItems: 'center' }}>
-          <Text style={{ fontSize: 13, fontWeight: '600', color: colors.text2 }}>Past date</Text>
-        </TouchableOpacity>
+      {/* Collapsed summary */}
+      <View style={{ marginTop: 12 }}>
+        {isCollection && target ? (
+          <>
+            <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6 }}>
+              <Text style={{ fontSize: 30, fontWeight: '800', color, fontVariant: ['tabular-nums'] }}>{count}</Text>
+              <Text style={{ fontSize: 15, fontWeight: '600', color: colors.text2 }}>of {target}</Text>
+              {pct !== null && <Text style={{ fontSize: 13, color: colors.text3, marginLeft: 2 }}>· {pct}%</Text>}
+            </View>
+            <View style={{ height: 6, borderRadius: 3, backgroundColor: colors.track, marginTop: 8, overflow: 'hidden' }}>
+              <View style={{ height: '100%', width: `${pct ?? 0}%` as DimensionValue, backgroundColor: color, borderRadius: 3 }} />
+            </View>
+          </>
+        ) : (
+          <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' }}>
+            <Text style={{ fontSize: 30, fontWeight: '800', color, fontVariant: ['tabular-nums'] }}>{count}</Text>
+            <Text style={{ fontSize: 15, fontWeight: '600', color: colors.text2 }}>{count === 1 ? 'time' : 'times'}</Text>
+            {last && <Text style={{ fontSize: 12, color: colors.text3, marginLeft: 4 }}>· last {fmtShort(last.date)}</Text>}
+          </View>
+        )}
       </View>
 
-      {/* History */}
-      {count > 0 && (
-        <View style={{ marginTop: 14 }}>
-          <Text style={{ fontSize: 10, fontWeight: '700', color: colors.text3, textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 8 }}>
-            History
-          </Text>
-          {visible.map(({ entry, num, gap }) => (
-            <View key={entry.date + num} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 10 }}>
-              <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: colors.isDark ? 'rgba(62,207,178,0.16)' : colors.tint, alignItems: 'center', justifyContent: 'center', marginTop: 1 }}>
-                <Text style={{ fontSize: 11, fontWeight: '800', color: colors.teal }}>{num}</Text>
-              </View>
-              <View style={{ flex: 1 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <Text style={{ fontSize: 13, fontWeight: '600', color: colors.text1 }}>{fmtFull(entry.date)}</Text>
-                  {gap !== null && (
-                    <Text style={{ fontSize: 11, fontWeight: '700', color: colors.text3 }}>+{gap}d</Text>
-                  )}
-                </View>
-                {!!entry.note && (
-                  <Text style={{ fontSize: 12, color: colors.text2, marginTop: 2 }}>{entry.note}</Text>
-                )}
-              </View>
-            </View>
-          ))}
-          {rows.length > 3 && (
-            <TouchableOpacity onPress={(ev) => { ev.stopPropagation(); onToggle(); }} style={{ alignSelf: 'flex-start', paddingVertical: 4 }}>
-              <Text style={{ fontSize: 12, fontWeight: '600', color }}>
-                {showAll ? 'Show less' : `Show all ${rows.length}`}
-              </Text>
+      {/* Actions: log affordance + expand chevron */}
+      <View style={{ flexDirection: 'row', gap: 8, marginTop: 12, alignItems: 'center' }}>
+        {isCollection ? (
+          <TouchableOpacity
+            onPress={(ev) => { ev.stopPropagation(); openAdd('0'); }}
+            style={{ flex: 1, paddingVertical: 11, borderRadius: 12, backgroundColor: colors.isDark ? 'rgba(62,207,178,0.16)' : colors.tint, alignItems: 'center' }}>
+            <Text style={{ fontSize: 13, fontWeight: '700', color: colors.teal }}>{universe ? '+ Add' : '+ Log'}</Text>
+          </TouchableOpacity>
+        ) : (
+          <>
+            <TouchableOpacity
+              onPress={(ev) => { ev.stopPropagation(); openAdd('0'); }}
+              style={{ flex: 1, paddingVertical: 11, borderRadius: 12, backgroundColor: colors.isDark ? 'rgba(62,207,178,0.16)' : colors.tint, alignItems: 'center' }}>
+              <Text style={{ fontSize: 13, fontWeight: '700', color: colors.teal }}>+ Log today</Text>
             </TouchableOpacity>
-          )}
-        </View>
+            <TouchableOpacity
+              onPress={(ev) => { ev.stopPropagation(); openAdd('1'); }}
+              style={{ flex: 1, paddingVertical: 11, borderRadius: 12, backgroundColor: colors.glass, borderWidth: 1, borderColor: colors.border, alignItems: 'center' }}>
+              <Text style={{ fontSize: 13, fontWeight: '600', color: colors.text2 }}>Past date</Text>
+            </TouchableOpacity>
+          </>
+        )}
+        {count > 0 && (
+          <TouchableOpacity
+            onPress={(ev) => { ev.stopPropagation(); onToggleExpand(); }}
+            accessibilityLabel={expanded ? 'Collapse' : 'Expand'}
+            style={{ width: 42, paddingVertical: 11, borderRadius: 12, backgroundColor: colors.glass, borderWidth: 1, borderColor: colors.border, alignItems: 'center' }}>
+            <Text style={{ fontSize: 15, color: colors.text2, marginTop: -1 }}>{expanded ? '⌃' : '⌄'}</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {/* Expanded detail */}
+      {expanded && count > 0 && (
+        isCollection
+          ? <CollectionList itemDate={itemDate} color={color} universe={universe} target={target} />
+          : <CountTimeline chrono={chrono} color={color} />
       )}
     </>
+  );
+}
+
+function CollectionList({ itemDate, color, universe, target }:
+  { itemDate: Map<string, string>; color: string; universe?: string[]; target?: number }) {
+  const { colors } = useTheme();
+  const rows = Array.from(itemDate.entries()).sort((a, b) => b[1].localeCompare(a[1])); // newest first
+  const total = universe ? universe.length : target;
+  const remaining = total ? Math.max(0, total - rows.length) : 0;
+  return (
+    <View style={{ marginTop: 14 }}>
+      <Text style={{ fontSize: 10, fontWeight: '700', color: colors.text3, textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 8 }}>
+        Logged{remaining > 0 ? ` · ${remaining} to go` : ' · complete! 🎉'}
+      </Text>
+      {rows.map(([item, date]) => (
+        <View key={item} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 9 }}>
+          <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: colors.isDark ? 'rgba(62,207,178,0.16)' : colors.tint, alignItems: 'center', justifyContent: 'center' }}>
+            <Text style={{ fontSize: 11, color: colors.teal }}>✓</Text>
+          </View>
+          <Text style={{ flex: 1, fontSize: 13, fontWeight: '600', color: colors.text1 }} numberOfLines={1}>{item}</Text>
+          <Text style={{ fontSize: 11, color: colors.text3 }}>{fmtShort(date)}</Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+function CountTimeline({ chrono, color }: { chrono: Memory['entries']; color: string }) {
+  const { colors } = useTheme();
+  const first = chrono[0];
+  const last  = chrono[chrono.length - 1];
+  const avgBetween = chrono.length > 1 ? Math.round(daysBetween(first.date, last.date) / (chrono.length - 1)) : null;
+  const rows = chrono
+    .map((e, i) => ({ entry: e, num: i + 1, gap: i === 0 ? null : daysBetween(chrono[i - 1].date, e.date) }))
+    .reverse(); // newest first
+  return (
+    <View style={{ marginTop: 14 }}>
+      <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
+        <Stat value={daysSince(last.date)} label="since last" color={color} />
+        <Stat value={daysSince(first.date)} label="days since first" color={colors.text1} />
+        <Stat value={avgBetween === null ? '—' : avgBetween} label="avg between" color={colors.text1} />
+      </View>
+      <Text style={{ fontSize: 10, fontWeight: '700', color: colors.text3, textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 8 }}>
+        History
+      </Text>
+      {rows.map(({ entry, num, gap }) => (
+        <View key={entry.date + num} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 10 }}>
+          <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: colors.isDark ? 'rgba(62,207,178,0.16)' : colors.tint, alignItems: 'center', justifyContent: 'center', marginTop: 1 }}>
+            <Text style={{ fontSize: 11, fontWeight: '800', color: colors.teal }}>{num}</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Text style={{ fontSize: 13, fontWeight: '600', color: colors.text1 }}>{fmtFull(entry.date)}</Text>
+              {gap !== null && (
+                <Text style={{ fontSize: 11, fontWeight: '700', color: colors.text3 }}>+{gap}d</Text>
+              )}
+            </View>
+            {!!entry.note && (
+              <Text style={{ fontSize: 12, color: colors.text2, marginTop: 2 }}>{entry.note}</Text>
+            )}
+          </View>
+        </View>
+      ))}
+    </View>
   );
 }

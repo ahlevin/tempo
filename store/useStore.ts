@@ -58,7 +58,7 @@ interface TempoStore {
   updateMemory: (id: string, patch: Partial<Memory>) => void;
   deleteMemory: (id: string) => void;
   toggleMemoryFav: (id: string) => void;
-  addLogEntry: (memId: string, entry: { date: string; note: string }) => void;
+  addLogEntry: (memId: string, entry: { date: string; note: string; item?: string }) => void;
   updatePrefs: (patch: Partial<UserPrefs>) => void;
   setHolidaysEnabled: (on: boolean) => void;
   setHolidayShown: (id: string, shown: boolean) => void;

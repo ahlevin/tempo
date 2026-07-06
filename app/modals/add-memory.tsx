@@ -11,6 +11,7 @@ import { Alert as AlertType } from '../../store/types';
 import { DateTimeField } from '../../components/DateTimeField';
 import { AlertsEditor } from '../../components/AlertsEditor';
 import { Toggle } from '../../components/FormControls';
+import { COLLECTION_PRESETS, COUNT_PRESETS, PRESET_BY_ID } from '../../constants/lifelogs';
 
 const DATE_LABELS: Record<string,string> = {
   birthday:'Date of Birth', anniversary:'Anniversary Date',
@@ -35,6 +36,16 @@ export default function AddMemoryModal() {
   const [note,  setNote]  = useState('');
   const [yearUnknown, setYearUnknown] = useState(false);
   const [alerts, setAlerts] = useState<AlertType[]>([]);
+  // Life-log shaping. preset='' means Custom (name it yourself; optional target).
+  const [preset, setPreset] = useState<string>('');
+  const [customTarget, setCustomTarget] = useState('');
+
+  function pickPreset(id: string) {
+    setPreset(id);
+    const p = PRESET_BY_ID[id];
+    if (p) { setName(p.name); setEmoji(p.emoji); }
+  }
+  function pickCustom() { setPreset(''); }
 
   const fi = { backgroundColor:colors.glass, borderWidth:1,
     borderColor:colors.border, borderRadius:12, padding:12,
@@ -44,9 +55,29 @@ export default function AddMemoryModal() {
 
   function submit() {
     if (!name.trim()||!date) { showToast('⚠️', 'Missing info', 'Please enter a name and date.'); return; }
+    const lifelog = type === 'lifelog';
+    // Resolve the log shape: a preset carries its kind/target; custom is a count
+    // unless the user set a target number (→ an X-of-Y collection).
+    let logKind: 'count' | 'collection' = 'count';
+    let logPreset: string | undefined;
+    let logTarget: number | undefined;
+    if (lifelog) {
+      const p = preset ? PRESET_BY_ID[preset] : undefined;
+      if (p) {
+        logKind = p.kind; logPreset = p.id; logTarget = p.target;
+      } else {
+        const t = parseInt(customTarget, 10);
+        if (t > 0) { logKind = 'collection'; logTarget = t; }
+      }
+    }
     addMemory({
       type:type as any, name:name.trim(), emoji, originDate:date, yearUnknown,
-      entries: type==='lifelog' ? [{date,note:note.trim()}] : [],
+      // A collection log starts empty (items are picked in); a count log seeds its
+      // first occurrence from the date.
+      entries: lifelog && logKind === 'count' ? [{date,note:note.trim()}] : [],
+      logKind: lifelog ? logKind : undefined,
+      logPreset: lifelog ? logPreset : undefined,
+      logTarget: lifelog ? logTarget : undefined,
       note: type!=='lifelog' ? note.trim() : '',
       // Reminders only apply to the recurring types (birthday/anniversary).
       fav: false, alerts: type==='lifelog' ? [] : alerts,
@@ -85,6 +116,38 @@ export default function AddMemoryModal() {
               </TouchableOpacity>
             ))}
           </View>
+
+          {type === 'lifelog' && (
+            <>
+              <FL label="What are you tracking?" />
+              <Text style={{ fontSize:11, color:colors.text3, marginTop:-2, marginBottom:7 }}>
+                Collections — progress toward a set (X of Y)
+              </Text>
+              <View style={{ flexDirection:'row', flexWrap:'wrap', gap:7, marginBottom:12 }}>
+                {COLLECTION_PRESETS.map(p => (
+                  <Chip key={p.id} selected={preset===p.id} emoji={p.emoji} label={p.name} onPress={() => pickPreset(p.id)} />
+                ))}
+              </View>
+              <Text style={{ fontSize:11, color:colors.text3, marginBottom:7 }}>Counts — a running tally</Text>
+              <View style={{ flexDirection:'row', flexWrap:'wrap', gap:7, marginBottom:12 }}>
+                {COUNT_PRESETS.map(p => (
+                  <Chip key={p.id} selected={preset===p.id} emoji={p.emoji} label={p.name} onPress={() => pickPreset(p.id)} />
+                ))}
+                <Chip selected={preset===''} emoji="✨" label="Custom" onPress={pickCustom} />
+              </View>
+              {preset === '' && (
+                <>
+                  <FL label="Target (optional)" />
+                  <TextInput value={customTarget} onChangeText={setCustomTarget} keyboardType="numeric"
+                    placeholder="e.g. 50 — leave blank to just count" placeholderTextColor={colors.text3} style={fi} />
+                  <Text style={{ fontSize:11, color:colors.text3, marginTop:-8, marginBottom:14, marginLeft:2 }}>
+                    Set a number to track “X of Y”; leave blank for a simple count.
+                  </Text>
+                </>
+              )}
+            </>
+          )}
+
           <FL label="Name" />
           <TextInput value={name} onChangeText={setName}
             placeholder="e.g. First Half Dome Hike…" placeholderTextColor={colors.text3} style={fi} />
@@ -128,4 +191,18 @@ function FL({ label }: { label: string }) {
   const { colors } = useTheme();
   return <Text style={{ fontSize:11, fontWeight:'600', color:colors.text3,
     textTransform:'uppercase', letterSpacing:0.5, marginBottom:6 }}>{label}</Text>;
+}
+
+function Chip({ selected, emoji, label, onPress }: { selected: boolean; emoji: string; label: string; onPress: () => void }) {
+  const { colors } = useTheme();
+  return (
+    <TouchableOpacity onPress={onPress}
+      style={{ flexDirection:'row', alignItems:'center', gap:6,
+        paddingVertical:8, paddingHorizontal:11, borderRadius:11, borderWidth:1.5,
+        borderColor: selected ? colors.teal : colors.border,
+        backgroundColor: selected ? (colors.isDark ? 'rgba(62,207,178,0.12)' : colors.tint) : colors.glass }}>
+      <Text style={{ fontSize:15 }}>{emoji}</Text>
+      <Text style={{ fontSize:12, fontWeight:'600', color: selected ? colors.teal : colors.text2 }}>{label}</Text>
+    </TouchableOpacity>
+  );
 }
