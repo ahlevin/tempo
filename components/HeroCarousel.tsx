@@ -1,10 +1,12 @@
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState } from 'react';
 import { View, Text, ScrollView, Dimensions, TouchableOpacity, Platform } from 'react-native';
+import { useIsFocused } from 'expo-router';
 import Svg, { Circle } from 'react-native-svg';
 import { catColor, dayCountColor } from '../constants/colors';
 import { useTheme } from '../contexts/ThemeContext';
+import { useTick } from '../contexts/TickContext';
 import { useStore } from '../store/useStore';
-import { nextOccurrence, daysUntil, msUntil, pctElapsed, eventProgress, recurLabel, nextAnnual, yearsMonthsDays, ordinal, fmtDateTimeFull, fmtMonthDay } from '../utils/dates';
+import { nextOccurrence, daysUntil, pctElapsed, eventProgress, recurLabel, nextAnnual, yearsMonthsDays, ordinal, fmtDateTimeFull, fmtMonthDay, toDate, isValidDate } from '../utils/dates';
 
 const W = Dimensions.get('window').width - 32;
 const CIRC = 301.6;
@@ -65,26 +67,59 @@ function DualRing({ goalPct, timePct }: { goalPct: number; timePct: number }) {
   );
 }
 
-function EventCard({ event: e }: { event: any }) {
+// The live-ticking part of the hero event card (Ring + Days/Hours/Mins/Secs).
+// `now` drives the seconds; it's the shared tick for the active card, or a
+// one-off Date.now() snapshot for inactive/off-screen cards (no re-render).
+function CountdownInner({ e, accent, now }: { e: any; accent: string; now: number }) {
   const { colors } = useTheme();
-  const toggleFav = useStore(s => s.toggleEventFav);
-  const [tick, setTick] = useState(0);
-  useEffect(() => {
-    const t = setInterval(() => setTick(n => n + 1), 1000);
-    return () => clearInterval(t);
-  }, []);
-
   const nd     = nextOccurrence(e);
-  const ms     = msUntil(nd);
+  const target = toDate(nd);
+  const ms     = isValidDate(target) ? target.getTime() - now : 0;
   const d      = ms > 0 ? Math.floor(ms / 86400000) : 0;
   const h      = ms > 0 ? Math.floor((ms % 86400000) / 3600000) : 0;
   const mi     = ms > 0 ? Math.floor((ms % 3600000) / 60000) : 0;
   const s      = ms > 0 ? Math.floor((ms % 60000) / 1000) : 0;
   const p      = eventProgress(e);
+  const pad    = (n: number) => String(n).padStart(2, '0');
+  return (
+    <View style={{ flexDirection:'row', alignItems:'center', gap:16, marginBottom:14 }}>
+      <Ring pct={p} color={accent} />
+      <View style={{ flex:1, flexDirection:'row', flexWrap:'wrap', gap:6 }}>
+        {[
+          { n:pad(d),  l:'Days',  c:accent },
+          { n:pad(h),  l:'Hours', c:colors.text1 },
+          { n:pad(mi), l:'Mins',  c:colors.text1 },
+          { n:pad(s),  l:'Secs',  c:accent },
+        ].map(u => (
+          <View key={u.l} style={{ width:'46%', backgroundColor:(colors.isDark ? 'rgba(255,255,255,0.05)' : colors.tile),
+            borderRadius:12, padding:9 }}>
+            <Text style={{ fontSize:20, fontWeight:'800', color:u.c,
+              fontVariant:['tabular-nums'] }}>{u.n}</Text>
+            <Text style={{ fontSize:9, color:colors.text3,
+              textTransform:'uppercase', marginTop:2 }}>{u.l}</Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+// Only the active/visible card subscribes to the shared per-second tick; this
+// separate component isolates that subscription so inactive cards never
+// re-render each second (and the shared interval idles when none are active).
+function LiveCountdown({ e, accent }: { e: any; accent: string }) {
+  const now = useTick();
+  return <CountdownInner e={e} accent={accent} now={now} />;
+}
+
+function EventCard({ event: e, active }: { event: any; active: boolean }) {
+  const { colors } = useTheme();
+  const toggleFav = useStore(s => s.toggleEventFav);
+
+  const nd     = nextOccurrence(e);
   const accent = catColor(colors, e.cat);
   const rl     = recurLabel(e);
   const whenStr = fmtDateTimeFull(nd, e.allDay);
-  const pad    = (n: number) => String(n).padStart(2, '0');
 
   return (
     <View style={{ width:W, backgroundColor: colors.isDark ? '#1A1830' : colors.surf, borderRadius:24, padding:22,
@@ -102,25 +137,9 @@ function EventCard({ event: e }: { event: any }) {
         marginBottom:18, paddingRight:34 }} numberOfLines={1}>
         {e.emoji} {e.name}
       </Text>
-      <View style={{ flexDirection:'row', alignItems:'center', gap:16, marginBottom:14 }}>
-        <Ring pct={p} color={accent} />
-        <View style={{ flex:1, flexDirection:'row', flexWrap:'wrap', gap:6 }}>
-          {[
-            { n:pad(d),  l:'Days',  c:accent },
-            { n:pad(h),  l:'Hours', c:colors.text1 },
-            { n:pad(mi), l:'Mins',  c:colors.text1 },
-            { n:pad(s),  l:'Secs',  c:accent },
-          ].map(u => (
-            <View key={u.l} style={{ width:'46%', backgroundColor:(colors.isDark ? 'rgba(255,255,255,0.05)' : colors.tile),
-              borderRadius:12, padding:9 }}>
-              <Text style={{ fontSize:20, fontWeight:'800', color:u.c,
-                fontVariant:['tabular-nums'] }}>{u.n}</Text>
-              <Text style={{ fontSize:9, color:colors.text3,
-                textTransform:'uppercase', marginTop:2 }}>{u.l}</Text>
-            </View>
-          ))}
-        </View>
-      </View>
+      {active
+        ? <LiveCountdown e={e} accent={accent} />
+        : <CountdownInner e={e} accent={accent} now={Date.now()} />}
       <View style={{ borderTopWidth:1, borderTopColor:(colors.isDark ? 'rgba(255,255,255,0.07)' : colors.track), paddingTop:10 }}>
         <Text style={{ fontSize:12, fontWeight:'600', color:colors.text1 }}>{whenStr}</Text>
       </View>
@@ -286,6 +305,7 @@ function MemoryCard({ memory: m }: { memory: any }) {
 
 export function HeroCarousel() {
   const { colors } = useTheme();
+  const focused  = useIsFocused();
   const events   = useStore(s => s.events);
   const goals    = useStore(s => s.goals);
   const memories = useStore(s => s.memories);
@@ -348,7 +368,8 @@ export function HeroCarousel() {
         >
           {items.map((item, i) => (
             <View key={i}>
-              {item.kind === 'event'  && <EventCard event={item.data} />}
+              {/* Only the on-screen card on the focused Home tab ticks per second. */}
+              {item.kind === 'event'  && <EventCard event={item.data} active={focused && i === idx} />}
               {item.kind === 'goal'   && <GoalCard  goal={item.data} />}
               {item.kind === 'memory' && <MemoryCard memory={item.data} />}
             </View>

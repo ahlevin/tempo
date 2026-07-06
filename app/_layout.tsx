@@ -10,6 +10,7 @@ import { ConfirmProvider } from '../components/ConfirmDialog';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import { ThemeProvider, useTheme } from '../contexts/ThemeContext';
+import { TickProvider } from '../contexts/TickContext';
 import { rescheduleAll } from '../lib/notifications';
 
 export default function RootLayout() {
@@ -22,7 +23,9 @@ export default function RootLayout() {
           <AuthProvider>
             <ToastProvider>
               <ConfirmProvider>
-                <RootNavigator />
+                <TickProvider>
+                  <RootNavigator />
+                </TickProvider>
               </ConfirmProvider>
             </ToastProvider>
           </AuthProvider>
