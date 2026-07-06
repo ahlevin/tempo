@@ -6,7 +6,7 @@ import { Event } from '../store/types';
 import { SwipeableRow } from './SwipeableRow';
 import { FavStar } from './FavStar';
 import { AlertBadge } from './AlertBadge';
-import { nextOccurrence, daysUntil, pctElapsed, urgencyColor, recurLabel, fmtDateTime } from '../utils/dates';
+import { nextOccurrence, daysUntil, eventProgress, urgencyColor, recurLabel, fmtDateTime } from '../utils/dates';
 
 const CAT_ACCENT: Record<string, string> = {
   travel: '#3ECFB2', celebration: '#7C6AF5', work: '#F0A04B', personal: '#E8507A',
@@ -18,7 +18,7 @@ export function EventCard({ event: e }: { event: Event }) {
 
   const nd     = nextOccurrence(e);
   const d      = daysUntil(nd);
-  const p      = pctElapsed(e.created, nd);
+  const p      = eventProgress(e);
   const uc     = urgencyColor(d);
   const accent = CAT_ACCENT[e.cat] || Colors.accent;
   const rl     = recurLabel(e);

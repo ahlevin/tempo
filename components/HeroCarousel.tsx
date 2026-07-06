@@ -3,7 +3,7 @@ import { View, Text, ScrollView, Dimensions, TouchableOpacity, Platform } from '
 import Svg, { Circle } from 'react-native-svg';
 import { Colors, CatColors } from '../constants/colors';
 import { useStore } from '../store/useStore';
-import { nextOccurrence, daysUntil, msUntil, pctElapsed, recurLabel, nextAnnual, yearsMonthsDays, ordinal, fmtDateTimeFull } from '../utils/dates';
+import { nextOccurrence, daysUntil, msUntil, pctElapsed, eventProgress, recurLabel, nextAnnual, yearsMonthsDays, ordinal, fmtDateTimeFull } from '../utils/dates';
 
 const W = Dimensions.get('window').width - 32;
 const CIRC = 301.6;
@@ -76,7 +76,7 @@ function EventCard({ event: e }: { event: any }) {
   const h      = ms > 0 ? Math.floor((ms % 86400000) / 3600000) : 0;
   const mi     = ms > 0 ? Math.floor((ms % 3600000) / 60000) : 0;
   const s      = ms > 0 ? Math.floor((ms % 60000) / 1000) : 0;
-  const p      = pctElapsed(e.created, nd);
+  const p      = eventProgress(e);
   const accent = CatColors[e.cat] || Colors.accent;
   const rl     = recurLabel(e);
   const whenStr = fmtDateTimeFull(nd, e.allDay);

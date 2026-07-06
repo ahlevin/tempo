@@ -1,5 +1,5 @@
 import { format, differenceInCalendarDays, addDays, addMonths, addYears, parseISO } from 'date-fns';
-import { Event } from '../store/types';
+import { Event, Recurrence } from '../store/types';
 
 // True only for a real, finite Date. Used to guard every format()/getTime() call
 // so a partial or malformed user-typed value can never throw "Invalid time value".
@@ -37,6 +37,30 @@ export function pctElapsed(created: string, target: string): number {
   if (e === s) return 0;
   const n = Date.now();
   return Math.round(Math.min(100, Math.max(0, ((n - s) / (e - s)) * 100)));
+}
+
+// One recurrence period before `next`, used as the "period start" for progress.
+function previousOccurrence(next: Date, freq: Recurrence['freq']): Date {
+  if (freq === 'daily')   return addDays(next, -1);
+  if (freq === 'weekly')  return addDays(next, -7);
+  if (freq === 'monthly') return addMonths(next, -1);
+  return addYears(next, -1); // yearly
+}
+
+// % elapsed through an event's CURRENT countdown period, for the ring/progress bar.
+//  - Recurring: from the previous occurrence to the next (fills across the cycle,
+//    so a yearly event 76 days out reads ~79%, not ~1% from its created date).
+//  - One-time: from creation to the start date.
+export function eventProgress(event: Event): number {
+  const target = toDate(nextOccurrence(event));
+  if (!isValidDate(target)) return 0;
+  const start = event.recur
+    ? previousOccurrence(target, event.recur.freq)
+    : toDate(event.created);
+  if (!isValidDate(start)) return 0;
+  const s = start.getTime(), e = target.getTime();
+  if (e <= s) return 0;
+  return Math.round(Math.min(100, Math.max(0, ((Date.now() - s) / (e - s)) * 100)));
 }
 
 export function urgencyColor(days: number): string {
