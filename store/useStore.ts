@@ -61,6 +61,9 @@ interface TempoStore {
   addLogEntry: (memId: string, entry: { date: string; note: string; item?: string; datePrecision?: import('./types').DatePrecision }) => void;
   updateLogEntry: (memId: string, index: number, patch: Partial<import('./types').LogEntry>) => void;
   deleteLogEntry: (memId: string, index: number) => void;
+  // Cross-type: a standalone event <-> a life-log entry (single source of truth).
+  attachEventToLog: (eventId: string, logId: string, entry: import('./types').LogEntry) => void;
+  detachEntryToEvent: (memId: string, index: number) => void;
   // Cross-type conversion. Events and memories are different tables, so a
   // cross-table convert DELETEs the old row and CREATEs the new one (id preserved).
   convertEventToMemory: (id: string, targetType: Memory['type']) => void;
@@ -331,6 +334,36 @@ export const useStore = create<TempoStore>()(
         deleteLogEntry: (memId, index) => {
           set(s => ({ memories: s.memories.map(m => m.id !== memId ? m
             : { ...m, entries: m.entries.filter((_, i) => i !== index) }) }));
+          enqueue({ kind: 'upsert', table: 'memories', id: memId });
+        },
+        // Move a standalone event INTO a life log as one entry (delete the event,
+        // append the entry). The entry is now the single source of truth.
+        attachEventToLog: (eventId, logId, entry) => {
+          set(s => ({
+            events: s.events.filter(e => e.id !== eventId),
+            memories: s.memories.map(m => m.id === logId ? { ...m, entries: [...m.entries, entry] } : m),
+          }));
+          enqueue({ kind: 'delete', table: 'events', id: eventId });
+          enqueue({ kind: 'upsert', table: 'memories', id: logId });
+        },
+        // Pull a life-log entry back OUT into a standalone event (remove the entry,
+        // create an event from it). Preserves its date/name/note.
+        detachEntryToEvent: (memId, index) => {
+          const m = get().memories.find(x => x.id === memId);
+          const e = m?.entries[index];
+          if (!m || !e) return;
+          const id = uuid();
+          const d = e.date || today();
+          const event: Event = {
+            id, name: e.item || m.name, emoji: m.emoji, cat: 'parties',
+            allDay: true, start: `${d}T00:00:00`, end: null, date: d,
+            created: today(), fav: false, note: e.note ?? '', recur: null, alerts: [],
+          };
+          set(s => ({
+            events: [...s.events, event],
+            memories: s.memories.map(x => x.id === memId ? { ...x, entries: x.entries.filter((_, i) => i !== index) } : x),
+          }));
+          enqueue({ kind: 'upsert', table: 'events', id });
           enqueue({ kind: 'upsert', table: 'memories', id: memId });
         },
         convertEventToMemory: (id, targetType) => {

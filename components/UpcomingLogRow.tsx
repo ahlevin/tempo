@@ -13,7 +13,9 @@ export function UpcomingLogRow({ item }: { item: UpcomingLogItem }) {
   const dateStr = new Date(item.dateISO + 'T00:00:00').toLocaleDateString('en-US',
     { weekday: 'short', month: 'short', day: 'numeric' });
 
-  const open = () => router.push({ pathname: '/modals/lifelog-detail', params: { id: item.memId } });
+  // Canonical editor for a life-log entry — the SAME screen the Life Log detail
+  // opens for it, so both surfaces edit the one underlying record.
+  const open = () => router.push({ pathname: '/modals/log-entry', params: { id: item.memId, edit: String(item.index) } });
 
   return (
     <TouchableOpacity activeOpacity={0.8} onPress={open}

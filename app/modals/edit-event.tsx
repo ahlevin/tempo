@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { ScrollView, View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
 import { useToast } from '../../components/Toast';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -11,7 +11,9 @@ import { Recurrence, Alert as AlertType } from '../../store/types';
 import { DateTimeField } from '../../components/DateTimeField';
 import { RecurrenceEditor } from '../../components/RecurrenceEditor';
 import { AlertsEditor } from '../../components/AlertsEditor';
+import { LifelogAttachSection, AttachHandle } from '../../components/LifelogAttachSection';
 import { useConfirm } from '../../components/ConfirmDialog';
+import { canonItem } from '../../utils/lifelog';
 import { toDate } from '../../utils/dates';
 
 export default function EditEventModal() {
@@ -21,9 +23,12 @@ export default function EditEventModal() {
   const updateEvent = useStore(s => s.updateEvent);
   const deleteEvent = useStore(s => s.deleteEvent);
   const convertEventToMemory = useStore(s => s.convertEventToMemory);
+  const attachEventToLog     = useStore(s => s.attachEventToLog);
   const confirm     = useConfirm();
   const { showToast } = useToast();
   const event = events.find(e => e.id === id);
+  const [attachOpen, setAttachOpen] = useState(false);
+  const attachRef = useRef<AttachHandle>(null);
 
   const initStart = event?.start || `${event?.date || format(new Date(), 'yyyy-MM-dd')}T00:00:00`;
   const initEnd   = event?.end   || format(addHours(toDate(initStart), 1), "yyyy-MM-dd'T'HH:mm:ss");
@@ -69,6 +74,23 @@ export default function EditEventModal() {
       message:`"${event!.name}" will move to your ${t.label === 'Life Log' ? 'Life Log' : t.label + 's'}. Its date, note, reminders, and star are kept.`,
       confirmLabel:'Convert' });
     if (ok) { convertEventToMemory(id, t.type); router.back(); }
+  }
+
+  // Move this standalone event INTO a life log as a single future-dated entry
+  // (single source of truth — the event row is removed).
+  async function moveIntoLog() {
+    if (!name.trim()) { showToast('⚠️', 'Missing info', 'Please enter a name.'); return; }
+    const d = attachRef.current?.describe();
+    if (!d) return; // the picker surfaced the reason
+    const ok = await confirm({ title:`Move into “${d.name}”?`,
+      message:`"${name.trim()}" becomes an entry in ${d.willCreate ? `a new “${d.name}”` : `“${d.name}”`} and stops being a standalone event. It counts down until its date, then completes.`,
+      confirmLabel:'Move' });
+    if (!ok) return;
+    const r = attachRef.current?.resolve();
+    if (!r) return;
+    const startIso = allDay ? `${start.slice(0, 10)}T00:00:00` : start;
+    attachEventToLog(id, r.targetId, { date: startIso.slice(0, 10), note: note.trim(), item: canonItem(r.universe, name.trim()), datePrecision: 'full' });
+    router.back();
   }
 
   return (
@@ -147,6 +169,19 @@ export default function EditEventModal() {
               </TouchableOpacity>
             ))}
           </View>
+
+          {/* Move this event into a life log (becomes a future-dated entry;
+              single source of truth — the event row is removed). */}
+          <Toggle label="📓 Move into a life log" value={attachOpen} onChange={setAttachOpen} />
+          {attachOpen && (
+            <>
+              <LifelogAttachSection ref={attachRef} emoji={emoji} />
+              <TouchableOpacity onPress={moveIntoLog}
+                style={{ backgroundColor:colors.teal, borderRadius:14, padding:15, alignItems:'center', marginBottom:16 }}>
+                <Text style={{ color: colors.isDark ? '#0A0A0F' : '#fff', fontSize:15, fontWeight:'700' }}>Move into life log →</Text>
+              </TouchableOpacity>
+            </>
+          )}
 
           <TouchableOpacity onPress={del}
             style={{ backgroundColor:(colors.isDark ? 'rgba(232,80,122,0.15)' : 'rgba(197,0,26,0.10)'), borderWidth:1,

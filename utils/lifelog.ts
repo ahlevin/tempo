@@ -12,6 +12,13 @@ export function logUniverse(m: Memory): string[] | undefined {
   return presetUniverse(m.logPreset);
 }
 
+// For a collection, snap a free-typed label to the universe's canonical spelling
+// ("france" → "France") when it matches; otherwise keep it as a label.
+export function canonItem(universe: string[] | undefined, label: string): string {
+  if (!universe) return label;
+  return universe.find(u => u.toLowerCase() === label.toLowerCase()) ?? label;
+}
+
 /** An entry is UPCOMING when it has a full future date (hasn't happened yet).
  *  Dateless/partial and past/today entries are treated as completed. */
 export function isUpcomingEntry(e: LogEntry): boolean {

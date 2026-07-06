@@ -7,7 +7,8 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { useStore } from '../../store/useStore';
 import { DatePrecision } from '../../store/types';
 import { DateTimeField } from '../../components/DateTimeField';
-import { logUniverse, isCollectionLog } from '../../utils/lifelog';
+import { useConfirm } from '../../components/ConfirmDialog';
+import { logUniverse, isCollectionLog, isUpcomingEntry } from '../../utils/lifelog';
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const PRECISIONS: { id: DatePrecision; label: string }[] = [
@@ -23,6 +24,8 @@ export default function LogEntryModal() {
   const memories       = useStore(s => s.memories);
   const addLogEntry    = useStore(s => s.addLogEntry);
   const updateLogEntry = useStore(s => s.updateLogEntry);
+  const detachEntryToEvent = useStore(s => s.detachEntryToEvent);
+  const confirm = useConfirm();
   const m = memories.find(x => x.id === id);
 
   const editIndex = edit != null && edit !== '' ? parseInt(edit, 10) : -1;
@@ -97,6 +100,15 @@ export default function LogEntryModal() {
     updateLogEntry(id, editIndex, entryPayload());
     router.back();
   }
+  // Detach an upcoming (attached) entry back into a standalone event.
+  async function detach() {
+    const ok = await confirm({ title: 'Remove from life log?',
+      message: `"${editing?.item || m!.name}" becomes a standalone countdown event again. Its date and note are kept; nothing is deleted.`,
+      confirmLabel: 'Remove' });
+    if (ok) { detachEntryToEvent(id, editIndex); router.back(); }
+  }
+  // Only upcoming (future-dated) entries can be detached back to an event.
+  const canDetach = isEdit && !!editing && isUpcomingEntry(editing);
 
   const headerTitle = isEdit ? 'Edit entry' : (isPicker ? 'Add to' : 'Log') + `: ${m.emoji} ${m.name}`;
 
@@ -232,10 +244,19 @@ export default function LogEntryModal() {
             placeholder="How was it?…" placeholderTextColor={colors.text3} style={fi} />
 
           {isEdit ? (
-            <TouchableOpacity onPress={saveEdit} disabled={isPicker && !item}
-              style={{ backgroundColor:colors.teal, borderRadius:14, padding:15, alignItems:'center', opacity: (isPicker && !item) ? 0.5 : 1 }}>
-              <Text style={{ color: colors.isDark ? '#0A0A0F' : '#fff', fontSize:15, fontWeight:'700' }}>Save changes</Text>
-            </TouchableOpacity>
+            <>
+              <TouchableOpacity onPress={saveEdit} disabled={isPicker && !item}
+                style={{ backgroundColor:colors.teal, borderRadius:14, padding:15, alignItems:'center', opacity: (isPicker && !item) ? 0.5 : 1, marginBottom: canDetach ? 10 : 0 }}>
+                <Text style={{ color: colors.isDark ? '#0A0A0F' : '#fff', fontSize:15, fontWeight:'700' }}>Save changes</Text>
+              </TouchableOpacity>
+              {canDetach && (
+                <TouchableOpacity onPress={detach}
+                  style={{ backgroundColor:colors.glass, borderWidth:1, borderColor:colors.border,
+                    borderRadius:14, padding:15, alignItems:'center' }}>
+                  <Text style={{ color:colors.text1, fontSize:15, fontWeight:'700' }}>Remove from life log</Text>
+                </TouchableOpacity>
+              )}
+            </>
           ) : isPicker ? (
             <>
               {/* Add-another loop: logs the selected item and stays in the picker. */}
