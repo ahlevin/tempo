@@ -1,7 +1,7 @@
 import { createElement, useRef, useState } from 'react';
 import { Platform, Pressable, Text, View } from 'react-native';
 import { format } from 'date-fns';
-import { Colors } from '../constants/colors';
+import { useTheme } from '../contexts/ThemeContext';
 import { fmt, toDate, fmtDateTime, isValidDate } from '../utils/dates';
 
 // Native module only — never loaded on web (it has no web implementation).
@@ -19,6 +19,7 @@ interface Props {
 }
 
 export function DateTimeField({ value, onChange, mode = 'date', label }: Props) {
+  const { colors } = useTheme();
   const [show, setShow] = useState(false);
   const [androidStep, setAndroidStep] = useState<'date' | 'time'>('date');
   const partial = useRef<Date | null>(null);
@@ -56,7 +57,7 @@ export function DateTimeField({ value, onChange, mode = 'date', label }: Props) 
             border: '1px solid rgba(255,255,255,0.1)',
             borderRadius: 12,
             padding: 12,
-            color: Colors.text1,
+            color: colors.text1,
             fontSize: 15,
             width: '100%',
             colorScheme: 'dark',
@@ -99,7 +100,7 @@ export function DateTimeField({ value, onChange, mode = 'date', label }: Props) 
       <Pressable onPress={() => { setAndroidStep('date'); setShow(true); }}
         style={{ backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1,
           borderColor: 'rgba(255,255,255,0.1)', borderRadius: 12, padding: 12 }}>
-        <Text style={{ color: Colors.text1, fontSize: 15 }}>{display}</Text>
+        <Text style={{ color: colors.text1, fontSize: 15 }}>{display}</Text>
       </Pressable>
       {show && (
         <DateTimePicker
@@ -112,7 +113,7 @@ export function DateTimeField({ value, onChange, mode = 'date', label }: Props) 
       )}
       {Platform.OS === 'ios' && show && (
         <Pressable onPress={() => setShow(false)} style={{ alignSelf: 'flex-end', paddingVertical: 6, paddingHorizontal: 4 }}>
-          <Text style={{ color: Colors.accent, fontWeight: '700', fontSize: 14 }}>Done</Text>
+          <Text style={{ color: colors.accent, fontWeight: '700', fontSize: 14 }}>Done</Text>
         </Pressable>
       )}
     </View>
@@ -120,8 +121,9 @@ export function DateTimeField({ value, onChange, mode = 'date', label }: Props) 
 }
 
 function FieldLabel({ text }: { text: string }) {
+  const { colors } = useTheme();
   return (
-    <Text style={{ fontSize: 11, fontWeight: '600', color: Colors.text3,
+    <Text style={{ fontSize: 11, fontWeight: '600', color: colors.text3,
       textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>{text}</Text>
   );
 }

@@ -1,5 +1,5 @@
 import { GestureResponderEvent, Text, TouchableOpacity } from 'react-native';
-import { Colors } from '../constants/colors';
+import { useTheme } from '../contexts/ThemeContext';
 
 /**
  * A clearly visible, tappable favourite toggle used on event & goal list rows.
@@ -11,6 +11,7 @@ import { Colors } from '../constants/colors';
  * - stopPropagation keeps a tap from triggering the card's tap-to-edit / swipe.
  */
 export function FavStar({ active, onToggle }: { active: boolean; onToggle: () => void }) {
+  const { colors } = useTheme();
   return (
     <TouchableOpacity
       onPress={(ev: GestureResponderEvent) => { ev.stopPropagation(); onToggle(); }}
@@ -23,7 +24,7 @@ export function FavStar({ active, onToggle }: { active: boolean; onToggle: () =>
         backgroundColor: active ? 'rgba(240,160,75,0.16)' : 'rgba(255,255,255,0.06)',
       }}
     >
-      <Text style={{ fontSize: 22, lineHeight: 26, textAlign: 'center', color: active ? Colors.amber : Colors.text2 }}>
+      <Text style={{ fontSize: 22, lineHeight: 26, textAlign: 'center', color: active ? colors.amber : colors.text2 }}>
         {active ? '★' : '☆'}
       </Text>
     </TouchableOpacity>

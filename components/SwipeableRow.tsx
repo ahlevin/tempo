@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { Animated, Platform, Pressable, Text, View } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
-import { Colors } from '../constants/colors';
+import { useTheme } from '../contexts/ThemeContext';
 import { useConfirm } from './ConfirmDialog';
 
 interface Props {
@@ -32,6 +32,7 @@ export function SwipeableRow({
 }: Props) {
   const ref = useRef<Swipeable>(null);
   const confirm = useConfirm();
+  const { colors } = useTheme();
 
   async function confirmDelete() {
     ref.current?.close();
@@ -48,7 +49,7 @@ export function SwipeableRow({
     return (
       <Pressable onPress={confirmDelete} style={{ width: 80, marginBottom }}>
         <View style={{
-          flex: 1, backgroundColor: Colors.rose, borderRadius: 18,
+          flex: 1, backgroundColor: colors.rose, borderRadius: 18,
           alignItems: 'center', justifyContent: 'center',
         }}>
           <Animated.View style={{ alignItems: 'center', transform: [{ scale }] }}>

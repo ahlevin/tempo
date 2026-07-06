@@ -4,7 +4,7 @@ import { useToast } from '../../components/Toast';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { format, addDays } from 'date-fns';
-import { Colors } from '../../constants/colors';
+import { useTheme } from '../../contexts/ThemeContext';
 import { GOAL_EMOJIS } from '../../constants/data';
 import { useStore } from '../../store/useStore';
 import { Alert as AlertType } from '../../store/types';
@@ -12,6 +12,7 @@ import { DateTimeField } from '../../components/DateTimeField';
 import { AlertsEditor } from '../../components/AlertsEditor';
 
 export default function AddGoalModal() {
+  const { colors } = useTheme();
   const addGoal = useStore(s => s.addGoal);
   const { showToast } = useToast();
   const [name,   setName]   = useState('');
@@ -24,7 +25,7 @@ export default function AddGoalModal() {
 
   const fi = { backgroundColor:'rgba(255,255,255,0.06)', borderWidth:1,
     borderColor:'rgba(255,255,255,0.1)', borderRadius:12, padding:12,
-    color:Colors.text1, fontSize:15, marginBottom:14 };
+    color:colors.text1, fontSize:15, marginBottom:14 };
 
   function submit() {
     if (!name.trim() || !target || !date) { showToast('⚠️', 'Missing info', 'Please fill in all fields.'); return; }
@@ -34,32 +35,32 @@ export default function AddGoalModal() {
   }
 
   return (
-    <SafeAreaView style={{ flex:1, backgroundColor:'#18182A' }} edges={['bottom']}>
+    <SafeAreaView style={{ flex:1, backgroundColor:colors.surf2 }} edges={['bottom']}>
       <KeyboardAvoidingView style={{ flex:1 }} behavior={Platform.OS==='ios'?'padding':undefined}>
         <View style={{ width:40, height:4, backgroundColor:'rgba(255,255,255,0.14)',
           borderRadius:2, alignSelf:'center', marginTop:10, marginBottom:4 }} />
         <View style={{ flexDirection:'row', justifyContent:'space-between',
           alignItems:'center', paddingHorizontal:20, paddingVertical:12 }}>
-          <Text style={{ fontSize:18, fontWeight:'700', color:Colors.text1 }}>New Goal 🎯</Text>
+          <Text style={{ fontSize:18, fontWeight:'700', color:colors.text1 }}>New Goal 🎯</Text>
           <TouchableOpacity onPress={() => router.back()}>
-            <Text style={{ fontSize:16, color:Colors.text3 }}>✕</Text>
+            <Text style={{ fontSize:16, color:colors.text3 }}>✕</Text>
           </TouchableOpacity>
         </View>
         <ScrollView contentContainerStyle={{ padding:20 }}
           showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
           <FL label="Goal Name" />
           <TextInput value={name} onChangeText={setName}
-            placeholder="e.g. Run 100 miles…" placeholderTextColor={Colors.text3} style={fi} />
+            placeholder="e.g. Run 100 miles…" placeholderTextColor={colors.text3} style={fi} />
           <FL label="Target" />
           <TextInput value={target} onChangeText={setTarget}
-            placeholder="100" placeholderTextColor={Colors.text3}
+            placeholder="100" placeholderTextColor={colors.text3}
             keyboardType="numeric" style={fi} />
           <FL label="Unit" />
           <TextInput value={unit} onChangeText={setUnit}
-            placeholder="miles, books, $…" placeholderTextColor={Colors.text3} style={fi} />
+            placeholder="miles, books, $…" placeholderTextColor={colors.text3} style={fi} />
           <FL label="Increment Step" />
           <TextInput value={step} onChangeText={setStep}
-            placeholder="1" placeholderTextColor={Colors.text3}
+            placeholder="1" placeholderTextColor={colors.text3}
             keyboardType="numeric" style={fi} />
           <DateTimeField mode="date" label="Deadline" value={date} onChange={setDate} />
           <FL label="Icon" />
@@ -67,7 +68,7 @@ export default function AddGoalModal() {
             {GOAL_EMOJIS.map(em => (
               <TouchableOpacity key={em} onPress={() => setEmoji(em)}
                 style={{ width:44, height:44, borderRadius:10, borderWidth:2,
-                  borderColor: em===emoji ? Colors.teal : 'transparent',
+                  borderColor: em===emoji ? colors.teal : 'transparent',
                   backgroundColor: em===emoji ? 'rgba(62,207,178,0.15)' : 'rgba(255,255,255,0.055)',
                   alignItems:'center', justifyContent:'center' }}>
                 <Text style={{ fontSize:20 }}>{em}</Text>
@@ -76,7 +77,7 @@ export default function AddGoalModal() {
           </View>
           <AlertsEditor value={alerts} onChange={setAlerts} />
           <TouchableOpacity onPress={submit}
-            style={{ backgroundColor:Colors.teal, borderRadius:14, padding:15, alignItems:'center' }}>
+            style={{ backgroundColor:colors.teal, borderRadius:14, padding:15, alignItems:'center' }}>
             <Text style={{ color:'#0A0A0F', fontSize:15, fontWeight:'700' }}>Set Goal →</Text>
           </TouchableOpacity>
           <View style={{ height:40 }} />
@@ -87,6 +88,7 @@ export default function AddGoalModal() {
 }
 
 function FL({ label }: { label: string }) {
-  return <Text style={{ fontSize:11, fontWeight:'600', color:Colors.text3,
+  const { colors } = useTheme();
+  return <Text style={{ fontSize:11, fontWeight:'600', color:colors.text3,
     textTransform:'uppercase', letterSpacing:0.5, marginBottom:6 }}>{label}</Text>;
 }

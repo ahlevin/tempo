@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
-import { Colors } from '../constants/colors';
+import { useTheme } from '../contexts/ThemeContext';
 import { Recurrence } from '../store/types';
 import { FL, Toggle } from './FormControls';
 
@@ -14,6 +14,7 @@ const DOW = ['Su','Mo','Tu','We','Th','Fr','Sa'];
 export function RecurrenceEditor({
   value, onChange,
 }: { value: Recurrence | null; onChange: (r: Recurrence | null) => void }) {
+  const { colors } = useTheme();
   const [recurOn, setRecurOn] = useState(!!value);
   const [freq,    setFreq]    = useState<Recurrence['freq']>(value?.freq || 'weekly');
   const [dow,     setDow]     = useState<number[]>(value?.dow?.length ? value.dow : [1]);
@@ -39,10 +40,10 @@ export function RecurrenceEditor({
             {(['daily','weekly','monthly','yearly'] as Recurrence['freq'][]).map(f => (
               <TouchableOpacity key={f} onPress={() => setFreq(f)}
                 style={{ flex:1, padding:8, borderRadius:9, borderWidth:1.5, alignItems:'center',
-                  borderColor: freq===f ? Colors.accent : Colors.border,
-                  backgroundColor: freq===f ? 'rgba(124,106,245,0.15)' : Colors.glass }}>
+                  borderColor: freq===f ? colors.accent : colors.border,
+                  backgroundColor: freq===f ? 'rgba(124,106,245,0.15)' : colors.glass }}>
                 <Text style={{ fontSize:11, fontWeight:'600',
-                  color: freq===f ? Colors.accent : Colors.text2 }}>
+                  color: freq===f ? colors.accent : colors.text2 }}>
                   {f.charAt(0).toUpperCase()+f.slice(1)}
                 </Text>
               </TouchableOpacity>
@@ -56,10 +57,10 @@ export function RecurrenceEditor({
                   <TouchableOpacity key={i} onPress={() => toggleDow(i)}
                     style={{ flex:1, aspectRatio:1, borderRadius:7, borderWidth:1.5,
                       alignItems:'center', justifyContent:'center',
-                      borderColor: dow.includes(i) ? Colors.accent : Colors.border,
-                      backgroundColor: dow.includes(i) ? 'rgba(124,106,245,0.15)' : Colors.glass }}>
+                      borderColor: dow.includes(i) ? colors.accent : colors.border,
+                      backgroundColor: dow.includes(i) ? 'rgba(124,106,245,0.15)' : colors.glass }}>
                     <Text style={{ fontSize:10, fontWeight:'700',
-                      color: dow.includes(i) ? Colors.accent : Colors.text3 }}>{d}</Text>
+                      color: dow.includes(i) ? colors.accent : colors.text3 }}>{d}</Text>
                   </TouchableOpacity>
                 ))}
               </View>

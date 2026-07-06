@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useRef, useState } from 'react';
 import { Modal, Pressable, Text, View } from 'react-native';
-import { Colors } from '../constants/colors';
+import { useTheme } from '../contexts/ThemeContext';
 
 export interface ConfirmOptions {
   title: string;
@@ -24,6 +24,7 @@ export function useConfirm(): ConfirmFn {
  * Usage: const ok = await confirm({ title, message, destructive: true }).
  */
 export function ConfirmProvider({ children }: { children: React.ReactNode }) {
+  const { colors } = useTheme();
   const [opts, setOpts] = useState<ConfirmOptions | null>(null);
   const resolver = useRef<((v: boolean) => void) | null>(null);
 
@@ -55,33 +56,33 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
           <Pressable
             onPress={(e) => e.stopPropagation()}
             style={{
-              width: '100%', maxWidth: 340, backgroundColor: Colors.surf2,
-              borderRadius: 20, borderWidth: 1, borderColor: Colors.border,
+              width: '100%', maxWidth: 340, backgroundColor: colors.surf2,
+              borderRadius: 20, borderWidth: 1, borderColor: colors.border,
               padding: 22,
             }}
           >
-            <Text style={{ fontSize: 17, fontWeight: '700', color: Colors.text1, marginBottom: opts?.message ? 8 : 18 }}>
+            <Text style={{ fontSize: 17, fontWeight: '700', color: colors.text1, marginBottom: opts?.message ? 8 : 18 }}>
               {opts?.title}
             </Text>
             {!!opts?.message && (
-              <Text style={{ fontSize: 14, color: Colors.text2, marginBottom: 20, lineHeight: 20 }}>
+              <Text style={{ fontSize: 14, color: colors.text2, marginBottom: 20, lineHeight: 20 }}>
                 {opts.message}
               </Text>
             )}
             <View style={{ flexDirection: 'row', gap: 10 }}>
               <Pressable
                 onPress={() => finish(false)}
-                style={{ flex: 1, paddingVertical: 13, borderRadius: 13, borderWidth: 1, borderColor: Colors.border,
-                  backgroundColor: Colors.glass, alignItems: 'center' }}
+                style={{ flex: 1, paddingVertical: 13, borderRadius: 13, borderWidth: 1, borderColor: colors.border,
+                  backgroundColor: colors.glass, alignItems: 'center' }}
               >
-                <Text style={{ fontSize: 15, fontWeight: '600', color: Colors.text2 }}>
+                <Text style={{ fontSize: 15, fontWeight: '600', color: colors.text2 }}>
                   {opts?.cancelLabel || 'Cancel'}
                 </Text>
               </Pressable>
               <Pressable
                 onPress={() => finish(true)}
                 style={{ flex: 1, paddingVertical: 13, borderRadius: 13, alignItems: 'center',
-                  backgroundColor: destructive ? Colors.rose : Colors.accent }}
+                  backgroundColor: destructive ? colors.rose : colors.accent }}
               >
                 <Text style={{ fontSize: 15, fontWeight: '700', color: '#fff' }}>
                   {opts?.confirmLabel || 'Confirm'}

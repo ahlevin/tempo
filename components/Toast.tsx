@@ -1,7 +1,7 @@
 import { createContext, useContext, useCallback, useEffect, useRef, useState } from 'react';
 import { Animated, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Colors } from '../constants/colors';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface ToastData {
   icon: string;
@@ -22,6 +22,7 @@ export function useToast() {
 const AUTO_DISMISS_MS = 4000;
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
+  const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const [toast, setToast] = useState<ToastData | null>(null);
   const translateY = useRef(new Animated.Value(-160)).current;
@@ -68,8 +69,8 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
           <TouchableOpacity activeOpacity={0.9} onPress={hide}
             style={{
               flexDirection: 'row', alignItems: 'center', gap: 12,
-              backgroundColor: Colors.surf2, borderRadius: 16, borderWidth: 1,
-              borderColor: Colors.border, paddingVertical: 12, paddingHorizontal: 14,
+              backgroundColor: colors.surf2, borderRadius: 16, borderWidth: 1,
+              borderColor: colors.border, paddingVertical: 12, paddingHorizontal: 14,
               shadowColor: '#000', shadowOffset: { width: 0, height: 8 },
               shadowOpacity: 0.4, shadowRadius: 16, elevation: 8,
             }}>
@@ -81,11 +82,11 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
               <Text style={{ fontSize: 20 }}>{toast.icon}</Text>
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 14, fontWeight: '700', color: Colors.text1 }} numberOfLines={1}>
+              <Text style={{ fontSize: 14, fontWeight: '700', color: colors.text1 }} numberOfLines={1}>
                 {toast.title}
               </Text>
               {!!toast.sub && (
-                <Text style={{ fontSize: 12, color: Colors.text2, marginTop: 1 }} numberOfLines={2}>
+                <Text style={{ fontSize: 12, color: colors.text2, marginTop: 1 }} numberOfLines={2}>
                   {toast.sub}
                 </Text>
               )}

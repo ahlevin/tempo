@@ -133,6 +133,7 @@ export function rowToPrefs(r: any): UserPrefs {
     location: r.location ?? '',
     displayName: r.display_name ?? '',
     onboarded: !!r.onboarded,
+    theme: r.theme === 'light' ? 'light' : 'dark',
   };
 }
 
@@ -144,6 +145,7 @@ export function prefsToRow(p: UserPrefs, userId: string) {
     location: p.location,
     display_name: p.displayName,
     onboarded: p.onboarded,
+    theme: p.theme,
     updated_at: new Date().toISOString(),
   };
 }

@@ -1,7 +1,8 @@
 import { useRef, useState, useEffect } from 'react';
 import { View, Text, ScrollView, Dimensions, TouchableOpacity, Platform } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
-import { Colors, CatColors } from '../constants/colors';
+import { CatColors } from '../constants/colors';
+import { useTheme } from '../contexts/ThemeContext';
 import { useStore } from '../store/useStore';
 import { nextOccurrence, daysUntil, msUntil, pctElapsed, eventProgress, recurLabel, nextAnnual, yearsMonthsDays, ordinal, fmtDateTimeFull } from '../utils/dates';
 
@@ -9,6 +10,7 @@ const W = Dimensions.get('window').width - 32;
 const CIRC = 301.6;
 
 function Ring({ pct, color }: { pct: number; color: string }) {
+  const { colors } = useTheme();
   const filled = CIRC * pct / 100;
   const empty  = CIRC - filled;
   return (
@@ -21,7 +23,7 @@ function Ring({ pct, color }: { pct: number; color: string }) {
         position:'absolute', transform:[{ rotate: (pct * 3.6 - 90) + 'deg' }] }} />
       <View style={{ position:'absolute', inset:0, alignItems:'center', justifyContent:'center' }}>
         <Text style={{ fontSize:17, fontWeight:'800', color }}>{pct}%</Text>
-        <Text style={{ fontSize:8, color:Colors.text3, textTransform:'uppercase', letterSpacing:0.5 }}>elapsed</Text>
+        <Text style={{ fontSize:8, color:colors.text3, textTransform:'uppercase', letterSpacing:0.5 }}>elapsed</Text>
       </View>
     </View>
   );
@@ -29,6 +31,7 @@ function Ring({ pct, color }: { pct: number; color: string }) {
 
 // Two concentric SVG rings: outer = time elapsed, inner = goal progress.
 function DualRing({ goalPct, timePct }: { goalPct: number; timePct: number }) {
+  const { colors } = useTheme();
   const SIZE = 100, STROKE = 7;
   const cx = SIZE / 2, cy = SIZE / 2;
   const rOuter = 46, rInner = 33;
@@ -41,28 +44,29 @@ function DualRing({ goalPct, timePct }: { goalPct: number; timePct: number }) {
       <Svg width={SIZE} height={SIZE} style={{ position: 'absolute' }}>
         {/* Outer track + time elapsed */}
         <Circle cx={cx} cy={cy} r={rOuter} stroke={track} strokeWidth={STROKE} fill="none" />
-        <Circle cx={cx} cy={cy} r={rOuter} stroke={Colors.amber} strokeWidth={STROKE} fill="none"
+        <Circle cx={cx} cy={cy} r={rOuter} stroke={colors.amber} strokeWidth={STROKE} fill="none"
           strokeLinecap="round" strokeDasharray={cOuter}
           strokeDashoffset={cOuter * (1 - Math.min(100, timePct) / 100)}
           transform={`rotate(-90 ${cx} ${cy})`} />
         {/* Inner track + goal progress */}
         <Circle cx={cx} cy={cy} r={rInner} stroke={track} strokeWidth={STROKE} fill="none" />
-        <Circle cx={cx} cy={cy} r={rInner} stroke={Colors.teal} strokeWidth={STROKE} fill="none"
+        <Circle cx={cx} cy={cy} r={rInner} stroke={colors.teal} strokeWidth={STROKE} fill="none"
           strokeLinecap="round" strokeDasharray={cInner}
           strokeDashoffset={cInner * (1 - Math.min(100, goalPct) / 100)}
           transform={`rotate(-90 ${cx} ${cy})`} />
       </Svg>
       <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-        <Text style={{ fontSize: 16, fontWeight: '800', color: Colors.teal }}>{goalPct}%</Text>
-        <Text style={{ fontSize: 7, color: Colors.text3, textTransform: 'uppercase' }}>goal</Text>
-        <Text style={{ fontSize: 12, fontWeight: '700', color: Colors.amber, marginTop: 1 }}>{timePct}%</Text>
-        <Text style={{ fontSize: 7, color: Colors.text3, textTransform: 'uppercase' }}>time</Text>
+        <Text style={{ fontSize: 16, fontWeight: '800', color: colors.teal }}>{goalPct}%</Text>
+        <Text style={{ fontSize: 7, color: colors.text3, textTransform: 'uppercase' }}>goal</Text>
+        <Text style={{ fontSize: 12, fontWeight: '700', color: colors.amber, marginTop: 1 }}>{timePct}%</Text>
+        <Text style={{ fontSize: 7, color: colors.text3, textTransform: 'uppercase' }}>time</Text>
       </View>
     </View>
   );
 }
 
 function EventCard({ event: e }: { event: any }) {
+  const { colors } = useTheme();
   const toggleFav = useStore(s => s.toggleEventFav);
   const [tick, setTick] = useState(0);
   useEffect(() => {
@@ -77,13 +81,13 @@ function EventCard({ event: e }: { event: any }) {
   const mi     = ms > 0 ? Math.floor((ms % 3600000) / 60000) : 0;
   const s      = ms > 0 ? Math.floor((ms % 60000) / 1000) : 0;
   const p      = eventProgress(e);
-  const accent = CatColors[e.cat] || Colors.accent;
+  const accent = CatColors[e.cat] || colors.accent;
   const rl     = recurLabel(e);
   const whenStr = fmtDateTimeFull(nd, e.allDay);
   const pad    = (n: number) => String(n).padStart(2, '0');
 
   return (
-    <View style={{ width:W, backgroundColor:'#1A1830', borderRadius:24, padding:22,
+    <View style={{ width:W, backgroundColor: colors.isDark ? '#1A1830' : colors.surf, borderRadius:24, padding:22,
       borderWidth:1, borderColor:'rgba(124,106,245,0.22)' }}>
       <TouchableOpacity onPress={() => toggleFav(e.id)}
         style={{ position:'absolute', top:16, right:16, width:30, height:30, borderRadius:15,
@@ -94,7 +98,7 @@ function EventCard({ event: e }: { event: any }) {
         textTransform:'uppercase', color:accent, marginBottom:5 }}>
         {rl ? '🔁 ' + rl : 'Next Up'}
       </Text>
-      <Text style={{ fontSize:22, fontWeight:'700', color:Colors.text1,
+      <Text style={{ fontSize:22, fontWeight:'700', color:colors.text1,
         marginBottom:18, paddingRight:34 }} numberOfLines={1}>
         {e.emoji} {e.name}
       </Text>
@@ -103,28 +107,29 @@ function EventCard({ event: e }: { event: any }) {
         <View style={{ flex:1, flexDirection:'row', flexWrap:'wrap', gap:6 }}>
           {[
             { n:pad(d),  l:'Days',  c:accent },
-            { n:pad(h),  l:'Hours', c:Colors.text1 },
-            { n:pad(mi), l:'Mins',  c:Colors.text1 },
+            { n:pad(h),  l:'Hours', c:colors.text1 },
+            { n:pad(mi), l:'Mins',  c:colors.text1 },
             { n:pad(s),  l:'Secs',  c:accent },
           ].map(u => (
             <View key={u.l} style={{ width:'46%', backgroundColor:'rgba(255,255,255,0.05)',
               borderRadius:12, padding:9 }}>
               <Text style={{ fontSize:20, fontWeight:'800', color:u.c,
                 fontVariant:['tabular-nums'] }}>{u.n}</Text>
-              <Text style={{ fontSize:9, color:Colors.text3,
+              <Text style={{ fontSize:9, color:colors.text3,
                 textTransform:'uppercase', marginTop:2 }}>{u.l}</Text>
             </View>
           ))}
         </View>
       </View>
       <View style={{ borderTopWidth:1, borderTopColor:'rgba(255,255,255,0.07)', paddingTop:10 }}>
-        <Text style={{ fontSize:12, fontWeight:'600', color:Colors.text1 }}>{whenStr}</Text>
+        <Text style={{ fontSize:12, fontWeight:'600', color:colors.text1 }}>{whenStr}</Text>
       </View>
     </View>
   );
 }
 
 function GoalCard({ goal: g }: { goal: any }) {
+  const { colors } = useTheme();
   const nudge     = useStore(s => s.nudgeGoal);
   const toggleFav = useStore(s => s.toggleGoalFav);
   const tp  = pctElapsed(g.created, g.date);
@@ -135,7 +140,7 @@ function GoalCard({ goal: g }: { goal: any }) {
   const dstr = new Date(g.date + 'T00:00:00').toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' });
 
   return (
-    <View style={{ width:W, backgroundColor:'#0F1E1A', borderRadius:24, padding:22,
+    <View style={{ width:W, backgroundColor: colors.isDark ? '#0F1E1A' : colors.surf, borderRadius:24, padding:22,
       borderWidth:1, borderColor:'rgba(62,207,178,0.25)' }}>
       <TouchableOpacity onPress={() => toggleFav(g.id)}
         style={{ position:'absolute', top:16, right:16, width:30, height:30, borderRadius:15,
@@ -143,8 +148,8 @@ function GoalCard({ goal: g }: { goal: any }) {
         <Text style={{ fontSize:14 }}>⭐</Text>
       </TouchableOpacity>
       <Text style={{ fontSize:11, fontWeight:'600', letterSpacing:1.2,
-        textTransform:'uppercase', color:Colors.teal, marginBottom:5 }}>Active Goal</Text>
-      <Text style={{ fontSize:22, fontWeight:'700', color:Colors.text1,
+        textTransform:'uppercase', color:colors.teal, marginBottom:5 }}>Active Goal</Text>
+      <Text style={{ fontSize:22, fontWeight:'700', color:colors.text1,
         marginBottom:18, paddingRight:34 }} numberOfLines={1}>
         {g.emoji} {g.name}
       </Text>
@@ -152,29 +157,29 @@ function GoalCard({ goal: g }: { goal: any }) {
         <DualRing goalPct={gp} timePct={tp} />
         <View style={{ flex:1, gap:6 }}>
           <View style={{ backgroundColor:'rgba(255,255,255,0.05)', borderRadius:12, padding:9 }}>
-            <Text style={{ fontSize:20, fontWeight:'800', color:Colors.teal,
+            <Text style={{ fontSize:20, fontWeight:'800', color:colors.teal,
               fontVariant:['tabular-nums'] }}>{String(d).padStart(2,'0')}</Text>
-            <Text style={{ fontSize:9, color:Colors.text3, textTransform:'uppercase', marginTop:2 }}>Days Left</Text>
+            <Text style={{ fontSize:9, color:colors.text3, textTransform:'uppercase', marginTop:2 }}>Days Left</Text>
           </View>
           <View style={{ backgroundColor:'rgba(255,255,255,0.05)', borderRadius:12, padding:9,
             flexDirection:'row', alignItems:'center', justifyContent:'space-between' }}>
             <View>
-              <Text style={{ fontSize:15, fontWeight:'800', color:Colors.teal }}>
+              <Text style={{ fontSize:15, fontWeight:'800', color:colors.teal }}>
                 {g.current.toLocaleString()}
-                <Text style={{ fontSize:11, color:Colors.text3 }}>/{g.target.toLocaleString()}</Text>
+                <Text style={{ fontSize:11, color:colors.text3 }}>/{g.target.toLocaleString()}</Text>
               </Text>
-              <Text style={{ fontSize:9, color:Colors.text3, textTransform:'uppercase' }}>{g.unit}</Text>
+              <Text style={{ fontSize:9, color:colors.text3, textTransform:'uppercase' }}>{g.unit}</Text>
             </View>
             <View style={{ flexDirection:'row', gap:5 }}>
               <TouchableOpacity onPress={() => nudge(g.id, -1)}
                 style={{ width:28, height:28, borderRadius:14,
                   backgroundColor:'rgba(255,255,255,0.08)',
                   alignItems:'center', justifyContent:'center' }}>
-                <Text style={{ color:Colors.text2, fontWeight:'700' }}>−</Text>
+                <Text style={{ color:colors.text2, fontWeight:'700' }}>−</Text>
               </TouchableOpacity>
               <TouchableOpacity onPress={() => nudge(g.id, 1)}
                 style={{ width:28, height:28, borderRadius:14,
-                  backgroundColor:Colors.teal, alignItems:'center', justifyContent:'center' }}>
+                  backgroundColor:colors.teal, alignItems:'center', justifyContent:'center' }}>
                 <Text style={{ color:'#0A0A0F', fontWeight:'700' }}>+</Text>
               </TouchableOpacity>
             </View>
@@ -182,9 +187,9 @@ function GoalCard({ goal: g }: { goal: any }) {
         </View>
       </View>
       <View style={{ borderTopWidth:1, borderTopColor:'rgba(255,255,255,0.07)', paddingTop:10 }}>
-        <Text style={{ fontSize:12, color:Colors.text2 }}>
-          <Text style={{ color:Colors.text3 }}>{wday} · </Text>
-          <Text style={{ fontWeight:'600', color:Colors.text1 }}>{dstr}</Text>
+        <Text style={{ fontSize:12, color:colors.text2 }}>
+          <Text style={{ color:colors.text3 }}>{wday} · </Text>
+          <Text style={{ fontWeight:'600', color:colors.text1 }}>{dstr}</Text>
         </Text>
       </View>
     </View>
@@ -192,6 +197,7 @@ function GoalCard({ goal: g }: { goal: any }) {
 }
 
 function MemoryCard({ memory: m }: { memory: any }) {
+  const { colors } = useTheme();
   const r = yearsMonthsDays(m.originDate);
 
   // Birthday / anniversary → annual countdown.
@@ -200,16 +206,16 @@ function MemoryCard({ memory: m }: { memory: any }) {
     const nb    = nextAnnual(m.originDate);
     const days  = daysUntil(nb);
     const num   = r.y + 1;
-    const color = isBday ? Colors.rose : Colors.accent;
+    const color = isBday ? colors.rose : colors.accent;
     const wday  = new Date(nb + 'T00:00:00').toLocaleDateString('en-US', { weekday:'long' });
     const dstr  = new Date(nb + 'T00:00:00').toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' });
     return (
-      <View style={{ width:W, backgroundColor:'#1E0F1A', borderRadius:24, padding:22,
+      <View style={{ width:W, backgroundColor: colors.isDark ? '#1E0F1A' : colors.surf, borderRadius:24, padding:22,
         borderWidth:1, borderColor: isBday ? 'rgba(232,80,122,0.28)' : 'rgba(124,106,245,0.28)' }}>
         <Text style={{ fontSize:11, fontWeight:'600', letterSpacing:1.2, textTransform:'uppercase', color, marginBottom:5 }}>
           {isBday ? 'Birthday Countdown' : 'Anniversary Countdown'}
         </Text>
-        <Text style={{ fontSize:22, fontWeight:'700', color:Colors.text1, marginBottom:4 }} numberOfLines={1}>
+        <Text style={{ fontSize:22, fontWeight:'700', color:colors.text1, marginBottom:4 }} numberOfLines={1}>
           {m.emoji} {m.name}
         </Text>
         <Text style={{ fontSize:14, fontWeight:'600', color, marginBottom:14 }}>
@@ -217,12 +223,12 @@ function MemoryCard({ memory: m }: { memory: any }) {
         </Text>
         <View style={{ alignItems:'center', paddingVertical:10 }}>
           <Text style={{ fontSize:64, fontWeight:'800', color, letterSpacing:-2, fontVariant:['tabular-nums'] }}>{days}</Text>
-          <Text style={{ fontSize:11, color:Colors.text3, textTransform:'uppercase', letterSpacing:1, marginTop:4 }}>days away</Text>
+          <Text style={{ fontSize:11, color:colors.text3, textTransform:'uppercase', letterSpacing:1, marginTop:4 }}>days away</Text>
         </View>
         <View style={{ borderTopWidth:1, borderTopColor:'rgba(255,255,255,0.07)', paddingTop:10 }}>
-          <Text style={{ fontSize:12, color:Colors.text2 }}>
-            <Text style={{ color:Colors.text3 }}>{wday} · </Text>
-            <Text style={{ fontWeight:'600', color:Colors.text1 }}>{dstr}</Text>
+          <Text style={{ fontSize:12, color:colors.text2 }}>
+            <Text style={{ color:colors.text3 }}>{wday} · </Text>
+            <Text style={{ fontWeight:'600', color:colors.text1 }}>{dstr}</Text>
           </Text>
         </View>
       </View>
@@ -231,27 +237,27 @@ function MemoryCard({ memory: m }: { memory: any }) {
 
   // Life log → count of entries.
   if (m.type === 'lifelog') {
-    const color = Colors.teal;
+    const color = colors.teal;
     const bigVal   = m.entries.length;
     const bigLabel = m.entries.length === 1 ? 'time' : 'times';
     const dstr = new Date(m.originDate + 'T00:00:00').toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' });
     return (
-      <View style={{ width:W, backgroundColor:'#0F1E1A', borderRadius:24, padding:22,
+      <View style={{ width:W, backgroundColor: colors.isDark ? '#0F1E1A' : colors.surf, borderRadius:24, padding:22,
         borderWidth:1, borderColor:'rgba(62,207,178,0.28)' }}>
         <Text style={{ fontSize:11, fontWeight:'600', letterSpacing:1.2, textTransform:'uppercase', color, marginBottom:5 }}>
           Life Log
         </Text>
-        <Text style={{ fontSize:22, fontWeight:'700', color:Colors.text1, marginBottom:14 }} numberOfLines={1}>
+        <Text style={{ fontSize:22, fontWeight:'700', color:colors.text1, marginBottom:14 }} numberOfLines={1}>
           {m.emoji} {m.name}
         </Text>
         <View style={{ alignItems:'center', paddingVertical:10 }}>
           <Text style={{ fontSize:64, fontWeight:'800', color, letterSpacing:-2, fontVariant:['tabular-nums'] }}>{bigVal}</Text>
-          <Text style={{ fontSize:11, color:Colors.text3, textTransform:'uppercase', letterSpacing:1, marginTop:4 }}>{bigLabel}</Text>
+          <Text style={{ fontSize:11, color:colors.text3, textTransform:'uppercase', letterSpacing:1, marginTop:4 }}>{bigLabel}</Text>
         </View>
         <View style={{ borderTopWidth:1, borderTopColor:'rgba(255,255,255,0.07)', paddingTop:10 }}>
-          <Text style={{ fontSize:12, color:Colors.text2 }}>
-            <Text style={{ color:Colors.text3 }}>Since </Text>
-            <Text style={{ fontWeight:'600', color:Colors.text1 }}>{dstr}</Text>
+          <Text style={{ fontSize:12, color:colors.text2 }}>
+            <Text style={{ color:colors.text3 }}>Since </Text>
+            <Text style={{ fontWeight:'600', color:colors.text1 }}>{dstr}</Text>
           </Text>
         </View>
       </View>
@@ -263,6 +269,7 @@ function MemoryCard({ memory: m }: { memory: any }) {
 }
 
 export function HeroCarousel() {
+  const { colors } = useTheme();
   const events   = useStore(s => s.events);
   const goals    = useStore(s => s.goals);
   const memories = useStore(s => s.memories);
@@ -293,11 +300,11 @@ export function HeroCarousel() {
 
   if (!items.length) {
     return (
-      <View style={{ backgroundColor:Colors.surf, borderRadius:24, padding:36,
+      <View style={{ backgroundColor:colors.surf, borderRadius:24, padding:36,
         alignItems:'center', marginBottom:8, borderWidth:1,
         borderColor:'rgba(255,255,255,0.08)' }}>
         <Text style={{ fontSize:32, marginBottom:10 }}>⭐</Text>
-        <Text style={{ color:Colors.text3, fontSize:14, textAlign:'center' }}>
+        <Text style={{ color:colors.text3, fontSize:14, textAlign:'center' }}>
           Star events, goals, or memories to pin them here.
         </Text>
       </View>
@@ -336,7 +343,7 @@ export function HeroCarousel() {
         {showArrows && idx > 0 && (
           <View pointerEvents="box-none" style={{ position:'absolute', left:4, top:0, bottom:0, justifyContent:'center' }}>
             <TouchableOpacity onPress={() => goTo(idx - 1)} accessibilityLabel="Previous" style={ARROW_BTN}>
-              <Text style={ARROW_TXT}>‹</Text>
+              <Text style={[ARROW_TXT, { color: colors.text1 }]}>‹</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -344,7 +351,7 @@ export function HeroCarousel() {
         {showArrows && idx < items.length - 1 && (
           <View pointerEvents="box-none" style={{ position:'absolute', right:4, top:0, bottom:0, justifyContent:'center' }}>
             <TouchableOpacity onPress={() => goTo(idx + 1)} accessibilityLabel="Next" style={ARROW_BTN}>
-              <Text style={ARROW_TXT}>›</Text>
+              <Text style={[ARROW_TXT, { color: colors.text1 }]}>›</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -368,7 +375,7 @@ export function HeroCarousel() {
 
 const ARROW_BTN = {
   width: 36, height: 36, borderRadius: 18,
-  backgroundColor: 'rgba(10,10,15,0.72)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.16)',
+  backgroundColor: 'rgba(10,10,15,0.72)',
   alignItems: 'center' as const, justifyContent: 'center' as const,
 };
-const ARROW_TXT = { fontSize: 22, lineHeight: 24, fontWeight: '700' as const, color: Colors.text1, marginTop: -2 };
+const ARROW_TXT = { fontSize: 22, lineHeight: 24, fontWeight: '700' as const, marginTop: -2 };

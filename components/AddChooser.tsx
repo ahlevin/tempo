@@ -1,6 +1,6 @@
 import { Modal, Pressable, Text, View } from 'react-native';
 import { router } from 'expo-router';
-import { Colors } from '../constants/colors';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface Choice { icon: string; label: string; sub: string; tint: string; go: () => void; }
 
@@ -18,6 +18,7 @@ const CHOICES: Choice[] = [
 ];
 
 export function AddChooser({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+  const { colors } = useTheme();
   const pick = (go: () => void) => { onClose(); go(); };
 
   return (
@@ -25,10 +26,10 @@ export function AddChooser({ visible, onClose }: { visible: boolean; onClose: ()
       <Pressable onPress={onClose} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
         {/* Sheet — stop backdrop press so taps inside don't dismiss */}
         <Pressable onPress={(e) => e.stopPropagation()}
-          style={{ backgroundColor: Colors.surf2, borderTopLeftRadius: 24, borderTopRightRadius: 24,
-            borderWidth: 1, borderColor: Colors.border, paddingHorizontal: 16, paddingTop: 10, paddingBottom: 36 }}>
+          style={{ backgroundColor: colors.surf2, borderTopLeftRadius: 24, borderTopRightRadius: 24,
+            borderWidth: 1, borderColor: colors.border, paddingHorizontal: 16, paddingTop: 10, paddingBottom: 36 }}>
           <View style={{ width: 40, height: 4, backgroundColor: 'rgba(255,255,255,0.14)', borderRadius: 2, alignSelf: 'center', marginBottom: 16 }} />
-          <Text style={{ fontSize: 18, fontWeight: '800', color: Colors.text1, marginBottom: 14, marginLeft: 6 }}>
+          <Text style={{ fontSize: 18, fontWeight: '800', color: colors.text1, marginBottom: 14, marginLeft: 6 }}>
             What would you like to add?
           </Text>
           {CHOICES.map(c => (
@@ -41,10 +42,10 @@ export function AddChooser({ visible, onClose }: { visible: boolean; onClose: ()
                 <Text style={{ fontSize: 22 }}>{c.icon}</Text>
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 15, fontWeight: '700', color: Colors.text1 }}>{c.label}</Text>
-                <Text style={{ fontSize: 12, color: Colors.text3, marginTop: 2 }}>{c.sub}</Text>
+                <Text style={{ fontSize: 15, fontWeight: '700', color: colors.text1 }}>{c.label}</Text>
+                <Text style={{ fontSize: 12, color: colors.text3, marginTop: 2 }}>{c.sub}</Text>
               </View>
-              <Text style={{ fontSize: 20, color: Colors.text3 }}>›</Text>
+              <Text style={{ fontSize: 20, color: colors.text3 }}>›</Text>
             </Pressable>
           ))}
         </Pressable>

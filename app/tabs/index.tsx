@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { ScrollView, View, Text, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { Colors } from '../../constants/colors';
+import { useTheme } from '../../contexts/ThemeContext';
 import { useStore } from '../../store/useStore';
 import { HeroCarousel } from '../../components/HeroCarousel';
 import { QuoteCard } from '../../components/QuoteCard';
@@ -22,6 +22,7 @@ const upcomingDays = (it: UpcomingItem) =>
   it.kind === 'event' ? daysUntil(nextOccurrence(it.data)) : daysUntil(nextAnnual(it.data.originDate));
 
 export default function HomeScreen() {
+  const { colors } = useTheme();
   const events      = useStore(s => s.events);
   const goals       = useStore(s => s.goals);
   const memories    = useStore(s => s.memories);
@@ -56,12 +57,12 @@ export default function HomeScreen() {
   const showGoals = filter === 'all' || filter === 'goal';
 
   return (
-    <SafeAreaView style={{ flex:1, backgroundColor:Colors.bg }} edges={['top']}>
+    <SafeAreaView style={{ flex:1, backgroundColor:colors.bg }} edges={['top']}>
       <View style={{ paddingHorizontal:20, paddingBottom:10 }}>
-        <Text style={{ fontSize:24, fontWeight:'700', color:Colors.text1, letterSpacing:-0.5 }}>
-          sayZay<Text style={{ color:Colors.accent }}>.</Text>
+        <Text style={{ fontSize:24, fontWeight:'700', color:colors.text1, letterSpacing:-0.5 }}>
+          sayZay<Text style={{ color:colors.accent }}>.</Text>
         </Text>
-        <Text style={{ fontSize:12, color:Colors.text3, marginTop:2 }}>
+        <Text style={{ fontSize:12, color:colors.text3, marginTop:2 }}>
           Countdowns &amp; Memories
         </Text>
       </View>
@@ -85,10 +86,10 @@ export default function HomeScreen() {
           {FILTERS.map(f => (
             <TouchableOpacity key={f.id} onPress={() => setFilter(f.id)}
               style={{ paddingVertical:7, paddingHorizontal:14, borderRadius:20, borderWidth:1,
-                borderColor: filter===f.id ? 'rgba(124,106,245,0.4)' : Colors.border,
-                backgroundColor: filter===f.id ? 'rgba(124,106,245,0.2)' : Colors.glass }}>
+                borderColor: filter===f.id ? 'rgba(124,106,245,0.4)' : colors.border,
+                backgroundColor: filter===f.id ? 'rgba(124,106,245,0.2)' : colors.glass }}>
               <Text style={{ fontSize:12, fontWeight:'600',
-                color: filter===f.id ? Colors.accent : Colors.text2 }}>{f.label}</Text>
+                color: filter===f.id ? colors.accent : colors.text2 }}>{f.label}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -129,13 +130,13 @@ export default function HomeScreen() {
             borderColor:'rgba(62,207,178,0.18)', borderRadius:18, padding:14, marginBottom:9 }}>
             <Text style={{ fontSize:24 }}>{card.icon}</Text>
             <View style={{ flex:1 }}>
-              <Text style={{ fontSize:14, fontWeight:'700', color:Colors.text1 }}>{card.title}</Text>
-              <Text style={{ fontSize:12, color:Colors.text2, marginTop:2 }}>{card.sub}</Text>
+              <Text style={{ fontSize:14, fontWeight:'700', color:colors.text1 }}>{card.title}</Text>
+              <Text style={{ fontSize:12, color:colors.text2, marginTop:2 }}>{card.sub}</Text>
             </View>
             <View style={{ backgroundColor:'rgba(62,207,178,0.14)', borderWidth:1,
               borderColor:'rgba(62,207,178,0.28)', borderRadius:20,
               paddingVertical:5, paddingHorizontal:10 }}>
-              <Text style={{ fontSize:12, fontWeight:'600', color:Colors.teal }}>Soon</Text>
+              <Text style={{ fontSize:12, fontWeight:'600', color:colors.teal }}>Soon</Text>
             </View>
           </View>
         ))}
@@ -144,9 +145,9 @@ export default function HomeScreen() {
       {/* FAB */}
       <TouchableOpacity onPress={() => setChooserOpen(true)}
         style={{ position:'absolute', bottom:90, right:20, width:54, height:54,
-          borderRadius:27, backgroundColor:Colors.accent,
+          borderRadius:27, backgroundColor:colors.accent,
           alignItems:'center', justifyContent:'center',
-          shadowColor:Colors.accent, shadowOffset:{width:0,height:8},
+          shadowColor:colors.accent, shadowOffset:{width:0,height:8},
           shadowOpacity:0.45, shadowRadius:16, elevation:8 }}>
         <Text style={{ fontSize:28, color:'#fff', lineHeight:32 }}>+</Text>
       </TouchableOpacity>
@@ -157,13 +158,14 @@ export default function HomeScreen() {
 }
 
 function SectionHeader({ title, onAdd }: { title:string; onAdd?:()=>void }) {
+  const { colors } = useTheme();
   return (
     <View style={{ flexDirection:'row', alignItems:'baseline', justifyContent:'space-between',
       marginTop:22, marginBottom:10, marginHorizontal:4 }}>
-      <Text style={{ fontSize:18, fontWeight:'700', color:Colors.text1, letterSpacing:-0.3 }}>{title}</Text>
+      <Text style={{ fontSize:18, fontWeight:'700', color:colors.text1, letterSpacing:-0.3 }}>{title}</Text>
       {onAdd && (
         <TouchableOpacity onPress={onAdd}>
-          <Text style={{ fontSize:13, color:Colors.accent, fontWeight:'500' }}>+ Add</Text>
+          <Text style={{ fontSize:13, color:colors.accent, fontWeight:'500' }}>+ Add</Text>
         </TouchableOpacity>
       )}
     </View>
@@ -172,16 +174,17 @@ function SectionHeader({ title, onAdd }: { title:string; onAdd?:()=>void }) {
 
 
 function EmptyPrompt({ icon, text, onPress }: { icon:string; text:string; onPress:()=>void }) {
+  const { colors } = useTheme();
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.8}
       style={{ alignItems:'center', paddingVertical:26, paddingHorizontal:20,
-        backgroundColor:Colors.glass, borderRadius:18, borderWidth:1,
-        borderColor:Colors.border, borderStyle:'dashed' }}>
+        backgroundColor:colors.glass, borderRadius:18, borderWidth:1,
+        borderColor:colors.border, borderStyle:'dashed' }}>
       <Text style={{ fontSize:30, marginBottom:10 }}>{icon}</Text>
-      <Text style={{ color:Colors.text2, fontSize:14, textAlign:'center', lineHeight:20 }}>{text}</Text>
+      <Text style={{ color:colors.text2, fontSize:14, textAlign:'center', lineHeight:20 }}>{text}</Text>
       <View style={{ marginTop:12, backgroundColor:'rgba(124,106,245,0.15)', borderWidth:1,
         borderColor:'rgba(124,106,245,0.3)', borderRadius:20, paddingVertical:7, paddingHorizontal:16 }}>
-        <Text style={{ color:Colors.accent, fontSize:13, fontWeight:'700' }}>+ Add</Text>
+        <Text style={{ color:colors.accent, fontSize:13, fontWeight:'700' }}>+ Add</Text>
       </View>
     </TouchableOpacity>
   );

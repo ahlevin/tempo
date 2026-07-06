@@ -64,4 +64,5 @@ export interface UserPrefs {
   location: string;
   displayName: string;
   onboarded: boolean;
+  theme: 'light' | 'dark';
 }

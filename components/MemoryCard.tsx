@@ -1,19 +1,20 @@
 import { useState } from 'react';
 import { GestureResponderEvent, Text, TouchableOpacity, View } from 'react-native';
 import { router } from 'expo-router';
-import { Colors } from '../constants/colors';
+import { useTheme } from '../contexts/ThemeContext';
 import { useStore } from '../store/useStore';
 import { Memory } from '../store/types';
 import { SwipeableRow } from './SwipeableRow';
 import { FavStar } from './FavStar';
 import { AlertBadge } from './AlertBadge';
+import { lightCardShadow } from '../constants/colors';
 import {
   yearsMonthsDays, nextAnnual, daysSince, daysUntil, daysBetween,
   ordinal, fmtShort, fmtFull,
 } from '../utils/dates';
 
-const TYPE_COLOR: Record<Memory['type'], string> = {
-  birthday: Colors.rose, anniversary: Colors.accent, lifelog: Colors.teal,
+const TYPE_COLOR_KEY: Record<Memory['type'], 'rose' | 'accent' | 'teal'> = {
+  birthday: 'rose', anniversary: 'accent', lifelog: 'teal',
 };
 const TYPE_BORDER: Record<Memory['type'], string> = {
   birthday: 'rgba(232,80,122,0.28)', anniversary: 'rgba(124,106,245,0.28)', lifelog: 'rgba(62,207,178,0.28)',
@@ -23,10 +24,11 @@ const TYPE_BG: Record<Memory['type'], string> = {
 };
 
 function Stat({ value, label, color }: { value: string | number; label: string; color: string }) {
+  const { colors } = useTheme();
   return (
     <View style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 12, padding: 10 }}>
       <Text style={{ fontSize: 17, fontWeight: '800', color, fontVariant: ['tabular-nums'] }}>{value}</Text>
-      <Text style={{ fontSize: 9, color: Colors.text3, textTransform: 'uppercase', letterSpacing: 0.4, marginTop: 2 }}>
+      <Text style={{ fontSize: 9, color: colors.text3, textTransform: 'uppercase', letterSpacing: 0.4, marginTop: 2 }}>
         {label}
       </Text>
     </View>
@@ -34,10 +36,11 @@ function Stat({ value, label, color }: { value: string | number; label: string; 
 }
 
 function Bridge({ text, color }: { text: string; color: string }) {
+  const { colors } = useTheme();
   return (
     <View style={{
       marginTop: 12, paddingVertical: 9, paddingHorizontal: 12, borderRadius: 12,
-      backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1, borderColor: Colors.border,
+      backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1, borderColor: colors.border,
     }}>
       <Text style={{ fontSize: 12, fontWeight: '600', color, paddingRight: 56 }}>{text}</Text>
     </View>
@@ -47,6 +50,7 @@ function Bridge({ text, color }: { text: string; color: string }) {
 const KNOWN_TYPES = new Set(['birthday', 'anniversary', 'lifelog']);
 
 export function MemoryCard({ memory: m }: { memory: Memory }) {
+  const { colors } = useTheme();
   const deleteMemory    = useStore(s => s.deleteMemory);
   const toggleMemoryFav = useStore(s => s.toggleMemoryFav);
   const [showAll, setShowAll] = useState(false);
@@ -54,7 +58,7 @@ export function MemoryCard({ memory: m }: { memory: Memory }) {
   // Legacy/unknown types (e.g. a removed 'milestone' row) render nothing.
   if (!KNOWN_TYPES.has(m.type)) return null;
 
-  const color  = TYPE_COLOR[m.type];
+  const color  = colors[TYPE_COLOR_KEY[m.type]];
   const border = TYPE_BORDER[m.type];
   const bg     = TYPE_BG[m.type];
   const r      = yearsMonthsDays(m.originDate);
@@ -64,8 +68,9 @@ export function MemoryCard({ memory: m }: { memory: Memory }) {
     <SwipeableRow onDelete={() => deleteMemory(m.id)} marginBottom={10}
       confirmTitle="Delete Memory" confirmMessage={`Delete "${m.name}"? This can't be undone.`}>
     <View style={{
-      backgroundColor: Colors.surf, borderRadius: 18, borderWidth: 1,
+      backgroundColor: colors.surf, borderRadius: 18, borderWidth: 1,
       borderColor: border, marginBottom: 10, overflow: 'hidden',
+      ...(colors.isDark ? null : lightCardShadow),
     }}>
       <View style={{ height: 3, backgroundColor: color }} />
       {/* Tap anywhere on the card to edit; inner controls stop propagation. */}
@@ -77,10 +82,10 @@ export function MemoryCard({ memory: m }: { memory: Memory }) {
           </View>
           <View style={{ flex: 1 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-              <Text style={{ fontSize: 15, fontWeight: '700', color: Colors.text1, maxWidth: '80%' }} numberOfLines={1}>{m.name}</Text>
+              <Text style={{ fontSize: 15, fontWeight: '700', color: colors.text1, maxWidth: '80%' }} numberOfLines={1}>{m.name}</Text>
               {(m.type === 'birthday' || m.type === 'anniversary') && <AlertBadge count={m.alerts?.length} />}
             </View>
-            <Text style={{ fontSize: 11, color: Colors.text3, marginTop: 2 }}>{fmtShort(m.originDate)}</Text>
+            <Text style={{ fontSize: 11, color: colors.text3, marginTop: 2 }}>{fmtShort(m.originDate)}</Text>
           </View>
           <FavStar active={m.fav} onToggle={() => toggleMemoryFav(m.id)} />
         </View>
@@ -99,12 +104,13 @@ export function MemoryCard({ memory: m }: { memory: Memory }) {
 type YMD = { y: number; mo: number; d: number };
 
 function BigNumber({ value, label, color }: { value: number; label: string; color: string }) {
+  const { colors } = useTheme();
   return (
     <View style={{ alignItems: 'center', paddingVertical: 14 }}>
       <Text style={{ fontSize: 52, fontWeight: '800', color, letterSpacing: -2, fontVariant: ['tabular-nums'] }}>
         {value}
       </Text>
-      <Text style={{ fontSize: 11, color: Colors.text3, textTransform: 'uppercase', letterSpacing: 1, marginTop: 2 }}>
+      <Text style={{ fontSize: 11, color: colors.text3, textTransform: 'uppercase', letterSpacing: 1, marginTop: 2 }}>
         {label}
       </Text>
     </View>
@@ -112,14 +118,15 @@ function BigNumber({ value, label, color }: { value: number; label: string; colo
 }
 
 function BirthdayBody({ m, r, color }: { m: Memory; r: YMD; color: string }) {
+  const { colors } = useTheme();
   const nb = nextAnnual(m.originDate);
   return (
     <>
       <BigNumber value={r.y} label="years old" color={color} />
       <View style={{ flexDirection: 'row', gap: 8 }}>
         <Stat value={daysSince(m.originDate).toLocaleString()} label="days alive" color={color} />
-        <Stat value={r.y * 12 + r.mo} label="months" color={Colors.text1} />
-        <Stat value={r.d} label="days" color={Colors.text1} />
+        <Stat value={r.y * 12 + r.mo} label="months" color={colors.text1} />
+        <Stat value={r.d} label="days" color={colors.text1} />
       </View>
       <Bridge color={color}
         text={`Turning ${r.y + 1} on ${fmtShort(nb)} — ${daysUntil(nb)} days away`} />
@@ -128,14 +135,15 @@ function BirthdayBody({ m, r, color }: { m: Memory; r: YMD; color: string }) {
 }
 
 function AnniversaryBody({ m, r, color }: { m: Memory; r: YMD; color: string }) {
+  const { colors } = useTheme();
   const nb = nextAnnual(m.originDate);
   return (
     <>
       <BigNumber value={r.y} label={r.y === 1 ? 'year' : 'years'} color={color} />
       <View style={{ flexDirection: 'row', gap: 8 }}>
         <Stat value={daysSince(m.originDate).toLocaleString()} label="days together" color={color} />
-        <Stat value={r.y * 12 + r.mo} label="months" color={Colors.text1} />
-        <Stat value={r.d} label="days" color={Colors.text1} />
+        <Stat value={r.y * 12 + r.mo} label="months" color={colors.text1} />
+        <Stat value={r.d} label="days" color={colors.text1} />
       </View>
       <Bridge color={color}
         text={`${ordinal(r.y + 1)} anniversary — ${fmtShort(nb)} · ${daysUntil(nb)} days away`} />
@@ -146,6 +154,7 @@ function AnniversaryBody({ m, r, color }: { m: Memory; r: YMD; color: string }) 
 function LifelogBody({
   m, color, showAll, onToggle,
 }: { m: Memory; color: string; showAll: boolean; onToggle: () => void }) {
+  const { colors } = useTheme();
   // Chronological (oldest → newest) so we can compute gaps; display newest first.
   const chrono = [...m.entries].sort((a, b) => a.date.localeCompare(b.date));
   const count  = chrono.length;
@@ -167,8 +176,8 @@ function LifelogBody({
       {count > 0 && (
         <View style={{ flexDirection: 'row', gap: 8 }}>
           <Stat value={sinceLast} label="since last" color={color} />
-          <Stat value={sinceFirst} label="days since first" color={Colors.text1} />
-          <Stat value={avgBetween === null ? '—' : avgBetween} label="avg between" color={Colors.text1} />
+          <Stat value={sinceFirst} label="days since first" color={colors.text1} />
+          <Stat value={avgBetween === null ? '—' : avgBetween} label="avg between" color={colors.text1} />
         </View>
       )}
 
@@ -177,35 +186,35 @@ function LifelogBody({
         <TouchableOpacity
           onPress={(ev) => { ev.stopPropagation(); router.push({ pathname: '/modals/log-entry', params: { id: m.id, past: '0' } }); }}
           style={{ flex: 1, paddingVertical: 11, borderRadius: 12, backgroundColor: 'rgba(62,207,178,0.16)', alignItems: 'center' }}>
-          <Text style={{ fontSize: 13, fontWeight: '700', color: Colors.teal }}>+ Log today</Text>
+          <Text style={{ fontSize: 13, fontWeight: '700', color: colors.teal }}>+ Log today</Text>
         </TouchableOpacity>
         <TouchableOpacity
           onPress={(ev) => { ev.stopPropagation(); router.push({ pathname: '/modals/log-entry', params: { id: m.id, past: '1' } }); }}
-          style={{ flex: 1, paddingVertical: 11, borderRadius: 12, backgroundColor: Colors.glass, borderWidth: 1, borderColor: Colors.border, alignItems: 'center' }}>
-          <Text style={{ fontSize: 13, fontWeight: '600', color: Colors.text2 }}>Past date</Text>
+          style={{ flex: 1, paddingVertical: 11, borderRadius: 12, backgroundColor: colors.glass, borderWidth: 1, borderColor: colors.border, alignItems: 'center' }}>
+          <Text style={{ fontSize: 13, fontWeight: '600', color: colors.text2 }}>Past date</Text>
         </TouchableOpacity>
       </View>
 
       {/* History */}
       {count > 0 && (
         <View style={{ marginTop: 14 }}>
-          <Text style={{ fontSize: 10, fontWeight: '700', color: Colors.text3, textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 8 }}>
+          <Text style={{ fontSize: 10, fontWeight: '700', color: colors.text3, textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 8 }}>
             History
           </Text>
           {visible.map(({ entry, num, gap }) => (
             <View key={entry.date + num} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 10 }}>
               <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: 'rgba(62,207,178,0.16)', alignItems: 'center', justifyContent: 'center', marginTop: 1 }}>
-                <Text style={{ fontSize: 11, fontWeight: '800', color: Colors.teal }}>{num}</Text>
+                <Text style={{ fontSize: 11, fontWeight: '800', color: colors.teal }}>{num}</Text>
               </View>
               <View style={{ flex: 1 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <Text style={{ fontSize: 13, fontWeight: '600', color: Colors.text1 }}>{fmtFull(entry.date)}</Text>
+                  <Text style={{ fontSize: 13, fontWeight: '600', color: colors.text1 }}>{fmtFull(entry.date)}</Text>
                   {gap !== null && (
-                    <Text style={{ fontSize: 11, fontWeight: '700', color: Colors.text3 }}>+{gap}d</Text>
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: colors.text3 }}>+{gap}d</Text>
                   )}
                 </View>
                 {!!entry.note && (
-                  <Text style={{ fontSize: 12, color: Colors.text2, marginTop: 2 }}>{entry.note}</Text>
+                  <Text style={{ fontSize: 12, color: colors.text2, marginTop: 2 }}>{entry.note}</Text>
                 )}
               </View>
             </View>

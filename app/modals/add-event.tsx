@@ -4,7 +4,7 @@ import { useToast } from '../../components/Toast';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { format, addDays } from 'date-fns';
-import { Colors } from '../../constants/colors';
+import { useTheme } from '../../contexts/ThemeContext';
 import { EMOJIS, CATEGORIES } from '../../constants/data';
 import { useStore } from '../../store/useStore';
 import { Recurrence, Alert as AlertType } from '../../store/types';
@@ -13,6 +13,7 @@ import { RecurrenceEditor } from '../../components/RecurrenceEditor';
 import { AlertsEditor } from '../../components/AlertsEditor';
 
 export default function AddEventModal() {
+  const { colors } = useTheme();
   const addEvent = useStore(s => s.addEvent);
   const { showToast } = useToast();
   const defaultDay = format(addDays(new Date(), 30), 'yyyy-MM-dd');
@@ -38,18 +39,18 @@ export default function AddEventModal() {
 
   const fi = { backgroundColor:'rgba(255,255,255,0.06)', borderWidth:1,
     borderColor:'rgba(255,255,255,0.1)', borderRadius:12, padding:12,
-    color:Colors.text1, fontSize:15, marginBottom:14 };
+    color:colors.text1, fontSize:15, marginBottom:14 };
 
   return (
-    <SafeAreaView style={{ flex:1, backgroundColor:'#18182A' }} edges={['bottom']}>
+    <SafeAreaView style={{ flex:1, backgroundColor:colors.surf2 }} edges={['bottom']}>
       <KeyboardAvoidingView style={{ flex:1 }} behavior={Platform.OS==='ios'?'padding':undefined}>
         <View style={{ width:40, height:4, backgroundColor:'rgba(255,255,255,0.14)',
           borderRadius:2, alignSelf:'center', marginTop:10, marginBottom:4 }} />
         <View style={{ flexDirection:'row', justifyContent:'space-between',
           alignItems:'center', paddingHorizontal:20, paddingVertical:12 }}>
-          <Text style={{ fontSize:18, fontWeight:'700', color:Colors.text1 }}>New Countdown</Text>
+          <Text style={{ fontSize:18, fontWeight:'700', color:colors.text1 }}>New Countdown</Text>
           <TouchableOpacity onPress={() => router.back()}>
-            <Text style={{ fontSize:16, color:Colors.text3 }}>✕</Text>
+            <Text style={{ fontSize:16, color:colors.text3 }}>✕</Text>
           </TouchableOpacity>
         </View>
         <ScrollView contentContainerStyle={{ padding:20 }}
@@ -57,7 +58,7 @@ export default function AddEventModal() {
 
           <FL label="Event Name" />
           <TextInput value={name} onChangeText={setName}
-            placeholder="e.g. Summer vacation…" placeholderTextColor={Colors.text3} style={fi} />
+            placeholder="e.g. Summer vacation…" placeholderTextColor={colors.text3} style={fi} />
 
           <Toggle label="📅 All-day" value={allDay} onChange={setAllDay} />
           {allDay ? (
@@ -75,7 +76,7 @@ export default function AddEventModal() {
             {EMOJIS.map(em => (
               <TouchableOpacity key={em} onPress={() => setEmoji(em)}
                 style={{ width:44, height:44, borderRadius:10, borderWidth:2,
-                  borderColor: em === emoji ? Colors.accent : 'transparent',
+                  borderColor: em === emoji ? colors.accent : 'transparent',
                   backgroundColor: em === emoji ? 'rgba(124,106,245,0.15)' : 'rgba(255,255,255,0.055)',
                   alignItems:'center', justifyContent:'center' }}>
                 <Text style={{ fontSize:20 }}>{em}</Text>
@@ -88,10 +89,10 @@ export default function AddEventModal() {
             {CATEGORIES.map(c => (
               <TouchableOpacity key={c.id} onPress={() => setCat(c.id)}
                 style={{ paddingVertical:9, paddingHorizontal:12, borderRadius:11, borderWidth:1,
-                  borderColor: cat === c.id ? Colors.accent : Colors.border,
-                  backgroundColor: cat === c.id ? 'rgba(124,106,245,0.12)' : Colors.glass }}>
+                  borderColor: cat === c.id ? colors.accent : colors.border,
+                  backgroundColor: cat === c.id ? 'rgba(124,106,245,0.12)' : colors.glass }}>
                 <Text style={{ fontSize:13, fontWeight:'600',
-                  color: cat === c.id ? Colors.accent : Colors.text2 }}>{c.label}</Text>
+                  color: cat === c.id ? colors.accent : colors.text2 }}>{c.label}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -101,7 +102,7 @@ export default function AddEventModal() {
           <AlertsEditor value={alerts} onChange={setAlerts} />
 
           <TouchableOpacity onPress={submit}
-            style={{ backgroundColor:Colors.accent, borderRadius:14,
+            style={{ backgroundColor:colors.accent, borderRadius:14,
               padding:15, alignItems:'center', marginTop:8 }}>
             <Text style={{ color:'#fff', fontSize:15, fontWeight:'700' }}>Add Countdown →</Text>
           </TouchableOpacity>
@@ -113,19 +114,21 @@ export default function AddEventModal() {
 }
 
 function FL({ label }: { label: string }) {
-  return <Text style={{ fontSize:11, fontWeight:'600', color:Colors.text3,
+  const { colors } = useTheme();
+  return <Text style={{ fontSize:11, fontWeight:'600', color:colors.text3,
     textTransform:'uppercase', letterSpacing:0.5, marginBottom:6 }}>{label}</Text>;
 }
 
 function Toggle({ label, value, onChange }: { label:string; value:boolean; onChange:(v:boolean)=>void }) {
+  const { colors } = useTheme();
   return (
     <TouchableOpacity onPress={() => onChange(!value)}
       style={{ flexDirection:'row', alignItems:'center', justifyContent:'space-between',
         backgroundColor:'rgba(255,255,255,0.04)', borderWidth:1,
         borderColor:'rgba(255,255,255,0.08)', borderRadius:11, padding:12, marginBottom:12 }}>
-      <Text style={{ fontSize:14, fontWeight:'600', color:Colors.text1 }}>{label}</Text>
+      <Text style={{ fontSize:14, fontWeight:'600', color:colors.text1 }}>{label}</Text>
       <View style={{ width:40, height:22, borderRadius:11,
-        backgroundColor: value ? Colors.accent : 'rgba(255,255,255,0.1)',
+        backgroundColor: value ? colors.accent : 'rgba(255,255,255,0.1)',
         justifyContent:'center', paddingHorizontal:2 }}>
         <View style={{ width:18, height:18, borderRadius:9, backgroundColor:'#fff',
           alignSelf: value ? 'flex-end' : 'flex-start' }} />

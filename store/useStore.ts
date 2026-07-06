@@ -17,6 +17,7 @@ const DEFAULT_PREFS: UserPrefs = {
   location: '',
   displayName: '',
   onboarded: false,
+  theme: 'dark',
 };
 
 // A queued write. Upserts reference the row by id and re-read the latest state

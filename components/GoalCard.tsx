@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { DimensionValue, Text, TouchableOpacity, View } from 'react-native';
 import { router } from 'expo-router';
-import { Colors } from '../constants/colors';
+import { useTheme } from '../contexts/ThemeContext';
+import { lightCardShadow } from '../constants/colors';
 import { useStore } from '../store/useStore';
 import { Goal } from '../store/types';
 import { daysUntil } from '../utils/dates';
@@ -11,6 +12,7 @@ import { FavStar } from './FavStar';
 import { AlertBadge } from './AlertBadge';
 
 export function GoalCard({ goal: g }: { goal: Goal }) {
+  const { colors } = useTheme();
   const toggleFav  = useStore(s => s.toggleGoalFav);
   const nudgeGoal  = useStore(s => s.nudgeGoal);
   const deleteGoal = useStore(s => s.deleteGoal);
@@ -36,12 +38,12 @@ export function GoalCard({ goal: g }: { goal: Goal }) {
     <SwipeableRow onDelete={() => deleteGoal(g.id)}
       confirmTitle="Delete Goal" confirmMessage={`Delete "${g.name}"? This can't be undone.`}>
     <View style={{
-      backgroundColor: Colors.surf, borderRadius: 18, borderWidth: 1,
+      backgroundColor: colors.surf, borderRadius: 18, borderWidth: 1,
       borderColor: 'rgba(62,207,178,0.2)', padding: 14, paddingLeft: 16, marginBottom: 8,
-      overflow: 'hidden',
+      overflow: 'hidden', ...(colors.isDark ? null : lightCardShadow),
     }}>
       <Confetti fire={burst} height={180} onDone={() => setBurst(0)} />
-      <View style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, backgroundColor: Colors.teal, borderRadius: 2 }} />
+      <View style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, backgroundColor: colors.teal, borderRadius: 2 }} />
       {/* Tap the header to edit; the progress row below owns its own controls. */}
       <TouchableOpacity activeOpacity={0.7} onPress={edit}
         style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 10 }}>
@@ -50,20 +52,20 @@ export function GoalCard({ goal: g }: { goal: Goal }) {
         </View>
         <View style={{ flex: 1 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-            <Text style={{ fontSize: 14, fontWeight: '600', color: Colors.text1, maxWidth: '80%' }} numberOfLines={1}>{g.name}</Text>
+            <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text1, maxWidth: '80%' }} numberOfLines={1}>{g.name}</Text>
             {done && (
               <View style={{ backgroundColor: 'rgba(62,207,178,0.18)', borderRadius: 8, paddingVertical: 2, paddingHorizontal: 7 }}>
-                <Text style={{ fontSize: 10, fontWeight: '800', color: Colors.teal }}>✓ Complete!</Text>
+                <Text style={{ fontSize: 10, fontWeight: '800', color: colors.teal }}>✓ Complete!</Text>
               </View>
             )}
             <AlertBadge count={g.alerts?.length} />
           </View>
-          <Text style={{ fontSize: 11, color: Colors.text3, marginTop: 2 }}>{dstr}</Text>
+          <Text style={{ fontSize: 11, color: colors.text3, marginTop: 2 }}>{dstr}</Text>
         </View>
         <View style={{ alignItems: 'center' }}>
           <View style={{ alignItems: 'flex-end' }}>
-            <Text style={{ fontSize: 18, fontWeight: '800', color: Colors.teal }}>{d}</Text>
-            <Text style={{ fontSize: 9, color: Colors.text3, textTransform: 'uppercase' }}>days</Text>
+            <Text style={{ fontSize: 18, fontWeight: '800', color: colors.teal }}>{d}</Text>
+            <Text style={{ fontSize: 9, color: colors.text3, textTransform: 'uppercase' }}>days</Text>
           </View>
           <FavStar active={g.fav} onToggle={() => toggleFav(g.id)} />
         </View>
@@ -72,26 +74,26 @@ export function GoalCard({ goal: g }: { goal: Goal }) {
         <View style={{ flex: 1 }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
             <TouchableOpacity onPress={() => router.push({ pathname: '/modals/exact-edit', params: { id: g.id } })} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
-              <Text style={{ fontSize: 12, fontWeight: '700', color: Colors.teal }}>
+              <Text style={{ fontSize: 12, fontWeight: '700', color: colors.teal }}>
                 {g.current.toLocaleString()} {g.unit}
               </Text>
             </TouchableOpacity>
-            <Text style={{ fontSize: 12, color: Colors.text3 }}>{g.target.toLocaleString()} {g.unit}</Text>
+            <Text style={{ fontSize: 12, color: colors.text3 }}>{g.target.toLocaleString()} {g.unit}</Text>
           </View>
           <View style={{ height: 6, backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 3, overflow: 'hidden' }}>
-            <View style={{ height: '100%', width: `${gp}%` as DimensionValue, backgroundColor: Colors.teal, borderRadius: 3 }} />
+            <View style={{ height: '100%', width: `${gp}%` as DimensionValue, backgroundColor: colors.teal, borderRadius: 3 }} />
           </View>
         </View>
-        <Text style={{ fontSize: 11, fontWeight: '700', color: Colors.teal }}>{gp}%</Text>
+        <Text style={{ fontSize: 11, fontWeight: '700', color: colors.teal }}>{gp}%</Text>
         {!done && (
           <View style={{ flexDirection: 'row', gap: 5 }}>
             <TouchableOpacity onPress={() => nudgeGoal(g.id, -1)}
               style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: 'rgba(255,255,255,0.08)', alignItems: 'center', justifyContent: 'center' }}>
-              <Text style={{ color: Colors.text2, fontWeight: '700', fontSize: 18 }}>−</Text>
+              <Text style={{ color: colors.text2, fontWeight: '700', fontSize: 18 }}>−</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => nudgeGoal(g.id, 1)}
               style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: 'rgba(62,207,178,0.18)', alignItems: 'center', justifyContent: 'center' }}>
-              <Text style={{ color: Colors.teal, fontWeight: '700', fontSize: 18 }}>+</Text>
+              <Text style={{ color: colors.teal, fontWeight: '700', fontSize: 18 }}>+</Text>
             </TouchableOpacity>
           </View>
         )}

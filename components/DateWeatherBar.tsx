@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { View, Text } from 'react-native';
-import { Colors } from '../constants/colors';
+import { useTheme } from '../contexts/ThemeContext';
 import { useStore } from '../store/useStore';
 
 const WX_ICONS: Record<number, string> = {
@@ -14,6 +14,7 @@ const WX_DESC: Record<number, string> = {
 };
 
 export function DateWeatherBar() {
+  const { colors } = useTheme();
   const prefs = useStore(s => s.prefs);
   const [wx, setWx]       = useState<any>(null);
   const [now, setNow]     = useState(new Date());
@@ -72,25 +73,25 @@ export function DateWeatherBar() {
   return (
     <View style={{
       flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-      backgroundColor: Colors.surf, borderRadius: 18, borderWidth: 1,
-      borderColor: Colors.border, padding: 12, paddingHorizontal: 16, marginBottom: 16, gap: 12,
+      backgroundColor: colors.surf, borderRadius: 18, borderWidth: 1,
+      borderColor: colors.border, padding: 12, paddingHorizontal: 16, marginBottom: 16, gap: 12,
     }}>
       <View style={{ flex: 1 }}>
-        <Text style={{ fontSize: 15, fontWeight: '700', color: Colors.text1, letterSpacing: -0.3 }}>
+        <Text style={{ fontSize: 15, fontWeight: '700', color: colors.text1, letterSpacing: -0.3 }}>
           {dateStr}
         </Text>
-        <Text style={{ fontSize: 11, color: Colors.text3, marginTop: 3 }}>
+        <Text style={{ fontSize: 11, color: colors.text3, marginTop: 3 }}>
           {tzShort} · {tz.replace(/_/g, ' ').replace(/\//g, ' · ')}
         </Text>
       </View>
       {wx && (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 0 }}>
           <View style={{ alignItems: 'flex-end' }}>
-            <Text style={{ fontSize: 11, color: Colors.text3 }}>{wx.city}</Text>
-            <Text style={{ fontSize: 10, color: Colors.text3 }}>{wx.desc}</Text>
+            <Text style={{ fontSize: 11, color: colors.text3 }}>{wx.city}</Text>
+            <Text style={{ fontSize: 10, color: colors.text3 }}>{wx.desc}</Text>
           </View>
           <Text style={{ fontSize: 26 }}>{wx.icon}</Text>
-          <Text style={{ fontSize: 20, fontWeight: '800', color: Colors.text1 }}>{wx.temp}°F</Text>
+          <Text style={{ fontSize: 20, fontWeight: '800', color: colors.text1 }}>{wx.temp}°F</Text>
         </View>
       )}
     </View>

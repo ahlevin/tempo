@@ -1,5 +1,5 @@
 import { Text, View } from 'react-native';
-import { Colors } from '../constants/colors';
+import { useTheme } from '../contexts/ThemeContext';
 
 /**
  * Small display-only "🔔 N" pill shown on cards when an item has one or more
@@ -7,12 +7,13 @@ import { Colors } from '../constants/colors';
  * unconditionally. Matches the subtle amber recurrence-badge style.
  */
 export function AlertBadge({ count }: { count: number | undefined }) {
+  const { colors } = useTheme();
   if (!count || count <= 0) return null;
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2,
       backgroundColor: 'rgba(240,160,75,0.14)', borderRadius: 8, paddingVertical: 2, paddingHorizontal: 6 }}>
       <Text style={{ fontSize: 9 }}>🔔</Text>
-      <Text style={{ fontSize: 9, fontWeight: '700', color: Colors.amber }}>{count}</Text>
+      <Text style={{ fontSize: 9, fontWeight: '700', color: colors.amber }}>{count}</Text>
     </View>
   );
 }

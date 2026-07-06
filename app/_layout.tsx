@@ -4,12 +4,12 @@ import { StatusBar } from 'expo-status-bar';
 import { View, Text, ActivityIndicator, AppState, Platform } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { Colors } from '../constants/colors';
 import { useStore } from '../store/useStore';
 import { ToastProvider } from '../components/Toast';
 import { ConfirmProvider } from '../components/ConfirmDialog';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
+import { ThemeProvider, useTheme } from '../contexts/ThemeContext';
 import { rescheduleAll } from '../lib/notifications';
 
 export default function RootLayout() {
@@ -17,18 +17,25 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ErrorBoundary>
       <SafeAreaProvider>
-        <StatusBar style="light" />
-        <AuthProvider>
-          <ToastProvider>
-            <ConfirmProvider>
-              <RootNavigator />
-            </ConfirmProvider>
-          </ToastProvider>
-        </AuthProvider>
+        <ThemeProvider>
+          <ThemedStatusBar />
+          <AuthProvider>
+            <ToastProvider>
+              <ConfirmProvider>
+                <RootNavigator />
+              </ConfirmProvider>
+            </ToastProvider>
+          </AuthProvider>
+        </ThemeProvider>
       </SafeAreaProvider>
       </ErrorBoundary>
     </GestureHandlerRootView>
   );
+}
+
+function ThemedStatusBar() {
+  const { colors } = useTheme();
+  return <StatusBar style={colors.isDark ? 'light' : 'dark'} />;
 }
 
 function RootNavigator() {
@@ -42,6 +49,7 @@ function RootNavigator() {
   const events          = useStore(s => s.events);
   const goals           = useStore(s => s.goals);
   const memories        = useStore(s => s.memories);
+  const { colors } = useTheme();
   const segments = useSegments();
   const router = useRouter();
 
@@ -103,7 +111,7 @@ function RootNavigator() {
 
   return (
     <View style={{ flex: 1 }}>
-      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#0A0A0F' } }}>
+      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(onboarding)" />
         <Stack.Screen name="tabs" />
@@ -122,13 +130,14 @@ function RootNavigator() {
 }
 
 function LoadingScreen() {
+  const { colors } = useTheme();
   return (
     <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-      backgroundColor: Colors.bg, alignItems: 'center', justifyContent: 'center', gap: 20 }}>
-      <Text style={{ fontSize: 40, fontWeight: '800', color: Colors.text1, letterSpacing: -1 }}>
-        sayZay<Text style={{ color: Colors.accent }}>.</Text>
+      backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center', gap: 20 }}>
+      <Text style={{ fontSize: 40, fontWeight: '800', color: colors.text1, letterSpacing: -1 }}>
+        sayZay<Text style={{ color: colors.accent }}>.</Text>
       </Text>
-      <ActivityIndicator color={Colors.accent} />
+      <ActivityIndicator color={colors.accent} />
     </View>
   );
 }

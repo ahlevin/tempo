@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
-import { Colors } from '../constants/colors';
+import { useTheme } from '../contexts/ThemeContext';
 import { QUOTES } from '../constants/data';
 
+// Icon/label + tint per quote type; `colorKey` resolves against the active palette.
 const META = {
-  bible:        { icon:'✝️', label:'Bible Verse',     color:Colors.teal,   bg:'rgba(62,207,178,0.07)',  border:'rgba(62,207,178,0.25)' },
-  motivational: { icon:'⚡', label:'Motivational',     color:Colors.accent, bg:'rgba(124,106,245,0.08)', border:'rgba(124,106,245,0.25)' },
-  jokes:        { icon:'😄', label:'Joke of the Day', color:Colors.amber,  bg:'rgba(240,160,75,0.07)',  border:'rgba(240,160,75,0.25)' },
+  bible:        { icon:'✝️', label:'Bible Verse',     colorKey:'teal'   as const, bg:'rgba(62,207,178,0.07)',  border:'rgba(62,207,178,0.25)' },
+  motivational: { icon:'⚡', label:'Motivational',     colorKey:'accent' as const, bg:'rgba(124,106,245,0.08)', border:'rgba(124,106,245,0.25)' },
+  jokes:        { icon:'😄', label:'Joke of the Day', colorKey:'amber'  as const, bg:'rgba(240,160,75,0.07)',  border:'rgba(240,160,75,0.25)' },
 };
 
 function dailyQuote(arr: any[]) {
@@ -16,12 +17,14 @@ function dailyQuote(arr: any[]) {
 }
 
 export function QuoteCard({ type }: { type: string }) {
+  const { colors } = useTheme();
   const [override, setOverride] = useState<number | null>(null);
 
   if (type === 'off' || !QUOTES[type as keyof typeof QUOTES]) return null;
 
   const arr  = QUOTES[type as keyof typeof QUOTES];
-  const meta = META[type as keyof typeof META];
+  const m    = META[type as keyof typeof META];
+  const meta = { ...m, color: colors[m.colorKey] };
   const q    = override !== null ? arr[override] : dailyQuote(arr);
 
   function rotate() {
@@ -42,10 +45,10 @@ export function QuoteCard({ type }: { type: string }) {
           style={{ width:26, height:26, borderRadius:13,
             backgroundColor:'rgba(255,255,255,0.06)',
             alignItems:'center', justifyContent:'center' }}>
-          <Text style={{ fontSize:13, color:Colors.text3 }}>↻</Text>
+          <Text style={{ fontSize:13, color:colors.text3 }}>↻</Text>
         </TouchableOpacity>
       </View>
-      <Text style={{ fontSize:13, lineHeight:21, color:Colors.text1, fontStyle:'italic', marginBottom:8 }}>
+      <Text style={{ fontSize:13, lineHeight:21, color:colors.text1, fontStyle:'italic', marginBottom:8 }}>
         "{q.text}"
       </Text>
       <Text style={{ fontSize:11, fontWeight:'600', color:meta.color }}>— {q.attr}</Text>
