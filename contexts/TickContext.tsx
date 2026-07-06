@@ -1,13 +1,16 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 
-// A single shared 1-second clock for the whole app. Instead of every live
-// countdown owning its own setInterval (which multiplied one-per-card and kept
-// firing off-screen — the main CPU/heat culprit), components subscribe to this
-// one tick via useTick(). The interval only runs while at least one consumer is
-// mounted, so screens with no live countdown cost nothing.
+// A single shared PER-MINUTE clock for the whole app. The hero countdown shows
+// days (+ coarse hours/minutes), never seconds, so a 60s cadence is plenty.
+// Instead of every live countdown owning its own setInterval (which multiplied
+// one-per-card and kept firing off-screen — the CPU/heat culprit), components
+// subscribe to this one tick via useTick(). The interval only runs while at
+// least one consumer is mounted, so screens with no live countdown cost nothing.
+
+const TICK_MS = 60_000; // per-minute; seconds are never displayed on the hero
 
 interface TickValue {
-  now: number;             // current time in ms; changes once per second while active
+  now: number;             // current time in ms; changes once per minute while active
   subscribe: () => () => void;
 }
 
@@ -32,18 +35,18 @@ export function TickProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!active) return;
     setNow(Date.now());
-    const id = setInterval(() => setNow(Date.now()), 1000);
+    const id = setInterval(() => setNow(Date.now()), TICK_MS);
     return () => clearInterval(id);
   }, [active]);
 
   // `children` is a stable element reference, so this provider re-rendering each
-  // second does NOT re-render the app tree — only useTick() consumers do.
+  // minute does NOT re-render the app tree — only useTick() consumers do.
   return <TickCtx.Provider value={{ now, subscribe }}>{children}</TickCtx.Provider>;
 }
 
-// Subscribe to the shared 1-second tick. Returns `now` (ms) and re-renders the
-// caller each second. Only call it in a component that is actually visible and
-// needs live seconds (e.g. the active hero card) so the interval stays idle
+// Subscribe to the shared per-minute tick. Returns `now` (ms) and re-renders the
+// caller once a minute. Only call it in a component that is actually visible and
+// needs a live countdown (e.g. the active hero card) so the interval stays idle
 // whenever nothing on screen is ticking.
 export function useTick(): number {
   const { now, subscribe } = useContext(TickCtx);

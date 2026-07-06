@@ -1,76 +1,19 @@
 import { useRef, useState } from 'react';
 import { View, Text, ScrollView, Dimensions, TouchableOpacity, Platform } from 'react-native';
 import { useIsFocused } from 'expo-router';
-import Svg, { Circle } from 'react-native-svg';
 import { catColor, dayCountColor } from '../constants/colors';
 import { useTheme } from '../contexts/ThemeContext';
 import { useTick } from '../contexts/TickContext';
 import { useStore } from '../store/useStore';
-import { nextOccurrence, daysUntil, pctElapsed, eventProgress, recurLabel, nextAnnual, yearsMonthsDays, ordinal, fmtDateTimeFull, fmtMonthDay, toDate, isValidDate } from '../utils/dates';
+import { nextOccurrence, daysUntil, recurLabel, nextAnnual, yearsMonthsDays, ordinal, fmtDateTimeFull, fmtMonthDay, toDate, isValidDate } from '../utils/dates';
 
 const W = Dimensions.get('window').width - 32;
-const CIRC = 301.6;
 
-function Ring({ pct, color }: { pct: number; color: string }) {
-  const { colors } = useTheme();
-  const filled = CIRC * pct / 100;
-  const empty  = CIRC - filled;
-  return (
-    <View style={{ width:100, height:100, position:'relative' }}>
-      <View style={{ width:100, height:100, borderRadius:50,
-        borderWidth:6, borderColor:(colors.isDark ? 'rgba(255,255,255,0.07)' : colors.track), position:'absolute' }} />
-      <View style={{ width:100, height:100, borderRadius:50,
-        borderWidth:6, borderColor:color,
-        borderTopColor:'transparent', borderLeftColor:'transparent',
-        position:'absolute', transform:[{ rotate: (pct * 3.6 - 90) + 'deg' }] }} />
-      <View style={{ position:'absolute', inset:0, alignItems:'center', justifyContent:'center' }}>
-        <Text style={{ fontSize:17, fontWeight:'800', color }}>{pct}%</Text>
-        <Text style={{ fontSize:8, color:colors.text3, textTransform:'uppercase', letterSpacing:0.5 }}>elapsed</Text>
-      </View>
-    </View>
-  );
-}
-
-// Two concentric SVG rings: outer = time elapsed, inner = goal progress.
-function DualRing({ goalPct, timePct }: { goalPct: number; timePct: number }) {
-  const { colors } = useTheme();
-  const SIZE = 100, STROKE = 7;
-  const cx = SIZE / 2, cy = SIZE / 2;
-  const rOuter = 46, rInner = 33;
-  const cOuter = 2 * Math.PI * rOuter;
-  const cInner = 2 * Math.PI * rInner;
-  const track  = (colors.isDark ? 'rgba(255,255,255,0.07)' : colors.track);
-
-  return (
-    <View style={{ width: SIZE, height: SIZE, alignItems: 'center', justifyContent: 'center' }}>
-      <Svg width={SIZE} height={SIZE} style={{ position: 'absolute' }}>
-        {/* Outer track + time elapsed */}
-        <Circle cx={cx} cy={cy} r={rOuter} stroke={track} strokeWidth={STROKE} fill="none" />
-        <Circle cx={cx} cy={cy} r={rOuter} stroke={colors.isDark ? colors.amber : colors.text2} strokeWidth={STROKE} fill="none"
-          strokeLinecap="round" strokeDasharray={cOuter}
-          strokeDashoffset={cOuter * (1 - Math.min(100, timePct) / 100)}
-          transform={`rotate(-90 ${cx} ${cy})`} />
-        {/* Inner track + goal progress */}
-        <Circle cx={cx} cy={cy} r={rInner} stroke={track} strokeWidth={STROKE} fill="none" />
-        <Circle cx={cx} cy={cy} r={rInner} stroke={colors.teal} strokeWidth={STROKE} fill="none"
-          strokeLinecap="round" strokeDasharray={cInner}
-          strokeDashoffset={cInner * (1 - Math.min(100, goalPct) / 100)}
-          transform={`rotate(-90 ${cx} ${cy})`} />
-      </Svg>
-      <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-        <Text style={{ fontSize: 16, fontWeight: '800', color: colors.teal }}>{goalPct}%</Text>
-        <Text style={{ fontSize: 7, color: colors.text3, textTransform: 'uppercase' }}>goal</Text>
-        <Text style={{ fontSize: 12, fontWeight: '700', color: colors.isDark ? colors.amber : colors.text2, marginTop: 1 }}>{timePct}%</Text>
-        <Text style={{ fontSize: 7, color: colors.text3, textTransform: 'uppercase' }}>time</Text>
-      </View>
-    </View>
-  );
-}
-
-// The live-ticking part of the hero event card (Ring + Days/Hours/Mins/Secs).
-// `now` drives the seconds; it's the shared tick for the active card, or a
-// one-off Date.now() snapshot for inactive/off-screen cards (no re-render).
-function CountdownInner({ e, accent, now }: { e: any; accent: string; now: number }) {
+// Prominent DAYS-remaining number for the hero event card (no ring, no seconds).
+// Hours/minutes are a small secondary line that refreshes per minute via the
+// shared tick when this is the active card. `now` is the shared per-minute tick
+// for the active card, or a one-off Date.now() snapshot for inactive cards.
+function CountdownBlock({ e, accent, now }: { e: any; accent: string; now: number }) {
   const { colors } = useTheme();
   const nd     = nextOccurrence(e);
   const target = toDate(nd);
@@ -78,38 +21,25 @@ function CountdownInner({ e, accent, now }: { e: any; accent: string; now: numbe
   const d      = ms > 0 ? Math.floor(ms / 86400000) : 0;
   const h      = ms > 0 ? Math.floor((ms % 86400000) / 3600000) : 0;
   const mi     = ms > 0 ? Math.floor((ms % 3600000) / 60000) : 0;
-  const s      = ms > 0 ? Math.floor((ms % 60000) / 1000) : 0;
-  const p      = eventProgress(e);
-  const pad    = (n: number) => String(n).padStart(2, '0');
   return (
-    <View style={{ flexDirection:'row', alignItems:'center', gap:16, marginBottom:14 }}>
-      <Ring pct={p} color={accent} />
-      <View style={{ flex:1, flexDirection:'row', flexWrap:'wrap', gap:6 }}>
-        {[
-          { n:pad(d),  l:'Days',  c:accent },
-          { n:pad(h),  l:'Hours', c:colors.text1 },
-          { n:pad(mi), l:'Mins',  c:colors.text1 },
-          { n:pad(s),  l:'Secs',  c:accent },
-        ].map(u => (
-          <View key={u.l} style={{ width:'46%', backgroundColor:(colors.isDark ? 'rgba(255,255,255,0.05)' : colors.tile),
-            borderRadius:12, padding:9 }}>
-            <Text style={{ fontSize:20, fontWeight:'800', color:u.c,
-              fontVariant:['tabular-nums'] }}>{u.n}</Text>
-            <Text style={{ fontSize:9, color:colors.text3,
-              textTransform:'uppercase', marginTop:2 }}>{u.l}</Text>
-          </View>
-        ))}
-      </View>
+    <View style={{ alignItems:'center', paddingVertical:6, marginBottom:8 }}>
+      <Text style={{ fontSize:64, fontWeight:'800', color:accent, letterSpacing:-2, fontVariant:['tabular-nums'] }}>{d}</Text>
+      <Text style={{ fontSize:11, color:colors.text3, textTransform:'uppercase', letterSpacing:1, marginTop:2 }}>
+        {d === 1 ? 'day away' : 'days away'}
+      </Text>
+      <Text style={{ fontSize:12, color:colors.text2, marginTop:6, fontVariant:['tabular-nums'] }}>
+        {h}h {mi}m
+      </Text>
     </View>
   );
 }
 
-// Only the active/visible card subscribes to the shared per-second tick; this
+// Only the active/visible card subscribes to the shared per-minute tick; this
 // separate component isolates that subscription so inactive cards never
-// re-render each second (and the shared interval idles when none are active).
+// re-render on tick (and the shared interval idles when none are active).
 function LiveCountdown({ e, accent }: { e: any; accent: string }) {
   const now = useTick();
-  return <CountdownInner e={e} accent={accent} now={now} />;
+  return <CountdownBlock e={e} accent={accent} now={now} />;
 }
 
 function EventCard({ event: e, active }: { event: any; active: boolean }) {
@@ -139,7 +69,7 @@ function EventCard({ event: e, active }: { event: any; active: boolean }) {
       </Text>
       {active
         ? <LiveCountdown e={e} accent={accent} />
-        : <CountdownInner e={e} accent={accent} now={Date.now()} />}
+        : <CountdownBlock e={e} accent={accent} now={Date.now()} />}
       <View style={{ borderTopWidth:1, borderTopColor:(colors.isDark ? 'rgba(255,255,255,0.07)' : colors.track), paddingTop:10 }}>
         <Text style={{ fontSize:12, fontWeight:'600', color:colors.text1 }}>{whenStr}</Text>
       </View>
@@ -151,7 +81,6 @@ function GoalCard({ goal: g }: { goal: any }) {
   const { colors } = useTheme();
   const nudge     = useStore(s => s.nudgeGoal);
   const toggleFav = useStore(s => s.toggleGoalFav);
-  const tp  = pctElapsed(g.created, g.date);
   const gp  = Math.round(Math.min(100, (g.current / g.target) * 100));
   const ms  = new Date(g.date + 'T00:00:00').getTime() - Date.now();
   const d   = ms > 0 ? Math.floor(ms / 86400000) : 0;
@@ -169,42 +98,43 @@ function GoalCard({ goal: g }: { goal: any }) {
       <Text style={{ fontSize:11, fontWeight:'600', letterSpacing:1.2,
         textTransform:'uppercase', color:colors.teal, marginBottom:5 }}>Active Goal</Text>
       <Text style={{ fontSize:22, fontWeight:'700', color:colors.text1,
-        marginBottom:18, paddingRight:34 }} numberOfLines={1}>
+        marginBottom:8, paddingRight:34 }} numberOfLines={1}>
         {g.emoji} {g.name}
       </Text>
-      <View style={{ flexDirection:'row', alignItems:'center', gap:12, marginBottom:14 }}>
-        <DualRing goalPct={gp} timePct={tp} />
-        <View style={{ flex:1, gap:6 }}>
-          <View style={{ backgroundColor:(colors.isDark ? 'rgba(255,255,255,0.05)' : colors.tile), borderRadius:12, padding:9 }}>
-            <Text style={{ fontSize:20, fontWeight:'800', color:colors.teal,
-              fontVariant:['tabular-nums'] }}>{String(d).padStart(2,'0')}</Text>
-            <Text style={{ fontSize:9, color:colors.text3, textTransform:'uppercase', marginTop:2 }}>Days Left</Text>
-          </View>
-          <View style={{ backgroundColor:(colors.isDark ? 'rgba(255,255,255,0.05)' : colors.tile), borderRadius:12, padding:9,
-            flexDirection:'row', alignItems:'center', justifyContent:'space-between' }}>
-            <View>
-              <Text style={{ fontSize:15, fontWeight:'800', color:colors.teal }}>
-                {g.current.toLocaleString()}
-                <Text style={{ fontSize:11, color:colors.text3 }}>/{g.target.toLocaleString()}</Text>
-              </Text>
-              <Text style={{ fontSize:9, color:colors.text3, textTransform:'uppercase' }}>{g.unit}</Text>
-            </View>
-            <View style={{ flexDirection:'row', gap:5 }}>
-              <TouchableOpacity onPress={() => nudge(g.id, -1)}
-                style={{ width:28, height:28, borderRadius:14,
-                  backgroundColor:(colors.isDark ? 'rgba(255,255,255,0.08)' : colors.tint),
-                  alignItems:'center', justifyContent:'center' }}>
-                <Text style={{ color:colors.text2, fontWeight:'700' }}>−</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => nudge(g.id, 1)}
-                style={{ width:28, height:28, borderRadius:14,
-                  backgroundColor:colors.teal, alignItems:'center', justifyContent:'center' }}>
-                <Text style={{ color: colors.isDark ? '#0A0A0F' : '#fff', fontWeight:'700' }}>+</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+
+      {/* Prominent days-left number */}
+      <View style={{ alignItems:'center', paddingVertical:6, marginBottom:8 }}>
+        <Text style={{ fontSize:64, fontWeight:'800', color:colors.teal, letterSpacing:-2, fontVariant:['tabular-nums'] }}>{d}</Text>
+        <Text style={{ fontSize:11, color:colors.text3, textTransform:'uppercase', letterSpacing:1, marginTop:2 }}>
+          {d === 1 ? 'day left' : 'days left'}
+        </Text>
+      </View>
+
+      {/* Progress + nudge (secondary) */}
+      <View style={{ backgroundColor:(colors.isDark ? 'rgba(255,255,255,0.05)' : colors.tile), borderRadius:12, padding:10,
+        flexDirection:'row', alignItems:'center', justifyContent:'space-between', marginBottom:14 }}>
+        <View>
+          <Text style={{ fontSize:15, fontWeight:'800', color:colors.teal }}>
+            {g.current.toLocaleString()}
+            <Text style={{ fontSize:11, color:colors.text3 }}>/{g.target.toLocaleString()}</Text>
+          </Text>
+          <Text style={{ fontSize:9, color:colors.text3, textTransform:'uppercase' }}>{g.unit} · {gp}%</Text>
+        </View>
+        <View style={{ flexDirection:'row', gap:5 }}>
+          <TouchableOpacity onPress={() => nudge(g.id, -1)}
+            style={{ width:28, height:28, borderRadius:14,
+              backgroundColor:(colors.isDark ? 'rgba(255,255,255,0.08)' : colors.tint),
+              alignItems:'center', justifyContent:'center' }}>
+            <Text style={{ color:colors.text2, fontWeight:'700' }}>−</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => nudge(g.id, 1)}
+            style={{ width:28, height:28, borderRadius:14,
+              backgroundColor:colors.teal, alignItems:'center', justifyContent:'center' }}>
+            <Text style={{ color: colors.isDark ? '#0A0A0F' : '#fff', fontWeight:'700' }}>+</Text>
+          </TouchableOpacity>
         </View>
       </View>
+
       <View style={{ borderTopWidth:1, borderTopColor:(colors.isDark ? 'rgba(255,255,255,0.07)' : colors.track), paddingTop:10 }}>
         <Text style={{ fontSize:12, color:colors.text2 }}>
           <Text style={{ color:colors.text3 }}>{wday} · </Text>
