@@ -13,7 +13,8 @@ import { DateTimeField } from '../../components/DateTimeField';
 import { AlertsEditor } from '../../components/AlertsEditor';
 import { LinksEditor } from '../../components/LinksEditor';
 import { Toggle } from '../../components/FormControls';
-import { COLLECTION_PRESETS, COUNT_PRESETS, PRESET_BY_ID } from '../../constants/lifelogs';
+import { PRESET_BY_ID } from '../../constants/lifelogs';
+import { PresetBrowser } from '../../components/PresetBrowser';
 
 const DATE_LABELS: Record<string,string> = {
   birthday:'Date of Birth', anniversary:'Anniversary Date',
@@ -129,21 +130,9 @@ export default function AddMemoryModal() {
           {type === 'lifelog' && (
             <>
               <FL label="What are you tracking?" />
-              <Text style={{ fontSize:11, color:colors.text3, marginTop:-2, marginBottom:7 }}>
-                Collections — progress toward a set (X of Y)
-              </Text>
-              <View style={{ flexDirection:'row', flexWrap:'wrap', gap:7, marginBottom:12 }}>
-                {COLLECTION_PRESETS.map(p => (
-                  <Chip key={p.id} selected={preset===p.id} emoji={p.emoji} label={p.name} onPress={() => pickPreset(p.id)} />
-                ))}
-              </View>
-              <Text style={{ fontSize:11, color:colors.text3, marginBottom:7 }}>Counts — a running tally</Text>
-              <View style={{ flexDirection:'row', flexWrap:'wrap', gap:7, marginBottom:12 }}>
-                {COUNT_PRESETS.map(p => (
-                  <Chip key={p.id} selected={preset===p.id} emoji={p.emoji} label={p.name} onPress={() => pickPreset(p.id)} />
-                ))}
-                <Chip selected={preset===''} emoji="✨" label="Custom" onPress={pickCustom} />
-              </View>
+              <PresetBrowser selectedId={preset}
+                onSelect={p => (p ? pickPreset(p.id) : pickCustom())}
+                showCustom customSelected={preset === ''} />
               {preset === '' && (
                 <>
                   <FL label="Target (optional)" />
@@ -219,16 +208,3 @@ function FL({ label }: { label: string }) {
     textTransform:'uppercase', letterSpacing:0.5, marginBottom:6 }}>{label}</Text>;
 }
 
-function Chip({ selected, emoji, label, onPress }: { selected: boolean; emoji: string; label: string; onPress: () => void }) {
-  const { colors } = useTheme();
-  return (
-    <TouchableOpacity onPress={onPress}
-      style={{ flexDirection:'row', alignItems:'center', gap:6,
-        paddingVertical:8, paddingHorizontal:11, borderRadius:11, borderWidth:1.5,
-        borderColor: selected ? colors.teal : colors.border,
-        backgroundColor: selected ? (colors.isDark ? 'rgba(62,207,178,0.12)' : colors.tint) : colors.glass }}>
-      <Text style={{ fontSize:15 }}>{emoji}</Text>
-      <Text style={{ fontSize:12, fontWeight:'600', color: selected ? colors.teal : colors.text2 }}>{label}</Text>
-    </TouchableOpacity>
-  );
-}

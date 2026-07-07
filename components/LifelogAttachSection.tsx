@@ -3,7 +3,8 @@ import { View, Text, TextInput, TouchableOpacity } from 'react-native';
 import { useTheme } from '../contexts/ThemeContext';
 import { useToast } from './Toast';
 import { useStore } from '../store/useStore';
-import { COLLECTION_PRESETS, COUNT_PRESETS, PRESET_BY_ID, presetUniverse } from '../constants/lifelogs';
+import { PRESET_BY_ID, presetUniverse } from '../constants/lifelogs';
+import { PresetBrowser } from './PresetBrowser';
 
 // Shared "Add to a life log" picker used by BOTH add-event and edit-event.
 // Three paths: From a type (preset + optional qualifier), Existing log, Custom.
@@ -129,18 +130,7 @@ export const LifelogAttachSection = forwardRef<AttachHandle, { emoji: string }>(
       {/* PATH 1 — preset type + optional qualifier */}
       {pathMode === 'preset' && (
         <>
-          <FL label="Collections" />
-          <View style={{ flexDirection:'row', flexWrap:'wrap', gap:7, marginBottom:12 }}>
-            {COLLECTION_PRESETS.map(p => (
-              <PresetChip key={p.id} p={p} selected={selectedPreset===p.id} onPress={() => pickPreset(p.id)} />
-            ))}
-          </View>
-          <FL label="Counts" />
-          <View style={{ flexDirection:'row', flexWrap:'wrap', gap:7, marginBottom:12 }}>
-            {COUNT_PRESETS.map(p => (
-              <PresetChip key={p.id} p={p} selected={selectedPreset===p.id} onPress={() => pickPreset(p.id)} />
-            ))}
-          </View>
+          <PresetBrowser selectedId={selectedPreset} onSelect={p => pickPreset(p ? p.id : '')} />
 
           {selectedPreset !== '' && (() => {
             const matches = matchesFor(selectedPreset, presetQualifier);
@@ -229,17 +219,3 @@ function FL({ label }: { label: string }) {
     textTransform:'uppercase', letterSpacing:0.5, marginBottom:6 }}>{label}</Text>;
 }
 
-function PresetChip({ p, selected, onPress }:
-  { p: { id: string; name: string; emoji: string }; selected: boolean; onPress: () => void }) {
-  const { colors } = useTheme();
-  return (
-    <TouchableOpacity onPress={onPress}
-      style={{ flexDirection:'row', alignItems:'center', gap:6, paddingVertical:8, paddingHorizontal:11,
-        borderRadius:11, borderWidth:1.5,
-        borderColor: selected ? colors.teal : colors.border,
-        backgroundColor: selected ? (colors.isDark ? 'rgba(62,207,178,0.12)' : colors.tint) : colors.glass }}>
-      <Text style={{ fontSize:15 }}>{p.emoji}</Text>
-      <Text style={{ fontSize:12, fontWeight:'600', color: selected ? colors.teal : colors.text2 }}>{p.name}</Text>
-    </TouchableOpacity>
-  );
-}

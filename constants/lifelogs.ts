@@ -5,6 +5,8 @@
 // picked from remaining items; custom collections use only a numeric `target`.
 // ---------------------------------------------------------------------------
 
+import { EXPANDED_UNIVERSES } from './lifelogUniverses.generated';
+
 export interface LifelogPreset {
   id: string;
   name: string;
@@ -12,6 +14,7 @@ export interface LifelogPreset {
   kind: 'count' | 'collection';
   universe?: string[]; // full named set (collection presets only)
   target?: number;     // the "Y" (defaults to universe.length for collections)
+  group?: string;      // browser grouping for expanded presets (originals: undefined → "Popular")
 }
 
 // ---- Seeded universes ------------------------------------------------------
@@ -120,8 +123,35 @@ export const COUNT_PRESETS: LifelogPreset[] = [
 
 export const LIFELOG_PRESETS: LifelogPreset[] = [...COLLECTION_PRESETS, ...COUNT_PRESETS];
 
+// ---- Expanded seeded universes (ADDITIVE) ----------------------------------
+// 77 bounded-universe collection presets from lifelogUniverses.generated.ts.
+// Each resolves EXACTLY like the original five universes: collection kind,
+// universe = items, target = items.length. The originals above are untouched;
+// these are merged in only for resolution (PRESET_BY_ID) and the preset browser.
+export const EXPANDED_PRESETS: LifelogPreset[] = EXPANDED_UNIVERSES.map(u => ({
+  id: u.id, name: u.name, emoji: u.emoji, kind: 'collection',
+  universe: u.items, target: u.items.length, group: u.group,
+}));
+
+// Expanded presets grouped for the browser, preserving the file's group order.
+export const EXPANDED_GROUPS: { group: string; presets: LifelogPreset[] }[] = (() => {
+  const order: string[] = [];
+  const byGroup: Record<string, LifelogPreset[]> = {};
+  for (const p of EXPANDED_PRESETS) {
+    const g = p.group ?? 'Other';
+    if (!byGroup[g]) { byGroup[g] = []; order.push(g); }
+    byGroup[g].push(p);
+  }
+  return order.map(g => ({ group: g, presets: byGroup[g] }));
+})();
+
+// Every preset (originals + expanded), for the browser's search. Originals first.
+export const ALL_LIFELOG_PRESETS: LifelogPreset[] = [...LIFELOG_PRESETS, ...EXPANDED_PRESETS];
+
+// Resolution map covers originals AND expanded. Expanded listed first so an
+// original preset ALWAYS wins on any id collision (originals are never altered).
 export const PRESET_BY_ID: Record<string, LifelogPreset> =
-  Object.fromEntries(LIFELOG_PRESETS.map(p => [p.id, p]));
+  Object.fromEntries([...EXPANDED_PRESETS, ...LIFELOG_PRESETS].map(p => [p.id, p]));
 
 /** The named universe for a memory's preset, or undefined (count / custom). */
 export function presetUniverse(logPreset: string | undefined): string[] | undefined {
