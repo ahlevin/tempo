@@ -9,6 +9,7 @@ import { useConfirm } from '../../components/ConfirmDialog';
 import { fmtLogDate, daysSince, daysBetween } from '../../utils/dates';
 import { isCollectionLog, logUniverse, logCount, upcomingCount, isUpcomingEntry, sortedEntries, logNoun } from '../../utils/lifelog';
 import { openLogEntryDetail } from '../../utils/nav';
+import { LinkBadge } from '../../components/LinkBadge';
 
 export default function LifelogDetailModal() {
   const { colors } = useTheme();
@@ -153,6 +154,7 @@ export default function LifelogDetailModal() {
                             <Text style={{ fontSize:9, fontWeight:'800', color:teal, textTransform:'uppercase', letterSpacing:0.3 }}>Upcoming</Text>
                           </View>
                         )}
+                        <LinkBadge count={entry.links?.length} />
                       </View>
                       {!!secondary && <Text style={{ fontSize:13, color:colors.text2, marginTop:1 }}>{secondary}</Text>}
                       {!!entry.note && <Text style={{ fontSize:13, color:colors.text2, marginTop:2 }} numberOfLines={2}>{entry.note}</Text>}

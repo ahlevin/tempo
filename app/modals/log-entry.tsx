@@ -6,8 +6,9 @@ import { format } from 'date-fns';
 import { useTheme } from '../../contexts/ThemeContext';
 import { CloseButton } from '../../components/CloseButton';
 import { useStore } from '../../store/useStore';
-import { DatePrecision } from '../../store/types';
+import { DatePrecision, Link } from '../../store/types';
 import { DateTimeField } from '../../components/DateTimeField';
+import { LinksEditor } from '../../components/LinksEditor';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { useToast } from '../../components/Toast';
 import { logUniverse, isCollectionLog, isUpcomingEntry } from '../../utils/lifelog';
@@ -47,6 +48,7 @@ export default function LogEntryModal() {
   const [year,  setYear]  = useState(editing?.date ? editing.date.slice(0, 4) : String(now.getFullYear()));
   const [month, setMonth] = useState(editing?.date && editing.date.length >= 7 ? parseInt(editing.date.slice(5, 7), 10) - 1 : now.getMonth());
   const [note,  setNote]  = useState(editing?.note ?? '');
+  const [links, setLinks] = useState<Link[]>(editing?.links ?? []);
   const [label, setLabel] = useState(!isPicker ? (editing?.item ?? '') : ''); // count/custom label
   const [item,  setItem]  = useState(isPicker ? (editing?.item ?? '') : '');  // collection item
   const [query, setQuery] = useState('');
@@ -82,7 +84,7 @@ export default function LogEntryModal() {
   function entryPayload() {
     const chosenItem = isPicker ? item : label.trim();
     return { date: buildDate(), note: note.trim(), datePrecision: precision,
-      item: chosenItem || undefined };
+      item: chosenItem || undefined, links };
   }
 
   // Add (count / custom collection): create then close.
@@ -96,7 +98,7 @@ export default function LogEntryModal() {
     if (!item) return;
     addLogEntry(id, entryPayload());
     setAddedCount(c => c + 1);
-    setItem(''); setNote(''); setQuery('');
+    setItem(''); setNote(''); setQuery(''); setLinks([]);
   }
   // Edit an existing entry.
   function saveEdit() {
@@ -257,6 +259,8 @@ export default function LogEntryModal() {
           </Text>
           <TextInput value={note} onChangeText={setNote}
             placeholder="How was it?…" placeholderTextColor={colors.text3} style={fi} />
+
+          <LinksEditor key={addedCount} value={links} onChange={setLinks} />
 
           {isEdit ? (
             <>

@@ -64,6 +64,8 @@ export interface LogEntry {
   /** How much of `date` is known — controls display (e.g. "2019" vs "March 2019"
    *  vs "March 15, 2019" vs no date). Absent → treat as 'full'. */
   datePrecision?: DatePrecision;
+  /** Per-entry labeled hyperlinks. Absent on older entries → treated as []. */
+  links?: Link[];
 }
 
 export interface Memory {
