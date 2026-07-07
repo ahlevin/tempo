@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Link } from 'expo-router';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -64,12 +63,9 @@ export default function LoginScreen() {
             : <Text style={{ color:'#fff', fontSize:16, fontWeight:'700' }}>Log In</Text>}
         </TouchableOpacity>
 
-        <View style={{ flexDirection:'row', justifyContent:'center', marginTop:22, gap:5 }}>
-          <Text style={{ color:colors.text3, fontSize:14 }}>New here?</Text>
-          <Link href="/signup" style={{ color:colors.accent, fontSize:14, fontWeight:'700' }}>
-            Create an account
-          </Link>
-        </View>
+        <Text style={{ color:colors.text3, fontSize:13, textAlign:'center', marginTop:22 }}>
+          Accounts are currently invite-only.
+        </Text>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
