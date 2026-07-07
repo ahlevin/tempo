@@ -1,13 +1,14 @@
 import { Text, TouchableOpacity, View } from 'react-native';
-import { router } from 'expo-router';
 import { useTheme } from '../contexts/ThemeContext';
 import { useStore } from '../store/useStore';
 import { lightCardShadow } from '../constants/colors';
 import { SwipeableRow } from './SwipeableRow';
+import { openLogEntryDetail } from '../utils/nav';
 import type { UpcomingLogItem } from '../utils/lifelog';
 
 // A future-dated life-log entry shown as a countdown on the Countdowns tab.
-// Tapping opens its parent life log. It carries the life log's teal treatment.
+// Tapping opens its READ-ONLY detail view (consistent with events/goals/memories);
+// the detail's Edit button opens the entry editor. Carries the life log's teal.
 export function UpcomingLogRow({ item }: { item: UpcomingLogItem }) {
   const { colors } = useTheme();
   const deleteLogEntry = useStore(s => s.deleteLogEntry);
@@ -16,9 +17,8 @@ export function UpcomingLogRow({ item }: { item: UpcomingLogItem }) {
   const dateStr = new Date(item.dateISO + 'T00:00:00').toLocaleDateString('en-US',
     { weekday: 'short', month: 'short', day: 'numeric' });
 
-  // Canonical editor for a life-log entry — the SAME screen the Life Log detail
-  // opens for it, so both surfaces edit the one underlying record.
-  const open = () => router.push({ pathname: '/modals/log-entry', params: { id: item.memId, edit: String(item.index) } });
+  // Read-only detail first (Edit there opens the canonical entry editor).
+  const open = () => openLogEntryDetail(item.memId, item.index);
 
   // Delete from the Countdowns side removes the ONE underlying entry — it's the
   // same record surfaced here and inside the life log, so a single delete clears
