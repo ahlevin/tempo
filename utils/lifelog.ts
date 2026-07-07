@@ -5,6 +5,12 @@ import { daysUntil } from './dates';
 // Shared life-log helpers (a life log is a container; dates live on entries).
 
 export function isCollectionLog(m: Memory): boolean {
+  // Authoritative: a log is a COLLECTION if its preset resolves to one — keying
+  // off PRESET_BY_ID (which covers all 92 presets, original + expanded) instead
+  // of trusting the stored logKind. This self-heals logs saved with a stale/wrong
+  // logKind (e.g. an expanded-universe log that got 'count'), so they get the item
+  // picker without recreation. Custom logs (no preset) fall back to logKind.
+  if (m.logPreset && PRESET_BY_ID[m.logPreset]?.kind === 'collection') return true;
   return (m.logKind ?? 'count') === 'collection';
 }
 

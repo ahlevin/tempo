@@ -5,7 +5,7 @@ import { catColor, heroTintBg, lightCardShadow } from '../constants/colors';
 import { openEventDetail, openGoalDetail, openMemoryDetail, openHolidayDetail } from '../utils/nav';
 import { CATEGORIES } from '../constants/data';
 import { visibleHolidays, HolidayItem } from '../constants/holidays';
-import { logCount, upcomingCount } from '../utils/lifelog';
+import { logCount, upcomingCount, isCollectionLog, logUniverse } from '../utils/lifelog';
 import { useTheme } from '../contexts/ThemeContext';
 import { useTick } from '../contexts/TickContext';
 import { useStore } from '../store/useStore';
@@ -252,7 +252,7 @@ function MemoryCard({ memory: m }: { memory: any }) {
   // COMPLETED only (future-dated entries don't inflate the headline).
   const accent = colors.teal;
   const dark   = colors.isDark ? colors.teal : colors.accent;
-  const isColl = (m.logKind === 'collection') && !!m.logTarget;
+  const isColl = isCollectionLog(m) && !!(m.logTarget ?? logUniverse(m)?.length);
   const completed = logCount(m);
   const upN = upcomingCount(m);
   const bigVal   = completed;

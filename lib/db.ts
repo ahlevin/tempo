@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import { Event, Goal, Memory, UserPrefs, LogEntry } from '../store/types';
+import { PRESET_BY_ID } from '../constants/lifelogs';
 
 // ---------------------------------------------------------------------------
 // Field mapping notes (app camelCase <-> DB snake_case)
@@ -137,7 +138,12 @@ export function rowToMemory(r: any): Memory {
     originDate: datePart(r.origin_date ?? ''),
     yearUnknown: !!r.year_unknown,
     entries: (r.entries ?? []) as LogEntry[],
-    logKind: r.log_kind === 'collection' ? 'collection' : 'count',
+    // Heal on read: if the log's preset resolves (original OR expanded), take the
+    // preset's authoritative kind — correcting any log persisted with a stale
+    // logKind (e.g. an expanded-universe log saved as 'count'). Custom/no-preset
+    // logs keep their stored kind.
+    logKind: (r.log_preset ? PRESET_BY_ID[r.log_preset]?.kind : undefined)
+      ?? (r.log_kind === 'collection' ? 'collection' : 'count'),
     logPreset: r.log_preset ?? undefined,
     logTarget: r.log_target ?? undefined,
     datePrecision: r.date_precision ?? 'full',
