@@ -6,6 +6,7 @@ import { lightCardShadow, dayCountColor } from '../constants/colors';
 import { useStore } from '../store/useStore';
 import { Goal } from '../store/types';
 import { daysUntil } from '../utils/dates';
+import { openGoalDetail } from '../utils/nav';
 import { Confetti } from './Confetti';
 import { SwipeableRow } from './SwipeableRow';
 import { FavStar } from './FavStar';
@@ -17,7 +18,7 @@ export function GoalCard({ goal: g }: { goal: Goal }) {
   const nudgeGoal  = useStore(s => s.nudgeGoal);
   const deleteGoal = useStore(s => s.deleteGoal);
   // Tap the header opens the read-only detail view (which has its own Edit button).
-  const edit = () => router.push({ pathname: '/modals/detail-goal', params: { id: g.id } });
+  const edit = () => openGoalDetail(g.id);
 
   const gp   = Math.round(Math.min(100, (g.current / g.target) * 100));
   const d    = daysUntil(g.date);

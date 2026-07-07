@@ -8,6 +8,7 @@ import { FavStar } from './FavStar';
 import { AlertBadge } from './AlertBadge';
 import { lightCardShadow, catColor } from '../constants/colors';
 import { isCollectionLog, logCount, upcomingCount } from '../utils/lifelog';
+import { openMemoryDetail } from '../utils/nav';
 import {
   yearsMonthsDays, nextAnnual, daysSince, daysUntil,
   ordinal, fmtShort, fmtMonthDay, fmtShortNoYear, fmtLogDate,
@@ -72,9 +73,7 @@ export function MemoryCard({ memory: m }: { memory: Memory }) {
   const r      = yearsMonthsDays(m.originDate);
   // Tap opens a read-only detail view (each has its own Edit button). Life logs
   // use their richer detail (entries + add); other memories use detail-memory.
-  const open = m.type === 'lifelog'
-    ? () => router.push({ pathname: '/modals/lifelog-detail', params: { id: m.id } })
-    : () => router.push({ pathname: '/modals/detail-memory', params: { id: m.id } });
+  const open = () => openMemoryDetail(m);
 
   return (
     <SwipeableRow onDelete={() => deleteMemory(m.id)} marginBottom={10}

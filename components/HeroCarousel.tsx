@@ -1,7 +1,8 @@
 import { useRef, useState } from 'react';
 import { View, Text, ScrollView, Dimensions, TouchableOpacity, Platform } from 'react-native';
-import { useIsFocused, router } from 'expo-router';
+import { useIsFocused } from 'expo-router';
 import { catColor, heroTintBg, lightCardShadow } from '../constants/colors';
+import { openEventDetail, openGoalDetail, openMemoryDetail, openHolidayDetail } from '../utils/nav';
 import { CATEGORIES } from '../constants/data';
 import { visibleHolidays, HolidayItem } from '../constants/holidays';
 import { logCount, upcomingCount } from '../utils/lifelog';
@@ -142,7 +143,7 @@ function EventCard({ event: e, active }: { event: any; active: boolean }) {
   const secondary = cat ? `${cat.emoji} ${cat.short}` : 'Countdown';
   return (
     <HeroFrame bgDark="#1A1830" borderDark="rgba(124,106,245,0.22)" fav={e.fav} onFav={() => toggleFav(e.id)}
-      onPress={() => router.push({ pathname: '/modals/detail-event', params: { id: e.id } })}>
+      onPress={() => openEventDetail(e.id)}>
       <Eyebrow color={accent}>{rl ? '🔁 ' + rl : 'Next Up'}</Eyebrow>
       <CardName>{e.emoji} {e.name}</CardName>
       <Secondary color={accent}>{secondary}</Secondary>
@@ -168,7 +169,7 @@ function GoalCard({ goal: g }: { goal: any }) {
 
   return (
     <HeroFrame bgDark="#0F1E1A" borderDark="rgba(62,207,178,0.25)" fav={g.fav} onFav={() => toggleFav(g.id)}
-      onPress={() => router.push({ pathname: '/modals/detail-goal', params: { id: g.id } })}>
+      onPress={() => openGoalDetail(g.id)}>
       <Eyebrow color={colors.teal}>Active Goal</Eyebrow>
       <CardName>{g.emoji} {g.name}</CardName>
       <Secondary color={colors.teal}>Goal: {g.target.toLocaleString()} {g.unit}</Secondary>
@@ -235,7 +236,7 @@ function MemoryCard({ memory: m }: { memory: any }) {
     const tileBg = heroTintBg(colors, dark);
     return (
       <HeroFrame bgDark={cardBgDark} borderDark={borderDark} fav={m.fav} onFav={() => toggleFav(m.id)}
-        onPress={() => router.push({ pathname: '/modals/detail-memory', params: { id: m.id } })}>
+        onPress={() => openMemoryDetail(m)}>
         <Eyebrow color={accent}>{eyebrow}</Eyebrow>
         <CardName>{m.emoji} {m.name}</CardName>
         <Secondary color={accent}>{midLabel}</Secondary>
@@ -263,7 +264,7 @@ function MemoryCard({ memory: m }: { memory: any }) {
   const info2 = isColl ? `${completed} of ${m.logTarget} logged` : `${completed} logged`;
   return (
     <HeroFrame bgDark="#0F1E1A" borderDark="rgba(62,207,178,0.28)" fav={m.fav} onFav={() => toggleFav(m.id)}
-      onPress={() => router.push({ pathname: '/modals/lifelog-detail', params: { id: m.id } })}>
+      onPress={() => openMemoryDetail(m)}>
       <Eyebrow color={accent}>Life Log</Eyebrow>
       <CardName>{m.emoji} {m.name}</CardName>
       <Secondary color={accent}>{secondary}</Secondary>
@@ -285,7 +286,7 @@ function HolidayCard({ item }: { item: HolidayItem }) {
   const dstr = new Date(item.dateISO + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
   return (
     <HeroFrame bgDark="#0F1E14" borderDark="rgba(46,139,87,0.28)" fav={item.fav} onFav={() => setHolidayFav(item.id, !item.fav)}
-      onPress={() => router.push({ pathname: '/modals/holiday-detail', params: { id: item.id } })}>
+      onPress={() => openHolidayDetail(item.id)}>
       <Eyebrow color={accent}>Holiday Countdown</Eyebrow>
       <CardName>{item.emoji} {item.name}</CardName>
       <Secondary color={accent}>Repeats yearly</Secondary>

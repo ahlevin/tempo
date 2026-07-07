@@ -7,6 +7,7 @@ import { useStore } from '../../store/useStore';
 import { useAuth } from '../../contexts/AuthContext';
 import { TIMEZONES, QUOTES } from '../../constants/data';
 import { catColor } from '../../constants/colors';
+import { BUILD_ID } from '../../constants/build';
 
 type QuoteType = 'bible' | 'motivational' | 'jokes' | 'off';
 const QUOTE_OPTS: { id: QuoteType; icon: string; label: string; desc: string }[] = [
@@ -223,6 +224,11 @@ export default function ProfileScreen() {
             <Text style={{ fontSize:12, color:colors.text3, marginTop:2 }}>Return to the login screen</Text>
           </View>
         </TouchableOpacity>
+
+        {/* Build marker — confirm a fresh deploy is live (Cloudflare can lag). */}
+        <Text style={{ fontSize:11, color:colors.text3, textAlign:'center', marginTop:4 }}>
+          Build {BUILD_ID}
+        </Text>
       </ScrollView>
     </SafeAreaView>
   );

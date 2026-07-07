@@ -8,6 +8,7 @@ import { FavStar } from './FavStar';
 import { AlertBadge } from './AlertBadge';
 import { lightCardShadow, dayCountColor, catColor } from '../constants/colors';
 import { nextAnnual, daysUntil, yearsMonthsDays, ordinal } from '../utils/dates';
+import { openMemoryDetail } from '../utils/nav';
 
 // A compact "Upcoming" list row for a recurring birthday/anniversary memory.
 // Leads with the person's name, shows the upcoming age / anniversary, and the
@@ -39,7 +40,7 @@ export function UpcomingMemoryRow({ memory: m }: { memory: Memory }) {
     { weekday: 'short', month: 'short', day: 'numeric' });
 
   // Tap opens the read-only detail view (which has its own Edit button).
-  const edit = () => router.push({ pathname: '/modals/detail-memory', params: { id: m.id } });
+  const edit = () => openMemoryDetail(m);
 
   return (
     <SwipeableRow onDelete={() => deleteMemory(m.id)}

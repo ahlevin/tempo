@@ -8,6 +8,7 @@ import { useStore } from '../../store/useStore';
 import { SwipeableRow } from '../../components/SwipeableRow';
 import { MemoryCard } from '../../components/MemoryCard';
 import { visibleHolidays } from '../../constants/holidays';
+import { openEventDetail, openGoalDetail, openHolidayDetail } from '../../utils/nav';
 import { nextOccurrence, daysUntil, fmtDateTime } from '../../utils/dates';
 
 // Favorites now lives as a sub-screen linked from Profile (was its own tab).
@@ -60,7 +61,7 @@ export default function FavoritesScreen() {
                 <SwipeableRow key={e.id} onDelete={() => deleteEvent(e.id)}
                   confirmTitle="Delete Event" confirmMessage={`Delete "${e.name}"? This can't be undone.`}>
                 <TouchableOpacity activeOpacity={0.8}
-                  onPress={() => router.push({ pathname:'/modals/detail-event', params:{ id:e.id } })}
+                  onPress={() => openEventDetail(e.id)}
                   style={{ backgroundColor:colors.surf, borderRadius:18,
                   borderWidth:1, borderColor:colors.border, padding:14,
                   marginBottom:8, flexDirection:'row', alignItems:'center', gap:12,
@@ -93,7 +94,7 @@ export default function FavoritesScreen() {
             <Text style={{ fontSize:16, fontWeight:'700', color:colors.text1, marginBottom:10 }}>Holidays</Text>
             {favHolidays.map(h => (
               <TouchableOpacity key={h.id} activeOpacity={0.8}
-                onPress={() => router.push({ pathname:'/modals/holiday-detail', params:{ id:h.id } })}
+                onPress={() => openHolidayDetail(h.id)}
                 style={{ backgroundColor:colors.surf, borderRadius:18, borderWidth:1, borderColor:colors.border,
                   padding:14, marginBottom:8, flexDirection:'row', alignItems:'center', gap:12,
                   ...(colors.isDark ? null : lightCardShadow) }}>
@@ -123,7 +124,7 @@ export default function FavoritesScreen() {
                 <SwipeableRow key={g.id} onDelete={() => deleteGoal(g.id)}
                   confirmTitle="Delete Goal" confirmMessage={`Delete "${g.name}"? This can't be undone.`}>
                 <TouchableOpacity activeOpacity={0.8}
-                  onPress={() => router.push({ pathname:'/modals/detail-goal', params:{ id:g.id } })}
+                  onPress={() => openGoalDetail(g.id)}
                   style={{ backgroundColor:colors.surf, borderRadius:18,
                   borderWidth:1, borderColor: colors.isDark ? 'rgba(62,207,178,0.2)' : colors.border,
                   padding:14, marginBottom:8, ...(colors.isDark ? null : lightCardShadow) }}>

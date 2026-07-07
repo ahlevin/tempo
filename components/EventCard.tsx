@@ -8,6 +8,7 @@ import { SwipeableRow } from './SwipeableRow';
 import { FavStar } from './FavStar';
 import { AlertBadge } from './AlertBadge';
 import { nextOccurrence, daysUntil, eventProgress, recurLabel, fmtDateTime } from '../utils/dates';
+import { openEventDetail } from '../utils/nav';
 
 export function EventCard({ event: e }: { event: Event }) {
   const { colors } = useTheme();
@@ -23,7 +24,7 @@ export function EventCard({ event: e }: { event: Event }) {
   const dstr   = fmtDateTime(nd, e.allDay);
 
   // Tap opens the read-only detail view (which has its own Edit button).
-  const edit = () => router.push({ pathname: '/modals/detail-event', params: { id: e.id } });
+  const edit = () => openEventDetail(e.id);
 
   return (
     <SwipeableRow onDelete={() => deleteEvent(e.id)}
