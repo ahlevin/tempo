@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Platform } from 'react-native';
 import { format, addDays } from 'date-fns';
 import { Event, Goal, Memory, UserPrefs, Alert, Recurrence } from './types';
 import { DEFAULT_HOLIDAY_IDS } from '../constants/holidays';
@@ -76,10 +75,11 @@ interface TempoStore {
   setHolidayReminder: (id: string, alerts: Alert[]) => void;
 }
 
-// Sync tracing. Enabled in dev on every platform AND always on web (so we can
-// watch enqueue → flush → POST in the browser console, since the web build runs
-// with __DEV__ === false). Flip SYNC_DEBUG to remove later.
-const SYNC_DEBUG = (typeof __DEV__ !== 'undefined' && __DEV__) || Platform.OS === 'web';
+// Sync tracing — DEV ONLY. Every [sync] enqueue → flush → POST line routes through
+// slog(), so gating on __DEV__ keeps them during local development but silences them
+// in the production web build (__DEV__ === false), leaving the deployed console clean.
+// (Genuine failures still surface via console.error below — those are not gated.)
+const SYNC_DEBUG = typeof __DEV__ !== 'undefined' && __DEV__;
 const slog = (...args: any[]) => { if (SYNC_DEBUG) console.log('[sync]', ...args); };
 
 // Per-op in-pass retry with backoff (transient failures like a not-yet-ready session).
