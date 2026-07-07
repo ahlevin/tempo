@@ -136,11 +136,11 @@ export default function EditEventModal() {
             placeholder="Add a note…" placeholderTextColor={colors.text3}
             style={{ ...fi, minHeight:64, textAlignVertical:'top' }} />
 
+          <LinksEditor value={links} onChange={setLinks} />
+
           <RecurrenceEditor value={recur} onChange={setRecur} />
 
           <AlertsEditor value={alerts} onChange={setAlerts} />
-
-          <LinksEditor value={links} onChange={setLinks} />
 
           <TouchableOpacity onPress={save}
             style={{ backgroundColor:colors.accent, borderRadius:14, padding:15, alignItems:'center', marginBottom:12 }}>

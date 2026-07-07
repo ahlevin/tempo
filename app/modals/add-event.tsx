@@ -127,6 +127,9 @@ export default function AddEventModal() {
             placeholder="Add a note…" placeholderTextColor={colors.text3}
             style={{ ...fi, minHeight:64, textAlignVertical:'top' }} />
 
+          {/* Links belong to a real event; hidden when graduating into a life log. */}
+          {!attachLog && <LinksEditor value={links} onChange={setLinks} />}
+
           {/* Graduate into a life log: counts down now, becomes a completed
               entry once its date passes. When on, we create a life-log entry
               instead of a standalone event. */}
@@ -145,7 +148,6 @@ export default function AddEventModal() {
             <>
               <RecurrenceEditor value={recur} onChange={setRecur} />
               <AlertsEditor value={alerts} onChange={setAlerts} />
-              <LinksEditor value={links} onChange={setLinks} />
             </>
           )}
 

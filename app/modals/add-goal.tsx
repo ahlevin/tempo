@@ -81,8 +81,8 @@ export default function AddGoalModal() {
           <TextInput value={note} onChangeText={setNote} multiline
             placeholder="Add a note…" placeholderTextColor={colors.text3}
             style={{ ...fi, minHeight:64, textAlignVertical:'top' }} />
-          <AlertsEditor value={alerts} onChange={setAlerts} />
           <LinksEditor value={links} onChange={setLinks} />
+          <AlertsEditor value={alerts} onChange={setAlerts} />
           <TouchableOpacity onPress={submit}
             style={{ backgroundColor:colors.teal, borderRadius:14, padding:15, alignItems:'center' }}>
             <Text style={{ color:'#0A0A0F', fontSize:15, fontWeight:'700' }}>Set Goal →</Text>

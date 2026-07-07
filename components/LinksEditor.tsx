@@ -12,8 +12,8 @@ import { cleanLinks } from '../utils/links';
  * dropped. Mirrors the AlertsEditor "uncontrolled-with-initial-value" pattern.
  */
 export function LinksEditor({
-  value, onChange,
-}: { value: Link[]; onChange: (l: Link[]) => void }) {
+  value = [], onChange,
+}: { value?: Link[]; onChange: (l: Link[]) => void }) {
   const { colors } = useTheme();
   const [rows, setRows] = useState<Link[]>(
     value.length ? value.map(l => ({ label: l.label ?? '', url: l.url ?? '' })) : []
