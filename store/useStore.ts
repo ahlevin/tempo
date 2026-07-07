@@ -20,6 +20,7 @@ const DEFAULT_PREFS: UserPrefs = {
   onboarded: false,
   theme: 'dark',
   holidays: { enabled: false, shown: {}, fav: {}, reminders: {} },
+  isSuperuser: false,
 };
 
 // A queued write. Upserts reference the row by id and re-read the latest state
@@ -63,6 +64,8 @@ interface TempoStore {
   addLogEntry: (memId: string, entry: { date: string; note: string; item?: string; datePrecision?: import('./types').DatePrecision; links?: import('./types').Link[] }) => void;
   updateLogEntry: (memId: string, index: number, patch: Partial<import('./types').LogEntry>) => void;
   deleteLogEntry: (memId: string, index: number) => void;
+  // Universe admin rename-safety: rename this user's matching logged items.
+  renameLogItems: (renames: { preset: string; from: string; to: string }[]) => number;
   // Cross-type: a standalone event <-> a life-log entry (single source of truth).
   attachEventToLog: (eventId: string, logId: string, entry: import('./types').LogEntry) => void;
   detachEntryToEvent: (memId: string, index: number) => string | null;
@@ -341,6 +344,36 @@ export const useStore = create<TempoStore>()(
         addLogEntry: (memId, entry) => {
           set(s => ({ memories: s.memories.map(m => m.id === memId ? { ...m, entries: [...m.entries, entry] } : m) }));
           enqueue({ kind: 'upsert', table: 'memories', id: memId });
+        },
+        // Rename-safety for the universe admin: when a superuser renames items in a
+        // universe, rename THIS user's matching logged entries (scoped to logs of
+        // that preset, exact item match) so their coverage doesn't drop. Touches
+        // only the current user's own memories; enqueues one upsert per changed log.
+        renameLogItems: (renames) => {
+          if (!renames.length) return 0;
+          const byPreset = new Map<string, Map<string, string>>();
+          for (const r of renames) {
+            if (!byPreset.has(r.preset)) byPreset.set(r.preset, new Map());
+            byPreset.get(r.preset)!.set(r.from, r.to);
+          }
+          let changed = 0;
+          const touchedIds: string[] = [];
+          set(s => ({
+            memories: s.memories.map(m => {
+              const map = m.logPreset ? byPreset.get(m.logPreset) : undefined;
+              if (!map) return m;
+              let touched = false;
+              const entries = m.entries.map(e => {
+                if (e.item && map.has(e.item)) { touched = true; changed++; return { ...e, item: map.get(e.item)! }; }
+                return e;
+              });
+              if (!touched) return m;
+              touchedIds.push(m.id);
+              return { ...m, entries };
+            }),
+          }));
+          for (const id of touchedIds) enqueue({ kind: 'upsert', table: 'memories', id });
+          return changed;
         },
         updateLogEntry: (memId, index, patch) => {
           set(s => ({ memories: s.memories.map(m => m.id !== memId ? m

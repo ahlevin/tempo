@@ -153,6 +153,7 @@ function RootNavigator() {
         <Stack.Screen name="modals/favorites"         options={{ presentation: 'modal' }} />
         <Stack.Screen name="modals/calendar"          options={{ presentation: 'modal' }} />
         <Stack.Screen name="modals/lifelog-detail"    options={{ presentation: 'modal' }} />
+        <Stack.Screen name="modals/admin-universes"   options={{ presentation: 'modal' }} />
       </Stack>
       {booting && <LoadingScreen timedOut={bootTimedOut} />}
     </View>

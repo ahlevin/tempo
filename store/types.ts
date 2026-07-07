@@ -110,4 +110,7 @@ export interface UserPrefs {
   onboarded: boolean;
   theme: 'light' | 'dark';
   holidays: HolidayPrefs;
+  /** Server-controlled flag (prefs.is_superuser). READ-ONLY in the app — never
+   *  written back — it gates the universe admin. Defaults false. */
+  isSuperuser: boolean;
 }

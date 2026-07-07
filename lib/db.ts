@@ -191,6 +191,7 @@ export function rowToPrefs(r: any): UserPrefs {
       fav: h.fav ?? {},
       reminders: h.reminders ?? {},
     },
+    isSuperuser: !!r.is_superuser,
   };
 }
 

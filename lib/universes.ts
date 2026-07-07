@@ -55,3 +55,36 @@ export async function fetchUniverses(): Promise<UniverseRow[]> {
     return [];
   }
 }
+
+// ---- Superuser writes (RLS enforces is_superuser server-side) --------------
+// All return { ok, error } and never throw; a failure leaves the table (and the
+// app's overlay) unchanged so the caller can toast the error and refresh.
+
+type WriteResult = { ok: boolean; error?: string };
+
+const toRowPayload = (rows: UniverseRow[]) =>
+  rows.map(r => ({ id: r.id, name: r.name, emoji: r.emoji, grp: r.grp, items: r.items, updated_at: new Date().toISOString() }));
+
+export async function upsertUniverses(rows: UniverseRow[]): Promise<WriteResult> {
+  try {
+    const { supabase } = await import('./supabase');
+    const { error } = await supabase.from('universes').upsert(toRowPayload(rows));
+    return error ? { ok: false, error: error.message } : { ok: true };
+  } catch (e: any) {
+    return { ok: false, error: e?.message ?? 'Network error' };
+  }
+}
+
+export function upsertUniverse(row: UniverseRow): Promise<WriteResult> {
+  return upsertUniverses([row]);
+}
+
+export async function deleteUniverse(id: string): Promise<WriteResult> {
+  try {
+    const { supabase } = await import('./supabase');
+    const { error } = await supabase.from('universes').delete().eq('id', id);
+    return error ? { ok: false, error: error.message } : { ok: true };
+  } catch (e: any) {
+    return { ok: false, error: e?.message ?? 'Network error' };
+  }
+}

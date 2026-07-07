@@ -209,6 +209,27 @@ export default function ProfileScreen() {
           <Text style={{ fontSize:16, color: prefs.holidays.enabled ? catColor(colors, 'holidays') : colors.text3 }}>›</Text>
         </TouchableOpacity>
 
+        {/* Superuser only — edit the shared collection universes (RLS-gated). */}
+        {prefs.isSuperuser && (
+          <>
+            <SLabel label="Admin" />
+            <TouchableOpacity onPress={() => router.push('/modals/admin-universes')}
+              style={{ flexDirection:'row', alignItems:'center', gap:14, padding:14,
+                borderRadius:18, borderWidth:1, borderColor:colors.border,
+                backgroundColor:colors.surf, marginBottom:28 }}>
+              <View style={{ width:44, height:44, borderRadius:13,
+                backgroundColor: colors.isDark ? 'rgba(124,106,245,0.16)' : colors.tint, alignItems:'center', justifyContent:'center' }}>
+                <Text style={{ fontSize:20 }}>🛠️</Text>
+              </View>
+              <View style={{ flex:1 }}>
+                <Text style={{ fontSize:15, fontWeight:'600', color:colors.text1 }}>Manage Lists</Text>
+                <Text style={{ fontSize:12, color:colors.text2, marginTop:2 }}>Edit the shared collection universes (all users)</Text>
+              </View>
+              <Text style={{ fontSize:16, color:colors.text3 }}>›</Text>
+            </TouchableOpacity>
+          </>
+        )}
+
         <SLabel label="Account" />
         <TouchableOpacity onPress={() => signOut()}
           style={{ flexDirection:'row', alignItems:'center', gap:14, padding:14,
