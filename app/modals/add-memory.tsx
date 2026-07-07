@@ -13,7 +13,7 @@ import { DateTimeField } from '../../components/DateTimeField';
 import { AlertsEditor } from '../../components/AlertsEditor';
 import { LinksEditor } from '../../components/LinksEditor';
 import { Toggle } from '../../components/FormControls';
-import { PRESET_BY_ID, LifelogPreset } from '../../constants/lifelogs';
+import { getPreset, LifelogPreset } from '../../constants/lifelogs';
 import { PresetBrowser, OccasionType } from '../../components/PresetBrowser';
 
 const DATE_LABELS: Record<string,string> = {
@@ -89,7 +89,7 @@ export default function AddMemoryModal() {
     let logPreset: string | undefined;
     let logTarget: number | undefined;
     if (lifelog) {
-      const p = preset ? PRESET_BY_ID[preset] : undefined;
+      const p = getPreset(preset);
       if (p) {
         logKind = p.kind; logPreset = p.id; logTarget = p.target;
       } else {
@@ -117,7 +117,7 @@ export default function AddMemoryModal() {
   }
 
   const lifelog = type === 'lifelog';
-  const chosen = preset ? PRESET_BY_ID[preset] : undefined;
+  const chosen = getPreset(preset);
   const chosenCount = chosen?.kind === 'collection' ? chosen.universe?.length : undefined;
   // Sticky Create bar appears once a Life Log choice is made (preset or custom).
   const showSticky = lifelog && !browserOpen && (preset !== '' || customMode);

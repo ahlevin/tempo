@@ -1,5 +1,5 @@
 import { Memory, LogEntry } from '../store/types';
-import { presetUniverse, PRESET_BY_ID } from '../constants/lifelogs';
+import { presetUniverse, getPreset } from '../constants/lifelogs';
 import { daysUntil } from './dates';
 
 // Shared life-log helpers (a life log is a container; dates live on entries).
@@ -10,7 +10,7 @@ export function isCollectionLog(m: Memory): boolean {
   // of trusting the stored logKind. This self-heals logs saved with a stale/wrong
   // logKind (e.g. an expanded-universe log that got 'count'), so they get the item
   // picker without recreation. Custom logs (no preset) fall back to logKind.
-  if (m.logPreset && PRESET_BY_ID[m.logPreset]?.kind === 'collection') return true;
+  if (m.logPreset && getPreset(m.logPreset)?.kind === 'collection') return true;
   return (m.logKind ?? 'count') === 'collection';
 }
 
@@ -96,6 +96,6 @@ const NOUNS: Record<string, string> = {
   restaurants: 'restaurant', museums: 'museum',
 };
 export function logNoun(m: Memory): string {
-  const p = m.logPreset ? PRESET_BY_ID[m.logPreset] : undefined;
+  const p = getPreset(m.logPreset);
   return (p && NOUNS[p.id]) || 'entry';
 }

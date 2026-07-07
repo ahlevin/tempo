@@ -1,6 +1,6 @@
 import { supabase } from './supabase';
 import { Event, Goal, Memory, UserPrefs, LogEntry } from '../store/types';
-import { PRESET_BY_ID } from '../constants/lifelogs';
+import { getPreset } from '../constants/lifelogs';
 
 // ---------------------------------------------------------------------------
 // Field mapping notes (app camelCase <-> DB snake_case)
@@ -142,7 +142,7 @@ export function rowToMemory(r: any): Memory {
     // preset's authoritative kind — correcting any log persisted with a stale
     // logKind (e.g. an expanded-universe log saved as 'count'). Custom/no-preset
     // logs keep their stored kind.
-    logKind: (r.log_preset ? PRESET_BY_ID[r.log_preset]?.kind : undefined)
+    logKind: getPreset(r.log_preset)?.kind
       ?? (r.log_kind === 'collection' ? 'collection' : 'count'),
     logPreset: r.log_preset ?? undefined,
     logTarget: r.log_target ?? undefined,

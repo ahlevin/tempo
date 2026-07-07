@@ -3,7 +3,7 @@ import { View, Text, TextInput, TouchableOpacity } from 'react-native';
 import { useTheme } from '../contexts/ThemeContext';
 import { useToast } from './Toast';
 import { useStore } from '../store/useStore';
-import { PRESET_BY_ID, presetUniverse } from '../constants/lifelogs';
+import { getPreset, presetUniverse } from '../constants/lifelogs';
 import { PresetBrowser } from './PresetBrowser';
 
 // Shared "Add to a life log" picker used by BOTH add-event and edit-event.
@@ -39,9 +39,9 @@ export const LifelogAttachSection = forwardRef<AttachHandle, { emoji: string }>(
     color:colors.text1, fontSize:15, marginBottom:14 };
 
   const resolvedPresetName = (pid: string, qualifier: string) => {
-    const p = PRESET_BY_ID[pid];
+    const nm = getPreset(pid)?.name ?? pid;
     const q = qualifier.trim();
-    return q ? `${p.name} - ${q}` : p.name;
+    return q ? `${nm} - ${q}` : nm;
   };
   // Match existing logs on the FULL resolved NAME (the name already encodes the
   // preset via its prefix). Matching on name — not requiring logPreset === pid —
@@ -66,7 +66,8 @@ export const LifelogAttachSection = forwardRef<AttachHandle, { emoji: string }>(
   function plan(): Plan | { error: string } {
     if (pathMode === 'preset') {
       if (!selectedPreset) return { error: 'Pick a life-log type.' };
-      const p = PRESET_BY_ID[selectedPreset];
+      const p = getPreset(selectedPreset);
+      if (!p) return { error: 'Pick a life-log type.' };
       if (presetTargetLogId) {
         const l = lifelogs.find(x => x.id === presetTargetLogId);
         return { name: l?.name ?? p.name, universe: presetUniverse(l?.logPreset), existingId: presetTargetLogId };

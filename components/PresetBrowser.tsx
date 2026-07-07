@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity } from 'react-native';
 import { useTheme } from '../contexts/ThemeContext';
-import { COLLECTION_PRESETS, COUNT_PRESETS, EXPANDED_GROUPS, ALL_LIFELOG_PRESETS, LifelogPreset } from '../constants/lifelogs';
+import { popularPresets, expandedGroups, allPresetsForSearch, LifelogPreset } from '../constants/lifelogs';
 
 export type OccasionType = 'birthday' | 'anniversary' | 'memorial';
 const OCCASIONS: { type: OccasionType; emoji: string; label: string }[] = [
@@ -39,7 +39,7 @@ export function PresetBrowser({
     const q = debounced.trim().toLowerCase();
     if (!q) return null;
     const presets: { p: LifelogPreset; hitItem?: string }[] = [];
-    for (const p of ALL_LIFELOG_PRESETS) {
+    for (const p of allPresetsForSearch()) {
       if (p.name.toLowerCase().includes(q) || (p.group ?? '').toLowerCase().includes(q)) { presets.push({ p }); continue; }
       const hit = p.universe?.find(i => i.toLowerCase().includes(q));
       if (hit) presets.push({ p, hitItem: hit });
@@ -51,7 +51,7 @@ export function PresetBrowser({
   }, [debounced, onSelectOccasion]);
 
   const searching = !!debounced.trim();
-  const POPULAR = [...COLLECTION_PRESETS, ...COUNT_PRESETS];
+  const POPULAR = popularPresets();
   const isOpen = (g: string) => openGroups[g] ?? POPULAR_DEFAULT_OPEN(g);
   const toggle = (g: string) => setOpenGroups(s => ({ ...s, [g]: !(s[g] ?? POPULAR_DEFAULT_OPEN(g)) }));
 
@@ -104,7 +104,7 @@ export function PresetBrowser({
           </GroupSection>
 
           {/* Expanded categories (collapsed by default) */}
-          {EXPANDED_GROUPS.map(({ group, presets }) => (
+          {expandedGroups().map(({ group, presets }) => (
             <GroupSection key={group} title={group} count={presets.length} open={isOpen(group)} onToggle={() => toggle(group)}>
               <Grid>
                 {presets.map(p => (

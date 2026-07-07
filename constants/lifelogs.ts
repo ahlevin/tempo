@@ -6,6 +6,7 @@
 // ---------------------------------------------------------------------------
 
 import { EXPANDED_UNIVERSES } from './lifelogUniverses.generated';
+import { remoteUniverse, UniverseRow } from '../lib/universes';
 
 export interface LifelogPreset {
   id: string;
@@ -148,12 +149,57 @@ export const EXPANDED_GROUPS: { group: string; presets: LifelogPreset[] }[] = ((
 // Every preset (originals + expanded), for the browser's search. Originals first.
 export const ALL_LIFELOG_PRESETS: LifelogPreset[] = [...LIFELOG_PRESETS, ...EXPANDED_PRESETS];
 
-// Resolution map covers originals AND expanded. Expanded listed first so an
-// original preset ALWAYS wins on any id collision (originals are never altered).
+// BUNDLED fallback map — originals AND expanded, keyed by id (never changes).
+// Expanded listed first so an original ALWAYS wins on any id collision.
 export const PRESET_BY_ID: Record<string, LifelogPreset> =
   Object.fromEntries([...EXPANDED_PRESETS, ...LIFELOG_PRESETS].map(p => [p.id, p]));
 
-/** The named universe for a memory's preset, or undefined (count / custom). */
+// Build a LifelogPreset from a remote overlay row. Every remote universe is a
+// bounded COLLECTION whose target is its CURRENT item count, so a table edit to
+// the items updates coverage ("X of N") automatically on next resolve.
+function fromRemote(r: UniverseRow): LifelogPreset {
+  return { id: r.id, name: r.name, emoji: r.emoji, kind: 'collection',
+    universe: r.items, target: r.items.length, group: r.grp || undefined };
+}
+
+/**
+ * Resolve a preset by id: REMOTE overlay first, else the BUNDLED definition.
+ * The overlay only ever overlays — an unknown/failed/empty overlay resolves
+ * entirely from the bundle. Count presets (no universe row) resolve from bundle.
+ */
+export function getPreset(id: string | undefined): LifelogPreset | undefined {
+  if (!id) return undefined;
+  const r = remoteUniverse(id);
+  return r ? fromRemote(r) : PRESET_BY_ID[id];
+}
+
+/** The named universe for a preset id — overlay-first, bundled fallback. */
 export function presetUniverse(logPreset: string | undefined): string[] | undefined {
-  return logPreset ? PRESET_BY_ID[logPreset]?.universe : undefined;
+  return getPreset(logPreset)?.universe;
+}
+
+// ---- Browser selectors (overlay-aware; cheap, safe to call every render) ----
+
+/** Popular = the original 5 collections + the 10 count presets, resolved. */
+export function popularPresets(): LifelogPreset[] {
+  return [...COLLECTION_PRESETS, ...COUNT_PRESETS].map(p => getPreset(p.id) ?? p);
+}
+
+/** Expanded categories grouped by RESOLVED grp (a remote grp moves a preset),
+ *  preserving first-appearance order. */
+export function expandedGroups(): { group: string; presets: LifelogPreset[] }[] {
+  const order: string[] = [];
+  const byGroup: Record<string, LifelogPreset[]> = {};
+  for (const bp of EXPANDED_PRESETS) {
+    const p = getPreset(bp.id) ?? bp;
+    const g = p.group ?? 'Other';
+    if (!byGroup[g]) { byGroup[g] = []; order.push(g); }
+    byGroup[g].push(p);
+  }
+  return order.map(g => ({ group: g, presets: byGroup[g] }));
+}
+
+/** Every preset (originals + counts + expanded), resolved — for search. */
+export function allPresetsForSearch(): LifelogPreset[] {
+  return [...popularPresets(), ...EXPANDED_PRESETS.map(p => getPreset(p.id) ?? p)];
 }

@@ -8,6 +8,7 @@ import {
   fetchAll, dbUpsert, dbDelete, dbUpsertPrefs,
   eventToRow, goalToRow, memoryToRow, prefsToRow, uuid, CloudTable,
 } from '../lib/db';
+import { fetchUniverses, setUniverseOverlay, UniverseRow } from '../lib/universes';
 
 const today = () => format(new Date(), 'yyyy-MM-dd');
 
@@ -38,10 +39,12 @@ interface TempoStore {
   loading: boolean;       // a cloud fetch is in flight
   ready: boolean;         // first load resolved for the current user (cache or cloud)
   outbox: SyncOp[];       // pending writes awaiting the cloud
+  remoteUniverses: UniverseRow[]; // read-only universe overlay (persisted; see lib/universes)
 
   loadForUser: (userId: string) => Promise<void>;
   clearForSignOut: () => void;
   flushOutbox: () => Promise<void>;
+  loadUniverses: () => Promise<void>;
 
   addEvent: (e: Omit<Event, 'id' | 'created'>) => string;
   updateEvent: (id: string, patch: Partial<Event>) => void;
@@ -167,8 +170,20 @@ export const useStore = create<TempoStore>()(
       return {
         events: [], goals: [], memories: [], prefs: DEFAULT_PREFS,
         userId: null, prefsExists: false, loading: false, ready: false, outbox: [],
+        remoteUniverses: [],
+
+        // Fetch the universe overlay in ONE query and store + persist it. Never
+        // blocks the UI and never surfaces errors: on failure/empty it keeps the
+        // existing (persisted or empty) overlay, and resolution falls back to the
+        // bundled constants. No effect on user data (memories/events/goals).
+        loadUniverses: async () => {
+          const rows = await fetchUniverses();
+          if (rows.length) { setUniverseOverlay(rows); set({ remoteUniverses: rows }); }
+        },
 
         loadForUser: async (uid) => {
+          // Kick off the (non-blocking) universe overlay refresh for this session.
+          void get().loadUniverses();
           const prev = get().userId;
           const sameUser = prev === uid;
           if (prev && !sameUser) {
@@ -492,11 +507,18 @@ export const useStore = create<TempoStore>()(
       name: 'tempo-storage',
       storage: createJSONStorage(() => AsyncStorage),
       version: 3,
-      // Persist only durable data + the offline queue; loading/ready are runtime.
+      // Persist durable data + the offline queue + the universe overlay (so a cold
+      // start resolves offline); loading/ready are runtime.
       partialize: (s) => ({
         events: s.events, goals: s.goals, memories: s.memories,
         prefs: s.prefs, userId: s.userId, prefsExists: s.prefsExists, outbox: s.outbox,
+        remoteUniverses: s.remoteUniverses,
       }),
+      // On cold start, push any persisted overlay into the module-level resolver
+      // BEFORE first render so offline resolution matches the last known cloud data.
+      onRehydrateStorage: () => (state) => {
+        if (state?.remoteUniverses?.length) setUniverseOverlay(state.remoteUniverses);
+      },
       // v1 (local seed era) -> v2 (cloud). Drop any locally-seeded cache so stale
       // demo data never lingers; the cloud repopulates on next login.
       // v2 -> v3: backfill prefs.holidays so older caches don't read undefined.
