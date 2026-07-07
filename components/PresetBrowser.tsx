@@ -1,64 +1,68 @@
 import { useEffect, useMemo, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity } from 'react-native';
 import { useTheme } from '../contexts/ThemeContext';
-import {
-  COLLECTION_PRESETS, COUNT_PRESETS, EXPANDED_GROUPS, ALL_LIFELOG_PRESETS, LifelogPreset,
-} from '../constants/lifelogs';
+import { COLLECTION_PRESETS, COUNT_PRESETS, EXPANDED_GROUPS, ALL_LIFELOG_PRESETS, LifelogPreset } from '../constants/lifelogs';
 
-// Shared, searchable, grouped life-log preset picker. Scales to ~82 presets by
-// replacing the flat chip rows with: a search field, a "Popular" section (the
-// original presets, exactly as before), collapsible groups for the expanded
-// universes, and a flat filtered list while searching. Search matches a preset's
-// NAME, GROUP, and any ITEM inside its universe (so "Everest" surfaces Seven
-// Summits + Eight Thousanders). Selection is reported via onSelect; null = Custom.
+export type OccasionType = 'birthday' | 'anniversary' | 'memorial';
+const OCCASIONS: { type: OccasionType; emoji: string; label: string }[] = [
+  { type: 'birthday',    emoji: '🎂', label: 'Birthday' },
+  { type: 'anniversary', emoji: '💑', label: 'Anniversary' },
+  { type: 'memorial',    emoji: '🕊️', label: 'Memorial' },
+];
+const POPULAR_DEFAULT_OPEN = (g: string) => g === 'Popular' || g === 'Family Occasions';
+
+// Unified, searchable, grouped tracking browser. One consistent 2-column pill
+// grid across Popular, the expanded categories, and (when onSelectOccasion is
+// provided) a Family Occasions group. Search matches preset NAME/GROUP/ITEM and,
+// when occasions are enabled, the occasion labels. Selecting a list preset →
+// onSelect(preset); Custom → onSelect(null); an occasion → onSelectOccasion(type).
 export function PresetBrowser({
-  selectedId, onSelect, showCustom = false, customSelected = false,
+  selectedId, onSelect, showCustom = false, customSelected = false, onSelectOccasion,
 }: {
   selectedId: string;
   onSelect: (preset: LifelogPreset | null) => void;
   showCustom?: boolean;
   customSelected?: boolean;
+  onSelectOccasion?: (type: OccasionType) => void;
 }) {
   const { colors } = useTheme();
   const [query, setQuery] = useState('');
   const [debounced, setDebounced] = useState('');
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
 
-  // Light debounce — all local data, so this is just to avoid re-filtering on
-  // every keystroke of a fast typist.
   useEffect(() => {
     const t = setTimeout(() => setDebounced(query), 120);
     return () => clearTimeout(t);
   }, [query]);
 
-  // Flat search results across every preset (originals + expanded). A preset
-  // matches on name/group, or on any item within its universe (with the first
-  // matching item surfaced as a hint).
   const results = useMemo(() => {
     const q = debounced.trim().toLowerCase();
     if (!q) return null;
-    const out: { p: LifelogPreset; hitItem?: string }[] = [];
+    const presets: { p: LifelogPreset; hitItem?: string }[] = [];
     for (const p of ALL_LIFELOG_PRESETS) {
-      if (p.name.toLowerCase().includes(q) || (p.group ?? '').toLowerCase().includes(q)) {
-        out.push({ p });
-        continue;
-      }
+      if (p.name.toLowerCase().includes(q) || (p.group ?? '').toLowerCase().includes(q)) { presets.push({ p }); continue; }
       const hit = p.universe?.find(i => i.toLowerCase().includes(q));
-      if (hit) out.push({ p, hitItem: hit });
+      if (hit) presets.push({ p, hitItem: hit });
     }
-    return out;
-  }, [debounced]);
+    const occ = onSelectOccasion
+      ? OCCASIONS.filter(o => o.label.toLowerCase().includes(q) || 'family occasions'.includes(q))
+      : [];
+    return { presets, occ };
+  }, [debounced, onSelectOccasion]);
 
-  const searching = !!(debounced.trim());
+  const searching = !!debounced.trim();
+  const POPULAR = [...COLLECTION_PRESETS, ...COUNT_PRESETS];
+  const isOpen = (g: string) => openGroups[g] ?? POPULAR_DEFAULT_OPEN(g);
+  const toggle = (g: string) => setOpenGroups(s => ({ ...s, [g]: !(s[g] ?? POPULAR_DEFAULT_OPEN(g)) }));
 
   return (
     <View style={{ marginBottom: 8 }}>
-      {/* Search field */}
+      {/* Search */}
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.glass,
         borderWidth: 1, borderColor: colors.border, borderRadius: 12, paddingHorizontal: 12, marginBottom: 12 }}>
         <Text style={{ fontSize: 14 }}>🔎</Text>
         <TextInput value={query} onChangeText={setQuery}
-          placeholder="Search lists — try 'Everest', 'Hot Wheels', 'pizza'…"
+          placeholder="Search — try 'Everest', 'Birthday', 'pizza'…"
           placeholderTextColor={colors.text3} autoCapitalize="none" autoCorrect={false}
           style={{ flex: 1, paddingVertical: 11, color: colors.text1, fontSize: 14 }} />
         {query.length > 0 && (
@@ -69,111 +73,107 @@ export function PresetBrowser({
       </View>
 
       {searching ? (
-        // ---- Flat filtered results ----
-        results && results.length > 0 ? (
+        results && (results.presets.length + results.occ.length) > 0 ? (
           <View>
-            <Label text={`${results.length} ${results.length === 1 ? 'list' : 'lists'}`} />
-            {results.map(({ p, hitItem }) => (
-              <PresetRow key={p.id} p={p} selected={selectedId === p.id}
-                groupLabel={p.group} hitItem={hitItem} onPress={() => onSelect(p)} />
-            ))}
+            <Label text={`${results.presets.length + results.occ.length} ${results.presets.length + results.occ.length === 1 ? 'result' : 'results'}`} />
+            <Grid>
+              {results.occ.map(o => (
+                <Pill key={'occ-' + o.type} emoji={o.emoji} label={o.label} onPress={() => onSelectOccasion?.(o.type)} />
+              ))}
+              {results.presets.map(({ p, hitItem }) => (
+                <Pill key={p.id} emoji={p.emoji} label={p.name} sublabel={hitItem ? `contains “${hitItem}”` : p.group}
+                  selected={selectedId === p.id} onPress={() => onSelect(p)} />
+              ))}
+            </Grid>
           </View>
         ) : (
           <Text style={{ fontSize: 13, color: colors.text2, paddingVertical: 14, textAlign: 'center' }}>
-            No lists match “{debounced.trim()}”. Use the Custom option to make your own.
+            No matches for “{debounced.trim()}”. Use Custom to make your own.
           </Text>
         )
       ) : (
-        // ---- Popular + collapsible groups ----
         <View>
-          <Label text="Popular" />
-          <Flow>
-            {COLLECTION_PRESETS.map(p => (
-              <Chip key={p.id} p={p} selected={selectedId === p.id} onPress={() => onSelect(p)} />
-            ))}
-            {COUNT_PRESETS.map(p => (
-              <Chip key={p.id} p={p} selected={selectedId === p.id} onPress={() => onSelect(p)} />
-            ))}
-            {showCustom && (
-              <Chip p={{ id: '__custom', name: 'Custom', emoji: '✨' }}
-                selected={customSelected} onPress={() => onSelect(null)} />
-            )}
-          </Flow>
+          {/* Popular (expanded by default) */}
+          <GroupSection title="Popular" count={POPULAR.length + (showCustom ? 1 : 0)} open={isOpen('Popular')} onToggle={() => toggle('Popular')}>
+            <Grid>
+              {POPULAR.map(p => (
+                <Pill key={p.id} emoji={p.emoji} label={p.name} selected={selectedId === p.id} onPress={() => onSelect(p)} />
+              ))}
+              {showCustom && <Pill emoji="✨" label="Custom" selected={customSelected} onPress={() => onSelect(null)} />}
+            </Grid>
+          </GroupSection>
 
-          {EXPANDED_GROUPS.map(({ group, presets }) => {
-            const open = !!openGroups[group];
-            return (
-              <View key={group} style={{ marginTop: 8 }}>
-                <TouchableOpacity onPress={() => setOpenGroups(s => ({ ...s, [group]: !s[group] }))}
-                  style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-                    paddingVertical: 11, paddingHorizontal: 12, borderRadius: 11, borderWidth: 1,
-                    borderColor: colors.border, backgroundColor: colors.glass }}>
-                  <Text style={{ fontSize: 13, fontWeight: '700', color: colors.text1 }}>
-                    {group} <Text style={{ color: colors.text3, fontWeight: '600' }}>· {presets.length}</Text>
-                  </Text>
-                  <Text style={{ fontSize: 13, color: colors.text3 }}>{open ? '▾' : '▸'}</Text>
-                </TouchableOpacity>
-                {open && (
-                  <View style={{ marginTop: 6 }}>
-                    {presets.map(p => (
-                      <PresetRow key={p.id} p={p} selected={selectedId === p.id} onPress={() => onSelect(p)} />
-                    ))}
-                  </View>
-                )}
-              </View>
-            );
-          })}
+          {/* Expanded categories (collapsed by default) */}
+          {EXPANDED_GROUPS.map(({ group, presets }) => (
+            <GroupSection key={group} title={group} count={presets.length} open={isOpen(group)} onToggle={() => toggle(group)}>
+              <Grid>
+                {presets.map(p => (
+                  <Pill key={p.id} emoji={p.emoji} label={p.name} selected={selectedId === p.id} onPress={() => onSelect(p)} />
+                ))}
+              </Grid>
+            </GroupSection>
+          ))}
+
+          {/* Family Occasions — LAST, expanded by default (only when enabled) */}
+          {onSelectOccasion && (
+            <GroupSection title="Family Occasions" count={OCCASIONS.length} open={isOpen('Family Occasions')} onToggle={() => toggle('Family Occasions')}>
+              <Grid>
+                {OCCASIONS.map(o => (
+                  <Pill key={o.type} emoji={o.emoji} label={o.label} onPress={() => onSelectOccasion(o.type)} />
+                ))}
+              </Grid>
+            </GroupSection>
+          )}
         </View>
       )}
     </View>
   );
 }
 
-// A single tappable list row: emoji, name, item count, optional group/hit labels.
-function PresetRow({ p, selected, onPress, groupLabel, hitItem }:
-  { p: LifelogPreset; selected: boolean; onPress: () => void; groupLabel?: string; hitItem?: string }) {
+// ── Symmetric building blocks ────────────────────────────────────────────────
+
+// A 2-column grid: equal-width (48%) columns, space-between gutter.
+function Grid({ children }: { children: React.ReactNode }) {
+  return <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}>{children}</View>;
+}
+
+// A uniform pill: equal height (minHeight), emoji + label (2 lines max, ellipsis).
+function Pill({ emoji, label, sublabel, selected = false, onPress }:
+  { emoji: string; label: string; sublabel?: string; selected?: boolean; onPress: () => void }) {
   const { colors } = useTheme();
-  const count = p.universe?.length;
   return (
-    <TouchableOpacity onPress={onPress} activeOpacity={0.7}
-      style={{ flexDirection: 'row', alignItems: 'center', gap: 11, padding: 11, borderRadius: 11, borderWidth: 1.5, marginBottom: 6,
+    <TouchableOpacity onPress={onPress} activeOpacity={0.75}
+      style={{ width: '48%', minHeight: 58, marginBottom: 8, flexDirection: 'row', alignItems: 'center', gap: 8,
+        paddingVertical: 10, paddingHorizontal: 11, borderRadius: 12, borderWidth: 1.5,
         borderColor: selected ? colors.teal : colors.border,
         backgroundColor: selected ? (colors.isDark ? 'rgba(62,207,178,0.12)' : colors.tint) : colors.glass }}>
-      <Text style={{ fontSize: 18 }}>{p.emoji}</Text>
+      <Text style={{ fontSize: 18 }}>{emoji}</Text>
       <View style={{ flex: 1 }}>
-        <Text style={{ fontSize: 13, fontWeight: '600', color: selected ? colors.teal : colors.text1 }} numberOfLines={2}>
-          {p.name}{count != null && <Text style={{ color: colors.text3, fontWeight: '600' }}>  · {count}</Text>}
-        </Text>
-        {!!groupLabel && (
-          <Text style={{ fontSize: 11, color: colors.text3, marginTop: 1 }}>{groupLabel}</Text>
-        )}
-        {!!hitItem && (
-          <Text style={{ fontSize: 11, color: colors.text2, marginTop: 1 }} numberOfLines={1}>contains “{hitItem}”</Text>
-        )}
+        <Text numberOfLines={2} style={{ fontSize: 12.5, fontWeight: '600', color: selected ? colors.teal : colors.text1 }}>{label}</Text>
+        {!!sublabel && <Text numberOfLines={1} style={{ fontSize: 10, color: colors.text3, marginTop: 1 }}>{sublabel}</Text>}
       </View>
-      {selected && <Text style={{ fontSize: 15, color: colors.teal }}>✓</Text>}
     </TouchableOpacity>
   );
 }
 
-// The original compact chip (Popular section keeps the familiar look).
-function Chip({ p, selected, onPress }:
-  { p: { id: string; name: string; emoji: string }; selected: boolean; onPress: () => void }) {
+// A collapsible group: header (title · count + chevron) then its grid when open.
+function GroupSection({ title, count, open, onToggle, children }:
+  { title: string; count: number; open: boolean; onToggle: () => void; children: React.ReactNode }) {
   const { colors } = useTheme();
   return (
-    <TouchableOpacity onPress={onPress}
-      style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 8, paddingHorizontal: 11,
-        borderRadius: 11, borderWidth: 1.5,
-        borderColor: selected ? colors.teal : colors.border,
-        backgroundColor: selected ? (colors.isDark ? 'rgba(62,207,178,0.12)' : colors.tint) : colors.glass }}>
-      <Text style={{ fontSize: 15 }}>{p.emoji}</Text>
-      <Text style={{ fontSize: 12, fontWeight: '600', color: selected ? colors.teal : colors.text2 }}>{p.name}</Text>
-    </TouchableOpacity>
+    <View style={{ marginBottom: 8 }}>
+      <TouchableOpacity onPress={onToggle}
+        style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+          paddingVertical: 11, paddingHorizontal: 12, borderRadius: 11, borderWidth: 1,
+          borderColor: colors.border, backgroundColor: colors.glass, marginBottom: open ? 10 : 0 }}>
+        <Text style={{ fontSize: 13, fontWeight: '700', color: colors.text1 }}>
+          {title} <Text style={{ color: colors.text3, fontWeight: '600' }}>· {count}</Text>
+        </Text>
+        <Text style={{ fontSize: 13, color: colors.text3 }}>{open ? '▾' : '▸'}</Text>
+      </TouchableOpacity>
+      {open && children}
+    </View>
   );
-}
-
-function Flow({ children }: { children: React.ReactNode }) {
-  return <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 7, marginBottom: 4 }}>{children}</View>;
 }
 
 function Label({ text }: { text: string }) {

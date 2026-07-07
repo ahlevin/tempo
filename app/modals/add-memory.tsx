@@ -6,7 +6,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { format, subDays } from 'date-fns';
 import { useTheme } from '../../contexts/ThemeContext';
 import { CloseButton } from '../../components/CloseButton';
-import { MEM_EMOJIS, MEMORY_TYPES } from '../../constants/data';
+import { MEM_EMOJIS } from '../../constants/data';
 import { useStore } from '../../store/useStore';
 import { Alert as AlertType, Link } from '../../store/types';
 import { DateTimeField } from '../../components/DateTimeField';
@@ -14,7 +14,7 @@ import { AlertsEditor } from '../../components/AlertsEditor';
 import { LinksEditor } from '../../components/LinksEditor';
 import { Toggle } from '../../components/FormControls';
 import { PRESET_BY_ID, LifelogPreset } from '../../constants/lifelogs';
-import { PresetBrowser } from '../../components/PresetBrowser';
+import { PresetBrowser, OccasionType } from '../../components/PresetBrowser';
 
 const DATE_LABELS: Record<string,string> = {
   birthday:'Date of Birth', anniversary:'Anniversary Date',
@@ -23,15 +23,17 @@ const DATE_LABELS: Record<string,string> = {
 const DEF_EMOJIS: Record<string,string> = {
   birthday:'🎂', anniversary:'💑', memorial:'🕊️', lifelog:'🏔️'
 };
-const MEM_TYPE_IDS = ['birthday', 'anniversary', 'memorial', 'lifelog'];
+const FORM_TYPES = ['birthday', 'anniversary', 'memorial'];
 
 export default function AddMemoryModal() {
   const { colors } = useTheme();
   const addMemory = useStore(s => s.addMemory);
   const { showToast } = useToast();
-  // Preselect the type when the add-chooser routes here with ?type=birthday etc.
+  // Deep link: the AddChooser routes Birthday/Anniversary/Memorial straight to
+  // their form (skipping the browser). Everything else opens the browser.
   const { type: typeParam } = useLocalSearchParams<{ type?: string }>();
-  const initialType = typeParam && MEM_TYPE_IDS.includes(typeParam) ? typeParam : 'birthday';
+  const deepLinked = !!typeParam && FORM_TYPES.includes(typeParam);
+  const initialType = deepLinked ? (typeParam as string) : 'lifelog';
   const [type,  setType]  = useState(initialType);
   const [name,  setName]  = useState('');
   const [date,  setDate]  = useState(format(subDays(new Date(), 1), 'yyyy-MM-dd'));
@@ -48,8 +50,8 @@ export default function AddMemoryModal() {
   const [customMode,    setCustomMode]    = useState(false); // "Custom" chosen (vs a real preset)
   const [customizeOpen, setCustomizeOpen] = useState(false); // name+icon revealed for a preset
 
-  // Browser selection: a preset collapses to a compact card; Custom opens the
-  // name/icon/target form. Seeds name/emoji exactly as before (unchanged logic).
+  // Browser: a preset collapses to a compact card; Custom opens the name/icon/
+  // target form. Seeds name/emoji exactly as before (unchanged logic).
   function choosePreset(p: LifelogPreset | null) {
     if (p) {
       setPreset(p.id); setCustomMode(false);
@@ -61,12 +63,18 @@ export default function AddMemoryModal() {
     setCustomizeOpen(false);
     setBrowserOpen(false);
   }
+  // A Family Occasions pill switches to that type's existing form.
+  function chooseOccasion(t: OccasionType) {
+    setType(t);
+    setEmoji(DEF_EMOJIS[t] || '⭐');
+    setName('');
+  }
+  // "Back to tracking" from an occasion form (only when reached via the browser).
+  function backToBrowser() { setType('lifelog'); }
 
   const fi = { backgroundColor:colors.glass, borderWidth:1,
     borderColor:colors.border, borderRadius:12, padding:12,
     color:colors.text1, fontSize:15, marginBottom:14 };
-
-  function pickType(t: string) { setType(t); setEmoji(DEF_EMOJIS[t]||'⭐'); }
 
   function submit() {
     const lifelog = type === 'lifelog';
@@ -122,40 +130,24 @@ export default function AddMemoryModal() {
           borderRadius:2, alignSelf:'center', marginTop:10, marginBottom:4 }} />
         <View style={{ flexDirection:'row', justifyContent:'space-between',
           alignItems:'center', paddingHorizontal:20, paddingVertical:12 }}>
-          <Text style={{ fontSize:18, fontWeight:'700', color:colors.text1 }}>
-            {lifelog ? 'New Life Log 📓' : 'New Memory 🕰️'}
-          </Text>
+          <Text style={{ fontSize:18, fontWeight:'700', color:colors.text1 }}>New Memory 🕰️</Text>
           <CloseButton />
         </View>
         <ScrollView contentContainerStyle={{ padding:20, paddingBottom: showSticky ? 24 : 40 }}
           showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-          <FL label="Type" />
-          <View style={{ flexDirection:'row', flexWrap:'wrap', gap:7, marginBottom:14 }}>
-            {MEMORY_TYPES.map(t => (
-              <TouchableOpacity key={t.id} onPress={() => pickType(t.id)}
-                style={{ flexDirection:'row', alignItems:'center', gap:7,
-                  paddingVertical:10, paddingHorizontal:12, borderRadius:11, borderWidth:1.5,
-                  borderColor: type===t.id ? colors.accent : colors.border,
-                  backgroundColor: type===t.id ? (colors.isDark ? 'rgba(124,106,245,0.1)' : colors.tint) : colors.glass }}>
-                <Text style={{ fontSize:18 }}>{t.icon}</Text>
-                <View>
-                  <Text style={{ fontSize:12, fontWeight:'600',
-                    color: type===t.id ? colors.accent : colors.text2 }}>{t.label}</Text>
-                  <Text style={{ fontSize:10, color:colors.text3 }}>{t.desc}</Text>
-                </View>
-              </TouchableOpacity>
-            ))}
-          </View>
 
-          {/* ============================ LIFE LOG ============================ */}
+          {/* ============================ LIFE LOG / BROWSER ============================ */}
           {lifelog && (
             <>
+              <Text style={{ fontSize:22, fontWeight:'800', color:colors.text1, letterSpacing:-0.3, marginBottom:14 }}>
+                What are you tracking?
+              </Text>
+
               {/* Browser — kept mounted (hidden when collapsed) so its search /
                   expanded groups survive a "Change". */}
               <View style={{ display: browserOpen ? 'flex' : 'none' }}>
-                <FL label="What are you tracking?" />
                 <PresetBrowser selectedId={preset} onSelect={choosePreset}
-                  showCustom customSelected={customMode} />
+                  showCustom customSelected={customMode} onSelectOccasion={chooseOccasion} />
               </View>
 
               {/* Collapsed PRESET selection */}
@@ -230,6 +222,15 @@ export default function AddMemoryModal() {
           {/* ===================== BIRTHDAY / ANNIVERSARY / MEMORIAL ===================== */}
           {!lifelog && (
             <>
+              {/* Reached via the browser's Family Occasions → offer a way back.
+                  Deep-linked (from the Countdowns +) keeps today's direct path. */}
+              {!deepLinked && (
+                <TouchableOpacity onPress={backToBrowser} hitSlop={{ top:8, bottom:8, left:8, right:8 }}
+                  style={{ alignSelf:'flex-start', paddingVertical:6, marginBottom:8 }}>
+                  <Text style={{ fontSize:13, fontWeight:'600', color:colors.accent }}>‹ Back to tracking</Text>
+                </TouchableOpacity>
+              )}
+
               <FL label="Name" />
               <TextInput value={name} onChangeText={setName}
                 placeholder="e.g. First Half Dome Hike…"
