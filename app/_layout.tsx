@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View, Text, ActivityIndicator, AppState, Platform } from 'react-native';
@@ -12,6 +12,7 @@ import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import { ThemeProvider, useTheme } from '../contexts/ThemeContext';
 import { TickProvider } from '../contexts/TickContext';
 import { rescheduleAll } from '../lib/notifications';
+import { supabase } from '../lib/supabase';
 
 export default function RootLayout() {
   return (
@@ -69,17 +70,22 @@ function RootNavigator() {
     rescheduleAll({ events, goals, memories });
   }, [session, events, goals, memories]);
 
-  // Re-push queued writes when the app/tab wakes or reconnects. AppState 'active'
-  // is native-only and unreliable on web, so on web we listen to DOM online/focus/
-  // visibility events instead. (Mutations already trigger a flush directly; this is
-  // just a belt-and-suspenders retry for anything left queued.)
+  // Re-push queued writes when the app/tab wakes or reconnects, and pause Supabase's
+  // token auto-refresh (a ~30s internal tick) while hidden so nothing polls in the
+  // background — resuming triggers an immediate refresh check, so the session stays
+  // valid. AppState 'active' is native-only and unreliable on web, so on web we
+  // listen to DOM online/focus/visibility events instead. (Mutations already trigger
+  // a flush directly; this is just a belt-and-suspenders retry for anything queued.)
   useEffect(() => {
     if (Platform.OS === 'web') {
       const g: any = globalThis as any;
       const wake = () => { flushOutbox(); };
       g.addEventListener?.('online', wake);
       g.addEventListener?.('focus', wake);
-      const onVis = () => { if (g.document?.visibilityState === 'visible') flushOutbox(); };
+      const onVis = () => {
+        if (g.document?.visibilityState === 'visible') { flushOutbox(); supabase.auth.startAutoRefresh(); }
+        else { supabase.auth.stopAutoRefresh(); }
+      };
       g.document?.addEventListener?.('visibilitychange', onVis);
       return () => {
         g.removeEventListener?.('online', wake);
@@ -87,12 +93,24 @@ function RootNavigator() {
         g.document?.removeEventListener?.('visibilitychange', onVis);
       };
     }
-    const sub = AppState.addEventListener('change', st => { if (st === 'active') flushOutbox(); });
+    const sub = AppState.addEventListener('change', st => {
+      if (st === 'active') { flushOutbox(); supabase.auth.startAutoRefresh(); }
+      else supabase.auth.stopAutoRefresh();
+    });
     return () => sub.remove();
   }, []);
 
   // Wait for the initial session check and (once logged in) the first data load.
   const booting = authLoading || (!!session && !storeReady);
+
+  // If boot hasn't resolved after ~9s (hung/slow load), stop the animated spinner
+  // and show a static state so we never animate an indicator indefinitely.
+  const [bootTimedOut, setBootTimedOut] = useState(false);
+  useEffect(() => {
+    if (!booting) { setBootTimedOut(false); return; }
+    const t = setTimeout(() => setBootTimedOut(true), 9000);
+    return () => clearTimeout(t);
+  }, [booting]);
 
   // Gate: logged-out -> (auth); logged-in but not onboarded -> (onboarding);
   // onboarded -> the app. Onboarding sits between "logged in" and "in the app".
@@ -136,12 +154,12 @@ function RootNavigator() {
         <Stack.Screen name="modals/calendar"          options={{ presentation: 'modal' }} />
         <Stack.Screen name="modals/lifelog-detail"    options={{ presentation: 'modal' }} />
       </Stack>
-      {booting && <LoadingScreen />}
+      {booting && <LoadingScreen timedOut={bootTimedOut} />}
     </View>
   );
 }
 
-function LoadingScreen() {
+function LoadingScreen({ timedOut }: { timedOut?: boolean }) {
   const { colors } = useTheme();
   return (
     <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
@@ -149,7 +167,12 @@ function LoadingScreen() {
       <Text style={{ fontSize: 40, fontWeight: '800', color: colors.text1, letterSpacing: -1 }}>
         sayZay<Text style={{ color: colors.accent }}>.</Text>
       </Text>
-      <ActivityIndicator color={colors.accent} />
+      {/* After a timeout, drop the animated spinner (never animate indefinitely). */}
+      {timedOut
+        ? <Text style={{ fontSize: 13, color: colors.text3, textAlign: 'center', paddingHorizontal: 40 }}>
+            Still loading… check your connection.
+          </Text>
+        : <ActivityIndicator color={colors.accent} />}
     </View>
   );
 }

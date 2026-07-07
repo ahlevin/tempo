@@ -19,9 +19,19 @@ export function DateWeatherBar() {
   const [wx, setWx]       = useState<any>(null);
   const [now, setNow]     = useState(new Date());
 
+  // The bar shows a DATE (no live seconds/minutes), so it only needs to change at
+  // midnight. Instead of a per-minute interval (1,440 wasted re-renders/day), we
+  // schedule a single timeout to just after the next local midnight, update once,
+  // then reschedule for the following day. Net: ~1 update/day.
   useEffect(() => {
-    const t = setInterval(() => setNow(new Date()), 60000);
-    return () => clearInterval(t);
+    let timer: ReturnType<typeof setTimeout>;
+    const scheduleMidnight = () => {
+      const d = new Date();
+      const next = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1, 0, 0, 5); // 00:00:05 tomorrow
+      timer = setTimeout(() => { setNow(new Date()); scheduleMidnight(); }, next.getTime() - d.getTime());
+    };
+    scheduleMidnight();
+    return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => { loadWeather(); }, [prefs.location]);
