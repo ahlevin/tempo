@@ -6,6 +6,7 @@ import { Memory } from '../store/types';
 import { SwipeableRow } from './SwipeableRow';
 import { FavStar } from './FavStar';
 import { AlertBadge } from './AlertBadge';
+import { LinkBadge } from './LinkBadge';
 import { lightCardShadow, dayCountColor, catColor } from '../constants/colors';
 import { nextAnnual, daysUntil, yearsMonthsDays, ordinal } from '../utils/dates';
 import { openMemoryDetail } from '../utils/nav';
@@ -58,6 +59,7 @@ export function UpcomingMemoryRow({ memory: m }: { memory: Memory }) {
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
             <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text1, maxWidth: '80%' }} numberOfLines={1}>{m.name}</Text>
             <AlertBadge count={m.alerts?.length} />
+            <LinkBadge count={m.links?.length} />
           </View>
           <Text style={{ fontSize: 13, color: colors.text2, marginTop: 2 }}>
             {m.yearUnknown ? (

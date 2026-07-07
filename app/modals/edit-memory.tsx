@@ -7,9 +7,10 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { CloseButton } from '../../components/CloseButton';
 import { MEM_EMOJIS } from '../../constants/data';
 import { useStore } from '../../store/useStore';
-import { Alert as AlertType } from '../../store/types';
+import { Alert as AlertType, Link } from '../../store/types';
 import { DateTimeField } from '../../components/DateTimeField';
 import { AlertsEditor } from '../../components/AlertsEditor';
+import { LinksEditor } from '../../components/LinksEditor';
 import { Toggle } from '../../components/FormControls';
 import { useConfirm } from '../../components/ConfirmDialog';
 
@@ -31,6 +32,7 @@ export default function EditMemoryModal() {
   const [note,  setNote]  = useState(m?.note        || '');
   const [yearUnknown, setYearUnknown] = useState(m?.yearUnknown ?? false);
   const [alerts, setAlerts] = useState<AlertType[]>(m?.alerts ?? []);
+  const [links,  setLinks]  = useState<Link[]>(m?.links ?? []);
 
   const fi = { backgroundColor:colors.glass, borderWidth:1,
     borderColor:colors.border, borderRadius:12, padding:12,
@@ -48,7 +50,7 @@ export default function EditMemoryModal() {
     if (!name.trim() || (!lifelog && !date)) { showToast('⚠️', 'Missing info', 'Please fill in all fields.'); return; }
     updateMemory(id, lifelog
       ? { name:name.trim(), emoji }   // life-log container: name + emoji only
-      : { name:name.trim(), originDate:date, emoji, note:note.trim(), yearUnknown, alerts });
+      : { name:name.trim(), originDate:date, emoji, note:note.trim(), yearUnknown, alerts, links });
     router.back();
   }
 
@@ -120,6 +122,7 @@ export default function EditMemoryModal() {
             <>
               <FL label="Note (optional)" />
               <TextInput value={note} onChangeText={setNote} placeholderTextColor={colors.text3} style={fi} />
+              <LinksEditor value={links} onChange={setLinks} />
             </>
           )}
           {(m.type === 'birthday' || m.type === 'anniversary' || m.type === 'memorial') && (

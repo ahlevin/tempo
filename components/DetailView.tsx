@@ -4,7 +4,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useTheme } from '../contexts/ThemeContext';
 import { lightCardShadow } from '../constants/colors';
-import type { Alert } from '../store/types';
+import type { Alert, Link } from '../store/types';
+import { linkLabel, openUrl } from '../utils/links';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Shared READ-ONLY detail scaffold used by every item type. A tap opens this
@@ -114,6 +115,31 @@ export function Field({ label, value }: { label: string; value: string }) {
       {!!label && <Text style={{ fontSize: 11, fontWeight: '700', color: colors.text3, textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 3 }}>{label}</Text>}
       <Text style={{ fontSize: 16, color: colors.text1, lineHeight: 22 }}>{value}</Text>
     </View>
+  );
+}
+
+// A "Links" section rendering each link as a tappable row (🔗 + label/domain,
+// accent color). Opens the URL cross-platform; invalid URLs fail silently.
+// Renders nothing when there are no links.
+export function LinksSection({ links }: { links?: Link[] }) {
+  const { colors } = useTheme();
+  const list = (links ?? []).filter(l => l && l.url);
+  if (!list.length) return null;
+  return (
+    <Section label="Links">
+      {list.map((l, i) => (
+        <TouchableOpacity key={i} onPress={() => openUrl(l.url)} activeOpacity={0.7}
+          accessibilityRole="link" accessibilityLabel={linkLabel(l)}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 9, paddingVertical: 9,
+            borderTopWidth: i === 0 ? 0 : 1, borderColor: colors.border }}>
+          <Text style={{ fontSize: 15 }}>🔗</Text>
+          <Text style={{ flex: 1, fontSize: 16, fontWeight: '600', color: colors.accent }} numberOfLines={1}>
+            {linkLabel(l)}
+          </Text>
+          <Text style={{ fontSize: 14, color: colors.text3 }}>↗</Text>
+        </TouchableOpacity>
+      ))}
+    </Section>
   );
 }
 

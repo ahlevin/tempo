@@ -67,6 +67,7 @@ export function rowToEvent(r: any): Event {
     note: r.note ?? '',
     recur: r.recur ?? null,
     alerts: r.alerts ?? [],
+    links: r.links ?? [],
   };
 }
 
@@ -84,6 +85,7 @@ export function eventToRow(e: Event, userId: string) {
     note: e.note,
     recur: e.recur,
     alerts: e.alerts,
+    links: e.links ?? [],
     created_at: tsFromDate(e.created),
   };
 }
@@ -103,6 +105,7 @@ export function rowToGoal(r: any): Goal {
     fav: !!r.fav,
     note: r.note ?? '',
     alerts: r.alerts ?? [],
+    links: r.links ?? [],
   };
 }
 
@@ -141,6 +144,7 @@ export function rowToMemory(r: any): Memory {
     note: r.note ?? '',
     fav: !!r.fav,
     alerts: r.alerts ?? [],
+    links: r.links ?? [],
   };
 }
 
@@ -160,6 +164,7 @@ export function memoryToRow(m: Memory, userId: string) {
     date_precision: m.datePrecision ?? 'full',
     note: m.note,
     alerts: m.alerts,
+    links: m.links ?? [],
     fav: m.fav,
   };
 }

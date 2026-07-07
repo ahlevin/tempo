@@ -7,6 +7,7 @@ import { Event } from '../store/types';
 import { SwipeableRow } from './SwipeableRow';
 import { FavStar } from './FavStar';
 import { AlertBadge } from './AlertBadge';
+import { LinkBadge } from './LinkBadge';
 import { nextOccurrence, daysUntil, eventProgress, recurLabel, fmtDateTime } from '../utils/dates';
 import { openEventDetail } from '../utils/nav';
 
@@ -56,6 +57,7 @@ export function EventCard({ event: e }: { event: Event }) {
             </View>
           )}
           <AlertBadge count={e.alerts.length} />
+          <LinkBadge count={e.links?.length} />
         </View>
         <Text style={{ fontSize: 13, color: colors.text2, marginTop: 2 }}>{dstr}</Text>
         {!!e.note && (

@@ -11,6 +11,7 @@ import { Confetti } from './Confetti';
 import { SwipeableRow } from './SwipeableRow';
 import { FavStar } from './FavStar';
 import { AlertBadge } from './AlertBadge';
+import { LinkBadge } from './LinkBadge';
 
 export function GoalCard({ goal: g }: { goal: Goal }) {
   const { colors } = useTheme();
@@ -61,6 +62,7 @@ export function GoalCard({ goal: g }: { goal: Goal }) {
               </View>
             )}
             <AlertBadge count={g.alerts?.length} />
+            <LinkBadge count={g.links?.length} />
           </View>
           <Text style={{ fontSize: 13, color: colors.text2, marginTop: 2 }}>{dstr}</Text>
           {!!g.note && (

@@ -6,6 +6,7 @@ import { Memory } from '../store/types';
 import { SwipeableRow } from './SwipeableRow';
 import { FavStar } from './FavStar';
 import { AlertBadge } from './AlertBadge';
+import { LinkBadge } from './LinkBadge';
 import { lightCardShadow, catColor } from '../constants/colors';
 import { isCollectionLog, logCount, upcomingCount } from '../utils/lifelog';
 import { openMemoryDetail } from '../utils/nav';
@@ -95,6 +96,7 @@ export function MemoryCard({ memory: m }: { memory: Memory }) {
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
               <Text style={{ fontSize: 15, fontWeight: '700', color: colors.text1, maxWidth: '80%' }} numberOfLines={1}>{m.name}</Text>
               {(m.type === 'birthday' || m.type === 'anniversary' || m.type === 'memorial') && <AlertBadge count={m.alerts?.length} />}
+              {m.type !== 'lifelog' && <LinkBadge count={m.links?.length} />}
             </View>
             {/* Life logs have no container date (dates live on entries). */}
             {m.type !== 'lifelog' && (

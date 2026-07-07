@@ -8,9 +8,10 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { CloseButton } from '../../components/CloseButton';
 import { MEM_EMOJIS, MEMORY_TYPES } from '../../constants/data';
 import { useStore } from '../../store/useStore';
-import { Alert as AlertType } from '../../store/types';
+import { Alert as AlertType, Link } from '../../store/types';
 import { DateTimeField } from '../../components/DateTimeField';
 import { AlertsEditor } from '../../components/AlertsEditor';
+import { LinksEditor } from '../../components/LinksEditor';
 import { Toggle } from '../../components/FormControls';
 import { COLLECTION_PRESETS, COUNT_PRESETS, PRESET_BY_ID } from '../../constants/lifelogs';
 
@@ -37,6 +38,7 @@ export default function AddMemoryModal() {
   const [note,  setNote]  = useState('');
   const [yearUnknown, setYearUnknown] = useState(false);
   const [alerts, setAlerts] = useState<AlertType[]>([]);
+  const [links,  setLinks]  = useState<Link[]>([]);
   // Life-log shaping. preset='' means Custom (name it yourself; optional target).
   const [preset, setPreset] = useState<string>('');
   const [customTarget, setCustomTarget] = useState('');
@@ -87,6 +89,7 @@ export default function AddMemoryModal() {
       note: lifelog ? '' : note.trim(),
       // Reminders only apply to the recurring types (birthday/anniversary/memorial).
       fav: false, alerts: lifelog ? [] : alerts,
+      links: lifelog ? [] : links,
     });
     // Creating a life log lands you in its detail view, ready to add entries.
     if (lifelog) router.replace({ pathname: '/modals/lifelog-detail', params: { id: newId } });
@@ -191,6 +194,7 @@ export default function AddMemoryModal() {
               <FL label="Note (optional)" />
               <TextInput value={note} onChangeText={setNote}
                 placeholder="Add a note…" placeholderTextColor={colors.text3} style={fi} />
+              <LinksEditor value={links} onChange={setLinks} />
             </>
           )}
           {(type === 'birthday' || type === 'anniversary' || type === 'memorial') && (

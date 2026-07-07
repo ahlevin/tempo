@@ -365,7 +365,7 @@ export const useStore = create<TempoStore>()(
           const id = get().addEvent({
             name, emoji: m.emoji, cat: 'parties',
             allDay: true, start: `${d}T00:00:00`, end: null, date: d,
-            fav: false, note: e.note ?? '', recur: null, alerts: [],
+            fav: false, note: e.note ?? '', recur: null, alerts: [], links: [],
           });
           slog(`detach: created event ${id} ("${name}") from ${e.item ? 'collection' : 'count'} entry; removing entry`);
           // The log is KEPT even if now empty, so re-attaching later finds it.
@@ -390,6 +390,7 @@ export const useStore = create<TempoStore>()(
             note: e.note ?? '',
             fav: e.fav,
             alerts: e.alerts ?? [],
+            links: e.links ?? [],
           };
           set(s => ({
             events: s.events.filter(x => x.id !== id),
@@ -423,6 +424,7 @@ export const useStore = create<TempoStore>()(
             note: m.note ?? '',
             recur,
             alerts: m.alerts ?? [],
+            links: m.links ?? [],
           };
           set(s => ({
             memories: s.memories.filter(x => x.id !== id),

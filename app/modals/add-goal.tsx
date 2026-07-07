@@ -8,9 +8,10 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { CloseButton } from '../../components/CloseButton';
 import { GOAL_EMOJIS } from '../../constants/data';
 import { useStore } from '../../store/useStore';
-import { Alert as AlertType } from '../../store/types';
+import { Alert as AlertType, Link } from '../../store/types';
 import { DateTimeField } from '../../components/DateTimeField';
 import { AlertsEditor } from '../../components/AlertsEditor';
+import { LinksEditor } from '../../components/LinksEditor';
 
 export default function AddGoalModal() {
   const { colors } = useTheme();
@@ -24,6 +25,7 @@ export default function AddGoalModal() {
   const [emoji,  setEmoji]  = useState('🎯');
   const [note,   setNote]   = useState('');
   const [alerts, setAlerts] = useState<AlertType[]>([]);
+  const [links,  setLinks]  = useState<Link[]>([]);
 
   const fi = { backgroundColor:colors.glass, borderWidth:1,
     borderColor:colors.border, borderRadius:12, padding:12,
@@ -32,7 +34,7 @@ export default function AddGoalModal() {
   function submit() {
     if (!name.trim() || !target || !date) { showToast('⚠️', 'Missing info', 'Please fill in all fields.'); return; }
     addGoal({ name:name.trim(), emoji, target:parseFloat(target),
-      unit:unit.trim()||'units', step:parseFloat(step)||1, date, fav:false, note:note.trim(), alerts });
+      unit:unit.trim()||'units', step:parseFloat(step)||1, date, fav:false, note:note.trim(), alerts, links });
     router.back();
   }
 
@@ -80,6 +82,7 @@ export default function AddGoalModal() {
             placeholder="Add a note…" placeholderTextColor={colors.text3}
             style={{ ...fi, minHeight:64, textAlignVertical:'top' }} />
           <AlertsEditor value={alerts} onChange={setAlerts} />
+          <LinksEditor value={links} onChange={setLinks} />
           <TouchableOpacity onPress={submit}
             style={{ backgroundColor:colors.teal, borderRadius:14, padding:15, alignItems:'center' }}>
             <Text style={{ color:'#0A0A0F', fontSize:15, fontWeight:'700' }}>Set Goal →</Text>

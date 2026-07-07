@@ -76,7 +76,7 @@ export default function OnboardingWizard() {
         addEvent({
           name: evName.trim(), emoji: '🎉', cat: 'parties',
           allDay: true, start: `${evDate}T00:00:00`, end: null, date: evDate,
-          fav: false, note: '', recur: null, alerts: [],
+          fav: false, note: '', recur: null, alerts: [], links: [],
         });
       } else {
         // Birthday/anniversary: a recurring Memory. The origin year (e.g. 1974)
@@ -84,7 +84,7 @@ export default function OnboardingWizard() {
         addMemory({
           type: itemType, name: evName.trim(),
           emoji: itemType === 'birthday' ? '🎂' : itemType === 'memorial' ? '🕊️' : '💍',
-          originDate: evDate, yearUnknown, entries: [], note: '', fav: false, alerts: [],
+          originDate: evDate, yearUnknown, entries: [], note: '', fav: false, alerts: [], links: [],
         });
       }
     }

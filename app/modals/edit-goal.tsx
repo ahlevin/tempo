@@ -7,9 +7,10 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { CloseButton } from '../../components/CloseButton';
 import { GOAL_EMOJIS } from '../../constants/data';
 import { useStore } from '../../store/useStore';
-import { Alert as AlertType } from '../../store/types';
+import { Alert as AlertType, Link } from '../../store/types';
 import { DateTimeField } from '../../components/DateTimeField';
 import { AlertsEditor } from '../../components/AlertsEditor';
+import { LinksEditor } from '../../components/LinksEditor';
 import { useConfirm } from '../../components/ConfirmDialog';
 
 export default function EditGoalModal() {
@@ -30,6 +31,7 @@ export default function EditGoalModal() {
   const [emoji,  setEmoji]  = useState(g?.emoji  || '🎯');
   const [note,   setNote]   = useState(g?.note   || '');
   const [alerts, setAlerts] = useState<AlertType[]>(g?.alerts ?? []);
+  const [links,  setLinks]  = useState<Link[]>(g?.links ?? []);
 
   const fi = { backgroundColor:colors.glass, borderWidth:1,
     borderColor:colors.border, borderRadius:12, padding:12,
@@ -40,7 +42,7 @@ export default function EditGoalModal() {
   function save() {
     if (!name.trim()||!target||!date) { showToast('⚠️', 'Missing info', 'Please fill in all fields.'); return; }
     updateGoal(id, { name:name.trim(), target:parseFloat(target),
-      unit:unit.trim()||'units', step:parseFloat(step)||1, date, emoji, note:note.trim(), alerts });
+      unit:unit.trim()||'units', step:parseFloat(step)||1, date, emoji, note:note.trim(), alerts, links });
     router.back();
   }
 
@@ -89,6 +91,7 @@ export default function EditGoalModal() {
             placeholder="Add a note…" placeholderTextColor={colors.text3}
             style={{ ...fi, minHeight:64, textAlignVertical:'top' }} />
           <AlertsEditor value={alerts} onChange={setAlerts} />
+          <LinksEditor value={links} onChange={setLinks} />
           <TouchableOpacity onPress={save}
             style={{ backgroundColor:colors.teal, borderRadius:14, padding:15, alignItems:'center', marginBottom:12 }}>
             <Text style={{ color:'#0A0A0F', fontSize:15, fontWeight:'700' }}>Save Changes →</Text>

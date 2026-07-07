@@ -3,6 +3,13 @@ export interface Alert {
   unit: 'minutes' | 'hours' | 'days' | 'weeks' | 'months';
 }
 
+// A labeled hyperlink attached to an item. `label` is the display text (falls
+// back to the URL/domain when blank); `url` is normalized to include a scheme.
+export interface Link {
+  label: string;
+  url: string;
+}
+
 export interface Recurrence {
   freq: 'daily' | 'weekly' | 'monthly' | 'yearly';
   dow: number[];
@@ -26,6 +33,7 @@ export interface Event {
   note: string;
   recur: Recurrence | null;
   alerts: Alert[];
+  links: Link[];
 }
 
 export interface Goal {
@@ -41,6 +49,7 @@ export interface Goal {
   fav: boolean;
   note: string;
   alerts: Alert[];
+  links: Link[];
 }
 
 export type DatePrecision = 'none' | 'year' | 'month' | 'full';
@@ -79,6 +88,7 @@ export interface Memory {
   note: string;
   fav: boolean;
   alerts: Alert[];
+  links: Link[];
 }
 
 // Per-user holiday visibility. The holiday LIBRARY is code (constants/holidays.ts);

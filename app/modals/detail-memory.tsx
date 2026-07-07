@@ -4,7 +4,7 @@ import { useStore } from '../../store/useStore';
 import { useTheme } from '../../contexts/ThemeContext';
 import { catColor, catBg, dayCountColor } from '../../constants/colors';
 import { nextAnnual, daysUntil, yearsMonthsDays, ordinal, fmtFull, fmtShortNoYear, fmtMonthDay } from '../../utils/dates';
-import { DetailScreen, DetailCard, DetailHeader, StatRow, Section, Field, remindersText } from '../../components/DetailView';
+import { DetailScreen, DetailCard, DetailHeader, StatRow, Section, Field, remindersText, LinksSection } from '../../components/DetailView';
 
 const TYPE_META: Record<'birthday' | 'anniversary' | 'memorial', { emoji: string; label: string }> = {
   birthday:    { emoji: '🎂', label: 'Birthday' },
@@ -66,6 +66,7 @@ export default function MemoryDetailModal() {
             <Field label="" value={m.note.trim()} />
           </Section>
         )}
+        <LinksSection links={m.links} />
         <View style={{ height: 4 }} />
       </DetailCard>
     </DetailScreen>

@@ -4,7 +4,7 @@ import { useStore } from '../../store/useStore';
 import { useTheme } from '../../contexts/ThemeContext';
 import { catColor, dayCountColor } from '../../constants/colors';
 import { daysUntil, fmtDateTimeFull } from '../../utils/dates';
-import { DetailScreen, DetailCard, DetailHeader, StatRow, Section, Field, remindersText } from '../../components/DetailView';
+import { DetailScreen, DetailCard, DetailHeader, StatRow, Section, Field, remindersText, LinksSection } from '../../components/DetailView';
 
 export default function GoalDetailModal() {
   const { colors } = useTheme();
@@ -49,6 +49,7 @@ export default function GoalDetailModal() {
             <Field label="" value={g.note.trim()} />
           </Section>
         )}
+        <LinksSection links={g.links} />
         <View style={{ height: 4 }} />
       </DetailCard>
     </DetailScreen>

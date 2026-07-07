@@ -13,6 +13,8 @@ import { DateTimeField } from '../../components/DateTimeField';
 import { RecurrenceEditor } from '../../components/RecurrenceEditor';
 import { AlertsEditor } from '../../components/AlertsEditor';
 import { LifelogAttachSection, AttachHandle } from '../../components/LifelogAttachSection';
+import { LinksEditor } from '../../components/LinksEditor';
+import { Link } from '../../store/types';
 import { canonItem } from '../../utils/lifelog';
 
 export default function AddEventModal() {
@@ -30,6 +32,7 @@ export default function AddEventModal() {
   const [note,   setNote]   = useState('');
   const [recur,  setRecur]  = useState<Recurrence | null>(null);
   const [alerts, setAlerts] = useState<AlertType[]>([]);
+  const [links,  setLinks]  = useState<Link[]>([]);
   // "Also log this in a Life Log" — turns the countdown into a future-dated
   // life-log ENTRY (the single source of truth; no separate event row).
   const [attachLog, setAttachLog] = useState(false);
@@ -52,7 +55,7 @@ export default function AddEventModal() {
     addEvent({
       name: name.trim(), emoji, cat: cat as any,
       allDay, start: startIso, end: allDay ? null : end, date: startIso.slice(0, 10), fav: false,
-      note: note.trim(), recur, alerts,
+      note: note.trim(), recur, alerts, links,
     });
     router.back();
   }
@@ -142,6 +145,7 @@ export default function AddEventModal() {
             <>
               <RecurrenceEditor value={recur} onChange={setRecur} />
               <AlertsEditor value={alerts} onChange={setAlerts} />
+              <LinksEditor value={links} onChange={setLinks} />
             </>
           )}
 

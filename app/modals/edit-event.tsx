@@ -8,10 +8,11 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { CloseButton } from '../../components/CloseButton';
 import { EMOJIS, CATEGORIES } from '../../constants/data';
 import { useStore } from '../../store/useStore';
-import { Recurrence, Alert as AlertType } from '../../store/types';
+import { Recurrence, Alert as AlertType, Link } from '../../store/types';
 import { DateTimeField } from '../../components/DateTimeField';
 import { RecurrenceEditor } from '../../components/RecurrenceEditor';
 import { AlertsEditor } from '../../components/AlertsEditor';
+import { LinksEditor } from '../../components/LinksEditor';
 import { LifelogAttachSection, AttachHandle } from '../../components/LifelogAttachSection';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { canonItem } from '../../utils/lifelog';
@@ -42,6 +43,7 @@ export default function EditEventModal() {
   const [note,   setNote]   = useState(event?.note   || '');
   const [recur,  setRecur]  = useState<Recurrence | null>(event?.recur ?? null);
   const [alerts, setAlerts] = useState<AlertType[]>(event?.alerts ?? []);
+  const [links,  setLinks]  = useState<Link[]>(event?.links ?? []);
 
   const fi = { backgroundColor:colors.glass, borderWidth:1,
     borderColor:colors.border, borderRadius:12, padding:12,
@@ -54,7 +56,7 @@ export default function EditEventModal() {
     const startIso = allDay ? `${start.slice(0, 10)}T00:00:00` : start;
     updateEvent(id, { name:name.trim(), emoji, cat:cat as any,
       allDay, start:startIso, end: allDay ? null : end, date: startIso.slice(0, 10),
-      note: note.trim(), recur, alerts });
+      note: note.trim(), recur, alerts, links });
     router.back();
   }
 
@@ -137,6 +139,8 @@ export default function EditEventModal() {
           <RecurrenceEditor value={recur} onChange={setRecur} />
 
           <AlertsEditor value={alerts} onChange={setAlerts} />
+
+          <LinksEditor value={links} onChange={setLinks} />
 
           <TouchableOpacity onPress={save}
             style={{ backgroundColor:colors.accent, borderRadius:14, padding:15, alignItems:'center', marginBottom:12 }}>

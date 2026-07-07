@@ -5,7 +5,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { catColor, catBg, dayCountColor } from '../../constants/colors';
 import { CATEGORIES } from '../../constants/data';
 import { nextOccurrence, daysUntil, recurLabel, fmtDateTimeFull } from '../../utils/dates';
-import { DetailScreen, DetailCard, DetailHeader, StatRow, Section, Field, remindersText } from '../../components/DetailView';
+import { DetailScreen, DetailCard, DetailHeader, StatRow, Section, Field, remindersText, LinksSection } from '../../components/DetailView';
 
 export default function EventDetailModal() {
   const { colors } = useTheme();
@@ -44,6 +44,7 @@ export default function EventDetailModal() {
             <Field label="" value={e.note.trim()} />
           </Section>
         )}
+        <LinksSection links={e.links} />
         <View style={{ height: 4 }} />
       </DetailCard>
     </DetailScreen>
