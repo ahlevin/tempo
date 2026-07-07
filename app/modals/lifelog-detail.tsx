@@ -8,6 +8,7 @@ import type { LogEntry } from '../../store/types';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { fmtLogDate, daysSince, daysBetween } from '../../utils/dates';
 import { isCollectionLog, logUniverse, logCount, upcomingCount, isUpcomingEntry, sortedEntries, logNoun } from '../../utils/lifelog';
+import { openLogEntryDetail } from '../../utils/nav';
 
 export default function LifelogDetailModal() {
   const { colors } = useTheme();
@@ -136,21 +137,27 @@ export default function LifelogDetailModal() {
                 <View key={index} style={{ flexDirection:'row', alignItems:'center', gap:10,
                   backgroundColor:colors.surf, borderRadius:14, borderWidth:1, borderColor:colors.border,
                   padding:12, marginBottom:8 }}>
-                  <View style={{ width:26, height:26, borderRadius:13, backgroundColor: colors.isDark ? 'rgba(62,207,178,0.16)' : colors.tint, alignItems:'center', justifyContent:'center' }}>
-                    <Text style={{ fontSize:12, color:teal }}>{up ? '⏳' : collection ? '✓' : '•'}</Text>
-                  </View>
-                  <View style={{ flex:1 }}>
-                    <View style={{ flexDirection:'row', alignItems:'center', gap:6, flexWrap:'wrap' }}>
-                      <Text style={{ fontSize:14, fontWeight:'600', color:colors.text1, maxWidth:'78%' }} numberOfLines={1}>{primary}</Text>
-                      {up && (
-                        <View style={{ backgroundColor: colors.isDark ? 'rgba(62,207,178,0.16)' : colors.tint, borderRadius:8, paddingVertical:2, paddingHorizontal:7 }}>
-                          <Text style={{ fontSize:9, fontWeight:'800', color:teal, textTransform:'uppercase', letterSpacing:0.3 }}>Upcoming</Text>
-                        </View>
-                      )}
+                  {/* Row body → read-only detail (same view as tapping from Countdowns).
+                      The action icons are separate touch targets, so tapping them
+                      never triggers this navigation. */}
+                  <TouchableOpacity onPress={() => openLogEntryDetail(m.id, index)} activeOpacity={0.7}
+                    style={{ flex:1, flexDirection:'row', alignItems:'center', gap:10 }}>
+                    <View style={{ width:26, height:26, borderRadius:13, backgroundColor: colors.isDark ? 'rgba(62,207,178,0.16)' : colors.tint, alignItems:'center', justifyContent:'center' }}>
+                      <Text style={{ fontSize:12, color:teal }}>{up ? '⏳' : collection ? '✓' : '•'}</Text>
                     </View>
-                    {!!secondary && <Text style={{ fontSize:13, color:colors.text2, marginTop:1 }}>{secondary}</Text>}
-                    {!!entry.note && <Text style={{ fontSize:13, color:colors.text2, marginTop:2 }} numberOfLines={2}>{entry.note}</Text>}
-                  </View>
+                    <View style={{ flex:1 }}>
+                      <View style={{ flexDirection:'row', alignItems:'center', gap:6, flexWrap:'wrap' }}>
+                        <Text style={{ fontSize:14, fontWeight:'600', color:colors.text1, maxWidth:'78%' }} numberOfLines={1}>{primary}</Text>
+                        {up && (
+                          <View style={{ backgroundColor: colors.isDark ? 'rgba(62,207,178,0.16)' : colors.tint, borderRadius:8, paddingVertical:2, paddingHorizontal:7 }}>
+                            <Text style={{ fontSize:9, fontWeight:'800', color:teal, textTransform:'uppercase', letterSpacing:0.3 }}>Upcoming</Text>
+                          </View>
+                        )}
+                      </View>
+                      {!!secondary && <Text style={{ fontSize:13, color:colors.text2, marginTop:1 }}>{secondary}</Text>}
+                      {!!entry.note && <Text style={{ fontSize:13, color:colors.text2, marginTop:2 }} numberOfLines={2}>{entry.note}</Text>}
+                    </View>
+                  </TouchableOpacity>
                   <TouchableOpacity onPress={() => editEntry(index)} hitSlop={{ top:8, bottom:8, left:8, right:8 }}
                     style={{ width:40, height:40, alignItems:'center', justifyContent:'center' }}>
                     <Text style={{ fontSize:17 }}>✏️</Text>
