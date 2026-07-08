@@ -5,7 +5,7 @@ import { catColor, heroTintBg, lightCardShadow } from '../constants/colors';
 import { openEventDetail, openGoalDetail, openMemoryDetail, openHolidayDetail } from '../utils/nav';
 import { CATEGORIES } from '../constants/data';
 import { visibleHolidays, HolidayItem } from '../constants/holidays';
-import { logCount, upcomingCount, isCollectionLog, logUniverse } from '../utils/lifelog';
+import { logCount, logVisits, upcomingCount, isCollectionLog, logUniverse } from '../utils/lifelog';
 import { useTheme } from '../contexts/ThemeContext';
 import { useTick } from '../contexts/TickContext';
 import { useStore } from '../store/useStore';
@@ -253,7 +253,8 @@ function MemoryCard({ memory: m }: { memory: any }) {
   const accent = colors.teal;
   const dark   = colors.isDark ? colors.teal : colors.accent;
   const isColl = isCollectionLog(m) && !!(m.logTarget ?? logUniverse(m)?.length);
-  const completed = logCount(m);
+  const completed = logCount(m);   // UNIQUE completed items (coverage)
+  const visits = logVisits(m);     // total completed entries (repeat visits)
   const upN = upcomingCount(m);
   const bigVal   = completed;
   const bigLabel = isColl ? `of ${m.logTarget}` : (bigVal === 1 ? 'Time' : 'Times');
@@ -261,7 +262,9 @@ function MemoryCard({ memory: m }: { memory: any }) {
   const secondary = upN > 0
     ? `${completed} done · ${upN} upcoming`
     : (isColl ? `${pct}% complete` : `${completed} logged`);
-  const info2 = isColl ? `${completed} of ${m.logTarget} logged` : `${completed} logged`;
+  const info2 = isColl
+    ? `${completed} of ${m.logTarget} logged${visits > completed ? ` · ${visits} visits` : ''}`
+    : `${completed} logged`;
   return (
     <HeroFrame bgDark="#0F1E1A" borderDark="rgba(62,207,178,0.28)" fav={m.fav} onFav={() => toggleFav(m.id)}
       onPress={() => openMemoryDetail(m)}>

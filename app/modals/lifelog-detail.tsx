@@ -7,7 +7,7 @@ import { useStore } from '../../store/useStore';
 import type { LogEntry } from '../../store/types';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { fmtLogDate, daysSince, daysBetween } from '../../utils/dates';
-import { isCollectionLog, logUniverse, logCount, upcomingCount, isUpcomingEntry, sortedEntries, logNoun } from '../../utils/lifelog';
+import { isCollectionLog, logUniverse, logCount, logVisits, upcomingCount, isUpcomingEntry, sortedEntries, logNoun } from '../../utils/lifelog';
 import { openLogEntryDetail } from '../../utils/nav';
 import { LinkBadge } from '../../components/LinkBadge';
 
@@ -26,7 +26,8 @@ export default function LifelogDetailModal() {
   const collection = isCollectionLog(m);
   const universe = logUniverse(m);
   const target = m.logTarget;
-  const count = logCount(m);        // COMPLETED only (excludes future-dated)
+  const count = logCount(m);        // UNIQUE completed items (coverage)
+  const visits = logVisits(m);      // total completed entries (repeat visits)
   const upN = upcomingCount(m);     // future-dated entries not yet counted
   const pct = collection && target ? Math.min(100, Math.round((count / target) * 100)) : null;
 
@@ -85,6 +86,7 @@ export default function LifelogDetailModal() {
                 <Text style={{ fontSize:34, fontWeight:'800', color:teal, fontVariant:['tabular-nums'] }}>{count}</Text>
                 <Text style={{ fontSize:16, fontWeight:'600', color:colors.text2 }}>of {target}</Text>
                 {pct !== null && <Text style={{ fontSize:14, color:colors.text2, marginLeft:2 }}>· {pct}%</Text>}
+                {visits > count && <Text style={{ fontSize:14, color:colors.text2, marginLeft:2 }}>· {visits} visits</Text>}
               </View>
               <View style={{ height:8, borderRadius:4, backgroundColor:colors.track, marginTop:10, overflow:'hidden' }}>
                 <View style={{ height:'100%', width:`${pct ?? 0}%` as DimensionValue, backgroundColor:teal, borderRadius:4 }} />

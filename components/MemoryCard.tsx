@@ -8,7 +8,7 @@ import { FavStar } from './FavStar';
 import { AlertBadge } from './AlertBadge';
 import { LinkBadge } from './LinkBadge';
 import { lightCardShadow, catColor } from '../constants/colors';
-import { isCollectionLog, logCount, upcomingCount } from '../utils/lifelog';
+import { isCollectionLog, logCount, upcomingCount, logVisits } from '../utils/lifelog';
 import { openMemoryDetail } from '../utils/nav';
 import {
   yearsMonthsDays, nextAnnual, daysSince, daysUntil,
@@ -247,7 +247,8 @@ function LifelogSummary({ m, color }: { m: Memory; color: string }) {
   const { colors } = useTheme();
   const collection = isCollectionLog(m);
   const target = m.logTarget;
-  const count = logCount(m);        // completed (excludes future-dated)
+  const count = logCount(m);        // UNIQUE completed items (coverage)
+  const visits = logVisits(m);      // total completed entries (repeat visits)
   const upN = upcomingCount(m);
   const pct = collection && target ? Math.min(100, Math.round((count / target) * 100)) : null;
   // "last" ignores future-dated entries.
@@ -261,6 +262,7 @@ function LifelogSummary({ m, color }: { m: Memory; color: string }) {
             <Text style={{ fontSize: 30, fontWeight: '800', color, fontVariant: ['tabular-nums'] }}>{count}</Text>
             <Text style={{ fontSize: 15, fontWeight: '600', color: colors.text2 }}>of {target}</Text>
             {pct !== null && <Text style={{ fontSize: 13, color: colors.text2, marginLeft: 2 }}>· {pct}%</Text>}
+            {collection && visits > count && <Text style={{ fontSize: 13, color: colors.text2, marginLeft: 2 }}>· {visits} visits</Text>}
           </View>
           <View style={{ height: 6, borderRadius: 3, backgroundColor: colors.track, marginTop: 8, overflow: 'hidden' }}>
             <View style={{ height: '100%', width: `${pct ?? 0}%` as DimensionValue, backgroundColor: color, borderRadius: 3 }} />

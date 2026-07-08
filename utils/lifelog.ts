@@ -40,6 +40,13 @@ export function logCount(m: Memory): number {
   return completed.length;
 }
 
+/** Total COMPLETED entries = visits (each visit is its own entry). For a
+ *  collection this can exceed logCount() when items are logged more than once;
+ *  callers append "· N visits" only when this exceeds the unique count. */
+export function logVisits(m: Memory): number {
+  return m.entries.filter(e => !isUpcomingEntry(e)).length;
+}
+
 /** How many entries are still upcoming (future-dated). */
 export function upcomingCount(m: Memory): number {
   return m.entries.filter(isUpcomingEntry).length;

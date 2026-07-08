@@ -58,14 +58,16 @@ export default function LogEntryModal() {
   const [query, setQuery] = useState('');
   const [addedCount, setAddedCount] = useState(0);
 
-  // Remaining = universe minus already-logged, but the entry being edited keeps its own item.
-  const remaining = useMemo(() => {
-    if (!isPicker || !universe || !m) return [];
-    const logged = new Set(m.entries.map(e => e.item).filter(Boolean));
-    if (editing?.item) logged.delete(editing.item);
+  // The FULL universe is always shown (repeat visits allowed). Each item carries
+  // its current entry count so it can render a "· N×" badge; selecting it logs
+  // ANOTHER visit. Search filters over all items.
+  const pickItems = useMemo(() => {
+    if (!isPicker || !universe || !m) return [] as { name: string; count: number }[];
+    const counts = new Map<string, number>();
+    m.entries.forEach(e => { if (e.item) counts.set(e.item, (counts.get(e.item) ?? 0) + 1); });
     const q = query.trim().toLowerCase();
-    return universe.filter(x => !logged.has(x) && (!q || x.toLowerCase().includes(q)));
-  }, [isPicker, universe, m, query, editing]);
+    return universe.filter(x => !q || x.toLowerCase().includes(q)).map(x => ({ name: x, count: counts.get(x) ?? 0 }));
+  }, [isPicker, universe, m, query]);
 
   const fi = { backgroundColor:colors.glass, borderWidth:1,
     borderColor:colors.border, borderRadius:12, padding:12,
@@ -169,19 +171,22 @@ export default function LogEntryModal() {
               <View style={{ maxHeight:240, borderWidth:1, borderColor:colors.border, borderRadius:12,
                 overflow:'hidden', marginBottom:14 }}>
                 <ScrollView keyboardShouldPersistTaps="handled" nestedScrollEnabled>
-                  {remaining.length === 0 ? (
+                  {pickItems.length === 0 ? (
                     <Text style={{ fontSize:13, color:colors.text3, padding:14 }}>
-                      {query ? 'No matches.' : 'All logged — nothing left! 🎉'}
+                      {query ? 'No matches.' : 'No items.'}
                     </Text>
-                  ) : remaining.map((x, i) => {
-                    const sel = item === x;
+                  ) : pickItems.map((x, i) => {
+                    const sel = item === x.name;
                     return (
-                      <TouchableOpacity key={x} onPress={() => setItem(x)}
+                      <TouchableOpacity key={x.name} onPress={() => setItem(x.name)}
                         style={{ padding:12, borderTopWidth: i === 0 ? 0 : 1, borderTopColor:colors.border,
                           backgroundColor: sel ? (colors.isDark ? 'rgba(62,207,178,0.14)' : colors.tint) : 'transparent' }}>
                         <Text style={{ fontSize:14, fontWeight: sel ? '700' : '500',
                           color: sel ? colors.teal : colors.text1 }}>
-                          {sel ? '✓ ' : ''}{x}
+                          {sel ? '✓ ' : ''}{x.name}
+                          {x.count > 0 && (
+                            <Text style={{ color: sel ? colors.teal : colors.text3, fontWeight:'600' }}>{`  · ${x.count}×`}</Text>
+                          )}
                         </Text>
                       </TouchableOpacity>
                     );
