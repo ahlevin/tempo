@@ -66,6 +66,9 @@ export interface LogEntry {
   datePrecision?: DatePrecision;
   /** Per-entry labeled hyperlinks. Absent on older entries → treated as []. */
   links?: Link[];
+  /** Reminders for an UPCOMING (future-dated) entry — same shape as Event.alerts.
+   *  Carried through the attach flow; absent on older entries → treated as []. */
+  alerts?: Alert[];
 }
 
 export interface Memory {

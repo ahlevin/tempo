@@ -3,6 +3,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useStore } from '../store/useStore';
 import { lightCardShadow } from '../constants/colors';
 import { SwipeableRow } from './SwipeableRow';
+import { AlertBadge } from './AlertBadge';
 import { openLogEntryDetail } from '../utils/nav';
 import type { UpcomingLogItem } from '../utils/lifelog';
 
@@ -37,7 +38,10 @@ export function UpcomingLogRow({ item }: { item: UpcomingLogItem }) {
         <Text style={{ fontSize: 20 }}>{item.emoji}</Text>
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text1, maxWidth: '86%' }} numberOfLines={1}>{item.label}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text1, maxWidth: '80%' }} numberOfLines={1}>{item.label}</Text>
+          <AlertBadge count={item.alerts} />
+        </View>
         <Text style={{ fontSize: 13, color: colors.text2, marginTop: 2 }}>
           <Text style={{ color, fontWeight: '700' }}>Upcoming</Text>
           <Text> · {item.logName} · {dateStr}</Text>

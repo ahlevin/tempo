@@ -47,7 +47,7 @@ export default function AddEventModal() {
       // standalone event; it graduates automatically once its date passes.
       const r = attachRef.current?.resolve();
       if (!r) return; // the picker surfaced the reason
-      addLogEntry(r.targetId, { date: startIso.slice(0, 10), note: note.trim(), item: canonItem(r.universe, name.trim()), datePrecision: 'full' });
+      addLogEntry(r.targetId, { date: startIso.slice(0, 10), note: note.trim(), item: canonItem(r.universe, name.trim()), datePrecision: 'full', alerts });
       router.back();
       return;
     }

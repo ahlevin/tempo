@@ -78,7 +78,7 @@ export default function EditEventModal() {
     const r = attachRef.current?.resolve();
     if (!r) return;
     const startIso = allDay ? `${start.slice(0, 10)}T00:00:00` : start;
-    attachEventToLog(id, r.targetId, { date: startIso.slice(0, 10), note: note.trim(), item: canonItem(r.universe, name.trim()), datePrecision: 'full' });
+    attachEventToLog(id, r.targetId, { date: startIso.slice(0, 10), note: note.trim(), item: canonItem(r.universe, name.trim()), datePrecision: 'full', alerts });
     router.back();
   }
 

@@ -5,7 +5,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { dayCountColor } from '../../constants/colors';
 import { daysUntil, fmtDateTimeFull, fmtLogDate } from '../../utils/dates';
 import { isUpcomingEntry } from '../../utils/lifelog';
-import { DetailScreen, DetailCard, DetailHeader, StatRow, Section, Field, LinksSection } from '../../components/DetailView';
+import { DetailScreen, DetailCard, DetailHeader, StatRow, Section, Field, LinksSection, remindersText } from '../../components/DetailView';
 
 // Read-only detail for a life-log entry — reached from Countdowns (attached
 // upcoming entries via UpcomingLogRow) AND from the Life Log detail (any entry).
@@ -48,6 +48,11 @@ export default function LogEntryDetailModal() {
         <Section label="When">
           <Field label="Date" value={dateText} />
         </Section>
+        {upcoming && (
+          <Section label="Reminders">
+            <Field label="Alerts" value={remindersText(entry.alerts)} />
+          </Section>
+        )}
         {!!(entry.note && entry.note.trim()) && (
           <Section label="Note">
             <Field label="" value={entry.note.trim()} />

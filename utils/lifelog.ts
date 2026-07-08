@@ -69,6 +69,7 @@ export interface UpcomingLogItem {
   label: string;   // entry item/label, or the log name if none
   dateISO: string;
   days: number;
+  alerts: number;  // count of reminders on the entry (for the card badge)
 }
 
 export function upcomingLogItems(memories: Memory[]): UpcomingLogItem[] {
@@ -80,6 +81,7 @@ export function upcomingLogItems(memories: Memory[]): UpcomingLogItem[] {
         out.push({
           memId: m.id, index, logName: m.name, emoji: m.emoji,
           label: e.item || m.name, dateISO: e.date, days: daysUntil(e.date),
+          alerts: e.alerts?.length ?? 0,
         });
       }
     });

@@ -111,6 +111,27 @@ export async function rescheduleAll(data: Snapshot): Promise<void> {
         );
       }
     }
+
+    // Future-dated life-log ENTRIES with reminders — an attached upcoming item is
+    // the single source of truth (no standalone event), so schedule it here just
+    // like an all-day event: fire at 9am on (entry date − offset). Past/dateless
+    // entries and those without alerts are skipped.
+    for (const m of data.memories) {
+      for (const e of m.entries) {
+        if (!e.alerts?.length || !e.date) continue;
+        const base = toDate(`${e.date}T00:00:00`);
+        if (!isValidDate(base)) continue;
+        const label = e.item || m.name;
+        for (const a of e.alerts) {
+          const fire = at9am(new Date(base.getTime() - offsetMs(a)));
+          if (fire.getTime() <= now) continue;
+          await schedule(
+            { type: Notifications.SchedulableTriggerInputTypes.DATE, date: fire },
+            `${m.emoji} ${label}`, `In ${a.value} ${unitLabel(a)}`,
+          );
+        }
+      }
+    }
   } catch (e) {
     console.warn('[notifications] rescheduleAll failed', e);
   }

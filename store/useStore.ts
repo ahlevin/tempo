@@ -61,7 +61,7 @@ interface TempoStore {
   updateMemory: (id: string, patch: Partial<Memory>) => void;
   deleteMemory: (id: string) => void;
   toggleMemoryFav: (id: string) => void;
-  addLogEntry: (memId: string, entry: { date: string; note: string; item?: string; datePrecision?: import('./types').DatePrecision; links?: import('./types').Link[] }) => void;
+  addLogEntry: (memId: string, entry: { date: string; note: string; item?: string; datePrecision?: import('./types').DatePrecision; links?: import('./types').Link[]; alerts?: import('./types').Alert[] }) => void;
   updateLogEntry: (memId: string, index: number, patch: Partial<import('./types').LogEntry>) => void;
   deleteLogEntry: (memId: string, index: number) => void;
   // Universe admin rename-safety: rename this user's matching logged items.
@@ -413,7 +413,7 @@ export const useStore = create<TempoStore>()(
           const id = get().addEvent({
             name, emoji: m.emoji, cat: 'parties',
             allDay: true, start: `${d}T00:00:00`, end: null, date: d,
-            fav: false, note: e.note ?? '', recur: null, alerts: [], links: e.links ?? [],
+            fav: false, note: e.note ?? '', recur: null, alerts: e.alerts ?? [], links: e.links ?? [],
           });
           slog(`detach: created event ${id} ("${name}") from ${e.item ? 'collection' : 'count'} entry; removing entry`);
           // The log is KEPT even if now empty, so re-attaching later finds it.
