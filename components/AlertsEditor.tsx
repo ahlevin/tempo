@@ -57,10 +57,10 @@ export function AlertsEditor({
                 {UNITS.map(u => (
                   <TouchableOpacity key={u}
                     onPress={() => setAlerts(prev => prev.map((x,j) => j===i?{...x,unit:u}:x))}
-                    style={{ padding:5, borderRadius:6,
-                      backgroundColor: a.unit===u ? (colors.isDark ? 'rgba(124,106,245,0.2)' : colors.tint) : 'transparent' }}>
-                    <Text style={{ fontSize:12,
-                      color: a.unit===u ? colors.accent : colors.text2 }}>{u} before</Text>
+                    style={{ paddingVertical:6, paddingHorizontal:8, borderRadius:6,
+                      backgroundColor: a.unit===u ? colors.accent : 'transparent' }}>
+                    <Text style={{ fontSize:12, fontWeight: a.unit===u ? '700' : '500',
+                      color: a.unit===u ? (colors.isDark ? '#0A0A0F' : '#fff') : colors.text2 }}>{u} before</Text>
                   </TouchableOpacity>
                 ))}
               </View>

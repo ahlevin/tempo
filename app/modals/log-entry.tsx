@@ -211,8 +211,8 @@ export default function LogEntryModal() {
                 <TouchableOpacity key={p.id} onPress={() => setPrecision(p.id)}
                   style={{ paddingVertical:8, paddingHorizontal:12, borderRadius:10, borderWidth:1.5,
                     borderColor: sel ? colors.teal : colors.border,
-                    backgroundColor: sel ? (colors.isDark ? 'rgba(62,207,178,0.12)' : colors.tint) : colors.glass }}>
-                  <Text style={{ fontSize:12, fontWeight:'600', color: sel ? colors.teal : colors.text2 }}>{p.label}</Text>
+                    backgroundColor: sel ? colors.teal : colors.glass }}>
+                  <Text style={{ fontSize:12, fontWeight: sel ? '700' : '600', color: sel ? (colors.isDark ? '#0A0A0F' : '#fff') : colors.text2 }}>{p.label}</Text>
                 </TouchableOpacity>
               );
             })}
@@ -225,10 +225,10 @@ export default function LogEntryModal() {
                   <TouchableOpacity key={String(opt.v)} onPress={() => setUsePast(opt.v)}
                     style={{ flex:1, padding:10, borderRadius:9, borderWidth:1.5,
                       borderColor: usePast===opt.v ? colors.teal : colors.border,
-                      backgroundColor: usePast===opt.v ? (colors.isDark ? 'rgba(62,207,178,0.1)' : colors.tint) : colors.glass,
+                      backgroundColor: usePast===opt.v ? colors.teal : colors.glass,
                       alignItems:'center' }}>
-                    <Text style={{ fontSize:13, fontWeight:'600',
-                      color: usePast===opt.v ? colors.teal : colors.text2 }}>{opt.l}</Text>
+                    <Text style={{ fontSize:13, fontWeight: usePast===opt.v ? '700' : '600',
+                      color: usePast===opt.v ? (colors.isDark ? '#0A0A0F' : '#fff') : colors.text2 }}>{opt.l}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -242,10 +242,10 @@ export default function LogEntryModal() {
                 const sel = month === i;
                 return (
                   <TouchableOpacity key={mo} onPress={() => setMonth(i)}
-                    style={{ width:'22%', paddingVertical:9, borderRadius:9, borderWidth:1, alignItems:'center',
+                    style={{ width:'22%', paddingVertical:9, borderRadius:9, borderWidth:1.5, alignItems:'center',
                       borderColor: sel ? colors.teal : colors.border,
-                      backgroundColor: sel ? (colors.isDark ? 'rgba(62,207,178,0.12)' : colors.tint) : colors.glass }}>
-                    <Text style={{ fontSize:12, fontWeight:'600', color: sel ? colors.teal : colors.text2 }}>{mo}</Text>
+                      backgroundColor: sel ? colors.teal : colors.glass }}>
+                    <Text style={{ fontSize:12, fontWeight: sel ? '700' : '600', color: sel ? (colors.isDark ? '#0A0A0F' : '#fff') : colors.text2 }}>{mo}</Text>
                   </TouchableOpacity>
                 );
               })}
