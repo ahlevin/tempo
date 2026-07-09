@@ -2,10 +2,10 @@ import { useRef, useState } from 'react';
 import { View, Text, ScrollView, Dimensions, TouchableOpacity, Platform } from 'react-native';
 import { useIsFocused } from 'expo-router';
 import { catColor, heroTintBg, lightCardShadow } from '../constants/colors';
-import { openEventDetail, openGoalDetail, openMemoryDetail, openHolidayDetail } from '../utils/nav';
+import { openEventDetail, openGoalDetail, openMemoryDetail, openHolidayDetail, openLogEntryDetail } from '../utils/nav';
 import { CATEGORIES } from '../constants/data';
 import { visibleHolidays, HolidayItem } from '../constants/holidays';
-import { logCount, logVisits, upcomingCount, isCollectionLog, logUniverse } from '../utils/lifelog';
+import { logCount, logVisits, upcomingCount, isCollectionLog, logUniverse, isUpcomingEntry } from '../utils/lifelog';
 import { useTheme } from '../contexts/ThemeContext';
 import { useTick } from '../contexts/TickContext';
 import { useStore } from '../store/useStore';
@@ -301,6 +301,30 @@ function HolidayCard({ item }: { item: HolidayItem }) {
   );
 }
 
+// ---- Life-log entry (a favorited UPCOMING entry, surfaced individually) ----
+
+function LogEntryCard({ item }: { item: any }) {
+  const { colors } = useTheme();
+  const toggleFav = useStore(s => s.toggleLogEntryFav);
+  const accent = colors.teal;
+  const target = new Date(item.dateISO + 'T00:00:00');
+  const wday = target.toLocaleDateString('en-US', { weekday: 'long' });
+  const dstr = target.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  return (
+    <HeroFrame bgDark="#0F1E1A" borderDark="rgba(62,207,178,0.28)" fav onFav={() => toggleFav(item.memId, item.index)}
+      onPress={() => openLogEntryDetail(item.memId, item.index)}>
+      <Eyebrow color={accent}>Life Log</Eyebrow>
+      <CardName>{item.emoji} {item.label}</CardName>
+      <Secondary color={accent}>{item.logName}</Secondary>
+      <View style={tileRow}>
+        <HeroTile value={item.days} label={item.days === 1 ? 'Day Away' : 'Days Away'} accent={accent}
+          bg={heroTintBg(colors, colors.isDark ? colors.teal : colors.accent)} />
+        <InfoColumn line1={wday} line2={dstr} />
+      </View>
+    </HeroFrame>
+  );
+}
+
 // ---- Carousel -------------------------------------------------------------
 
 export function HeroCarousel() {
@@ -322,7 +346,7 @@ export function HeroCarousel() {
 
   // Hero = ONLY starred items, of every type (events, goals, memories, holidays),
   // sorted by soonest upcoming date.
-  const items: { kind: 'event' | 'goal' | 'memory' | 'holiday'; data: any; days: number }[] = [];
+  const items: { kind: 'event' | 'goal' | 'memory' | 'holiday' | 'logentry'; data: any; days: number }[] = [];
   events.filter(e => e.fav).forEach(e => items.push({ kind:'event', data:e, days: daysUntil(nextOccurrence(e)) }));
   goals.filter(g => g.fav).forEach(g => items.push({ kind:'goal', data:g, days: daysUntil(g.date) }));
   memories
@@ -332,6 +356,18 @@ export function HeroCarousel() {
         ? daysUntil(nextAnnual(m.originDate)) : Number.MAX_SAFE_INTEGER;
       items.push({ kind:'memory', data:m, days });
     });
+  // Favorited UPCOMING life-log ENTRIES (entry.fav) surface individually — the
+  // same entry the UpcomingLogRow/Favorites modal shows, keyed by memory+index.
+  memories.filter(m => m.type === 'lifelog').forEach(m => {
+    m.entries.forEach((e, index) => {
+      if (e.fav && isUpcomingEntry(e)) {
+        items.push({ kind:'logentry', days: daysUntil(e.date), data: {
+          memId: m.id, index, emoji: m.emoji, logName: m.name,
+          label: e.item || m.name, dateISO: e.date, days: daysUntil(e.date),
+        } });
+      }
+    });
+  });
   visibleHolidays(holidayPrefs).filter(h => h.fav).forEach(h => items.push({ kind:'holiday', data:h, days: h.days }));
   items.sort((a, b) => a.days - b.days);
 
@@ -379,6 +415,7 @@ export function HeroCarousel() {
             {item.kind === 'event'   && <EventCard event={item.data} active={focused && i === idx} />}
             {item.kind === 'goal'    && <GoalCard  goal={item.data} />}
             {item.kind === 'memory'  && <MemoryCard memory={item.data} />}
+            {item.kind === 'logentry'&& <LogEntryCard item={item.data} />}
             {item.kind === 'holiday' && <HolidayCard item={item.data} />}
           </View>
         ))}
