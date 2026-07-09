@@ -6,19 +6,14 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { useStore } from '../../store/useStore';
 import { GoalCard } from '../../components/GoalCard';
 import { SectionHeader, EmptyPrompt, ScreenTitle } from '../../components/SectionUI';
-import { StatCard, StatRow, SearchBar } from '../../components/ListControls';
-import { goalDone } from '../../utils/goals';
+import { SearchBar } from '../../components/ListControls';
 
 // The Goals tab — ONLY goals, moved out of the Countdowns screen. Header shows
 // headline metrics; a search box filters the list by name.
 export default function GoalsScreen() {
   const { colors } = useTheme();
   const goals = useStore(s => s.goals);
-  const memories = useStore(s => s.memories);   // linked goals derive progress from logs
   const add = () => router.push('/modals/add-goal');
-
-  const completed = goals.filter(g => goalDone(g, memories)).length;
-  const active = goals.length - completed;
 
   const [q, setQ] = useState('');
   const query = q.trim().toLowerCase();
@@ -37,11 +32,6 @@ export default function GoalsScreen() {
           </>
         ) : (
           <>
-            <StatRow>
-              <StatCard value={goals.length} label={goals.length === 1 ? 'Goal' : 'Goals'}
-                sub={`${active} active · ${completed} completed`} />
-              <StatCard value={completed} label="Completed" />
-            </StatRow>
             <SearchBar value={q} onChange={setQ} placeholder="Search goals…" />
             <SectionHeader title="Your goals" onAdd={add} />
             {shown.length === 0

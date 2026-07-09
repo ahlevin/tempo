@@ -6,8 +6,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { useStore } from '../../store/useStore';
 import { MemoryCard } from '../../components/MemoryCard';
 import { SectionHeader, EmptyPrompt, ScreenTitle } from '../../components/SectionUI';
-import { StatCard, StatRow, SearchBar } from '../../components/ListControls';
-import { isCollectionLog, logCount } from '../../utils/lifelog';
+import { SearchBar } from '../../components/ListControls';
 import { getPreset } from '../../constants/lifelogs';
 
 // The Life Log tab — ONLY life logs (memory type 'lifelog'), count + collection,
@@ -18,10 +17,6 @@ export default function LifeLogScreen() {
   const memories = useStore(s => s.memories);
   const logs = memories.filter(m => m.type === 'lifelog');
   const add = () => router.push({ pathname: '/modals/add-memory', params: { type: 'lifelog' } });
-
-  const collections = logs.filter(isCollectionLog).length;
-  const counts = logs.length - collections;
-  const totalLogged = logs.reduce((n, m) => n + logCount(m), 0);
 
   const [q, setQ] = useState('');
   const query = q.trim().toLowerCase();
@@ -47,11 +42,6 @@ export default function LifeLogScreen() {
           </>
         ) : (
           <>
-            <StatRow>
-              <StatCard value={logs.length} label={logs.length === 1 ? 'Log' : 'Logs'}
-                sub={`${collections} collections · ${counts} counts`} />
-              <StatCard value={totalLogged} label="Logged" />
-            </StatRow>
             <SearchBar value={q} onChange={setQ} placeholder="Search logs…" />
             <SectionHeader title="Your logs" onAdd={add} />
             {shown.length === 0
