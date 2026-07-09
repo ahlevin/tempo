@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useTheme } from '../../contexts/ThemeContext';
 import { CloseButton } from '../../components/CloseButton';
-import { GOAL_EMOJIS } from '../../constants/data';
+import { IconPicker } from '../../components/IconPicker';
 import { useStore } from '../../store/useStore';
 import { Alert as AlertType, Link } from '../../store/types';
 import { DateTimeField } from '../../components/DateTimeField';
@@ -112,17 +112,7 @@ export default function EditGoalModal() {
           {/* 11 — APPEARANCE */}
           <SH label="Appearance" />
           <FL label="Icon" />
-          <View style={{ flexDirection:'row', flexWrap:'wrap', gap:6, marginBottom:14 }}>
-            {GOAL_EMOJIS.map(em => (
-              <TouchableOpacity key={em} onPress={() => setEmoji(em)}
-                style={{ width:44, height:44, borderRadius:10, borderWidth:2,
-                  borderColor: em===emoji ? colors.teal : 'transparent',
-                  backgroundColor: em===emoji ? (colors.isDark ? 'rgba(62,207,178,0.15)' : colors.tint) : colors.glass,
-                  alignItems:'center', justifyContent:'center' }}>
-                <Text style={{ fontSize:20 }}>{em}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          <IconPicker value={emoji} onChange={setEmoji} accent={colors.teal} />
           <FL label="Note (optional)" />
           <TextInput value={note} onChangeText={setNote} multiline
             placeholder="Add a note…" placeholderTextColor={colors.text3}
