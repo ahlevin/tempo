@@ -11,6 +11,7 @@ import { Alert as AlertType, Link } from '../../store/types';
 import { DateTimeField } from '../../components/DateTimeField';
 import { AlertsEditor } from '../../components/AlertsEditor';
 import { LinksEditor } from '../../components/LinksEditor';
+import { GoalLinkSection, GoalLink } from '../../components/GoalLinkSection';
 import { useConfirm } from '../../components/ConfirmDialog';
 
 export default function EditGoalModal() {
@@ -32,6 +33,10 @@ export default function EditGoalModal() {
   const [note,   setNote]   = useState(g?.note   || '');
   const [alerts, setAlerts] = useState<AlertType[]>(g?.alerts ?? []);
   const [links,  setLinks]  = useState<Link[]>(g?.links ?? []);
+  const [link,   setLink]   = useState<GoalLink>({
+    linkedLogId: g?.linkedLogId ?? null, linkedPreset: g?.linkedPreset ?? null,
+    windowKind: g?.windowKind ?? null, windowYear: g?.windowYear ?? null,
+  });
 
   const fi = { backgroundColor:colors.glass, borderWidth:1,
     borderColor:colors.border, borderRadius:12, padding:12,
@@ -42,7 +47,7 @@ export default function EditGoalModal() {
   function save() {
     if (!name.trim()||!target||!date) { showToast('⚠️', 'Missing info', 'Please fill in all fields.'); return; }
     updateGoal(id, { name:name.trim(), target:parseFloat(target),
-      unit:unit.trim()||'units', step:parseFloat(step)||1, date, emoji, note:note.trim(), alerts, links });
+      unit:unit.trim()||'units', step:parseFloat(step)||1, date, emoji, note:note.trim(), alerts, links, ...link });
     router.back();
   }
 
@@ -74,6 +79,7 @@ export default function EditGoalModal() {
           <TextInput value={step} onChangeText={setStep}
             keyboardType="numeric" placeholderTextColor={colors.text3} style={fi} />
           <DateTimeField mode="date" label="Deadline" value={date} onChange={setDate} />
+          <GoalLinkSection value={link} onChange={setLink} />
           <FL label="Icon" />
           <View style={{ flexDirection:'row', flexWrap:'wrap', gap:6, marginBottom:20 }}>
             {GOAL_EMOJIS.map(em => (

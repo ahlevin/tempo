@@ -11,8 +11,9 @@ import { AddChooser } from '../../components/AddChooser';
 import { UpcomingMemoryRow } from '../../components/UpcomingMemoryRow';
 import { HolidayRow } from '../../components/HolidayRow';
 import { UpcomingLogRow } from '../../components/UpcomingLogRow';
+import { UpcomingGoalRow } from '../../components/UpcomingGoalRow';
 import { SectionHeader, EmptyPrompt } from '../../components/SectionUI';
-import { Event, Memory } from '../../store/types';
+import { Event, Memory, Goal } from '../../store/types';
 import { CATEGORIES } from '../../constants/data';
 import { catColor } from '../../constants/colors';
 import { visibleHolidays, HolidayItem } from '../../constants/holidays';
@@ -35,16 +36,19 @@ type UpcomingItem =
   | { kind: 'event'; data: Event }
   | { kind: 'memory'; data: Memory }
   | { kind: 'holiday'; data: HolidayItem }
-  | { kind: 'logentry'; data: UpcomingLogItem };
+  | { kind: 'logentry'; data: UpcomingLogItem }
+  | { kind: 'goal'; data: Goal };
 const upcomingDays = (it: UpcomingItem) =>
   it.kind === 'event' ? daysUntil(nextOccurrence(it.data))
   : it.kind === 'memory' ? daysUntil(nextAnnual(it.data.originDate))
+  : it.kind === 'goal' ? daysUntil(it.data.date)
   : it.data.days;
 
 export default function HomeScreen() {
   const { colors } = useTheme();
   const events      = useStore(s => s.events);
   const memories    = useStore(s => s.memories);
+  const goals       = useStore(s => s.goals);
   const prefs       = useStore(s => s.prefs);
   const [filter, setFilter] = useState('all');
   const [chooserOpen, setChooserOpen] = useState(false);
@@ -79,6 +83,11 @@ export default function HomeScreen() {
   // (derived from the entry date — no stored event, auto-transitions to completed).
   if (isAll) {
     upcomingLogItems(memories).forEach(it => upcoming.push({ kind: 'logentry', data: it }));
+  }
+  // Goals with a future target date surface as countdowns too (derived from the
+  // date — the Goals tab stays as-is). Past-date goals drop off, like everything.
+  if (isAll) {
+    goals.filter(g => daysUntil(g.date) > 0).forEach(g => upcoming.push({ kind: 'goal', data: g }));
   }
   upcoming.sort((a, b) => upcomingDays(a) - upcomingDays(b));
 
@@ -151,6 +160,8 @@ export default function HomeScreen() {
             ? <UpcomingMemoryRow key={`m-${it.data.id}`} memory={it.data} />
             : it.kind === 'holiday'
             ? <HolidayRow key={`h-${it.data.id}`} item={it.data} />
+            : it.kind === 'goal'
+            ? <UpcomingGoalRow key={`g-${it.data.id}`} goal={it.data} />
             : <UpcomingLogRow key={`l-${it.data.memId}-${it.data.index}`} item={it.data} />)}
       </ScrollView>
 

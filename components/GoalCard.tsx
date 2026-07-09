@@ -7,6 +7,7 @@ import { useStore } from '../store/useStore';
 import { Goal } from '../store/types';
 import { daysUntil } from '../utils/dates';
 import { openGoalDetail } from '../utils/nav';
+import { isLinkedGoal, goalDerivedProgress, goalDone, linkedLog, windowLabel } from '../utils/goals';
 import { Confetti } from './Confetti';
 import { SwipeableRow } from './SwipeableRow';
 import { FavStar } from './FavStar';
@@ -15,15 +16,21 @@ import { LinkBadge } from './LinkBadge';
 
 export function GoalCard({ goal: g }: { goal: Goal }) {
   const { colors } = useTheme();
+  const memories   = useStore(s => s.memories);
   const toggleFav  = useStore(s => s.toggleGoalFav);
   const nudgeGoal  = useStore(s => s.nudgeGoal);
   const deleteGoal = useStore(s => s.deleteGoal);
   // Tap the header opens the read-only detail view (which has its own Edit button).
   const edit = () => openGoalDetail(g.id);
 
-  const gp   = Math.round(Math.min(100, (g.current / g.target) * 100));
+  // Linked goals DERIVE progress from their life log (never stored); unlinked
+  // goals use the manual counter exactly as before.
+  const linked = isLinkedGoal(g);
+  const prog = linked ? goalDerivedProgress(g, memories) : g.current;
+  const log  = linked ? linkedLog(g, memories) : undefined;
+  const gp   = g.target > 0 ? Math.round(Math.min(100, (prog / g.target) * 100)) : 0;
   const d    = daysUntil(g.date);
-  const done = g.current >= g.target;
+  const done = linked ? goalDone(g, memories) : g.current >= g.target;
 
   // Fire confetti on the transition into completion (not on initial mount of an
   // already-complete goal).
@@ -65,6 +72,11 @@ export function GoalCard({ goal: g }: { goal: Goal }) {
             <LinkBadge count={g.links?.length} />
           </View>
           <Text style={{ fontSize: 13, color: colors.text2, marginTop: 2 }}>{dstr}</Text>
+          {linked && (
+            <Text style={{ fontSize: 12, color: colors.teal, marginTop: 2, fontWeight: '600' }} numberOfLines={1}>
+              🔗 {log ? log.name : 'Linked log'} · {windowLabel(g)}
+            </Text>
+          )}
           {!!g.note && (
             <Text style={{ fontSize: 13, color: colors.text2, marginTop: 2, fontStyle: 'italic' }} numberOfLines={1}>
               {g.note}
@@ -82,11 +94,17 @@ export function GoalCard({ goal: g }: { goal: Goal }) {
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
         <View style={{ flex: 1 }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
-            <TouchableOpacity onPress={() => router.push({ pathname: '/modals/exact-edit', params: { id: g.id } })} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
+            {linked ? (
               <Text style={{ fontSize: 12, fontWeight: '700', color: colors.teal }}>
-                {g.current.toLocaleString()} {g.unit}
+                {prog.toLocaleString()} {g.unit}
               </Text>
-            </TouchableOpacity>
+            ) : (
+              <TouchableOpacity onPress={() => router.push({ pathname: '/modals/exact-edit', params: { id: g.id } })} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: colors.teal }}>
+                  {g.current.toLocaleString()} {g.unit}
+                </Text>
+              </TouchableOpacity>
+            )}
             <Text style={{ fontSize: 12, color: colors.text2 }}>{g.target.toLocaleString()} {g.unit}</Text>
           </View>
           <View style={{ height: 6, backgroundColor: colors.track, borderRadius: 3, overflow: 'hidden' }}>
@@ -94,7 +112,7 @@ export function GoalCard({ goal: g }: { goal: Goal }) {
           </View>
         </View>
         <Text style={{ fontSize: 11, fontWeight: '700', color: colors.teal }}>{gp}%</Text>
-        {!done && (
+        {!done && !linked && (
           <View style={{ flexDirection: 'row', gap: 5 }}>
             <TouchableOpacity onPress={() => nudgeGoal(g.id, -1)}
               style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: colors.tint, alignItems: 'center', justifyContent: 'center' }}>

@@ -12,6 +12,7 @@ import { Alert as AlertType, Link } from '../../store/types';
 import { DateTimeField } from '../../components/DateTimeField';
 import { AlertsEditor } from '../../components/AlertsEditor';
 import { LinksEditor } from '../../components/LinksEditor';
+import { GoalLinkSection, GoalLink } from '../../components/GoalLinkSection';
 
 export default function AddGoalModal() {
   const { colors } = useTheme();
@@ -26,6 +27,7 @@ export default function AddGoalModal() {
   const [note,   setNote]   = useState('');
   const [alerts, setAlerts] = useState<AlertType[]>([]);
   const [links,  setLinks]  = useState<Link[]>([]);
+  const [link,   setLink]   = useState<GoalLink>({});
 
   const fi = { backgroundColor:colors.glass, borderWidth:1,
     borderColor:colors.border, borderRadius:12, padding:12,
@@ -34,7 +36,7 @@ export default function AddGoalModal() {
   function submit() {
     if (!name.trim() || !target || !date) { showToast('⚠️', 'Missing info', 'Please fill in all fields.'); return; }
     addGoal({ name:name.trim(), emoji, target:parseFloat(target),
-      unit:unit.trim()||'units', step:parseFloat(step)||1, date, fav:false, note:note.trim(), alerts, links });
+      unit:unit.trim()||'units', step:parseFloat(step)||1, date, fav:false, note:note.trim(), alerts, links, ...link });
     router.back();
   }
 
@@ -65,6 +67,7 @@ export default function AddGoalModal() {
             placeholder="1" placeholderTextColor={colors.text3}
             keyboardType="numeric" style={fi} />
           <DateTimeField mode="date" label="Deadline" value={date} onChange={setDate} />
+          <GoalLinkSection value={link} onChange={setLink} />
           <FL label="Icon" />
           <View style={{ flexDirection:'row', flexWrap:'wrap', gap:6, marginBottom:20 }}>
             {GOAL_EMOJIS.map(em => (

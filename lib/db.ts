@@ -107,6 +107,10 @@ export function rowToGoal(r: any): Goal {
     note: r.note ?? '',
     alerts: r.alerts ?? [],
     links: r.links ?? [],
+    linkedPreset: r.linked_preset ?? null,
+    linkedLogId: r.linked_log_id ?? null,
+    windowKind: r.window_kind ?? null,
+    windowYear: r.window_year ?? null,
   };
 }
 
@@ -124,6 +128,10 @@ export function goalToRow(g: Goal, userId: string) {
     fav: g.fav,
     note: g.note,
     alerts: g.alerts,
+    linked_preset: g.linkedPreset ?? null,
+    linked_log_id: g.linkedLogId ?? null,
+    window_kind: g.windowKind ?? null,
+    window_year: g.windowYear ?? null,
     created_at: tsFromDate(g.created),
   };
 }
