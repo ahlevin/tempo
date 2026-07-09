@@ -52,6 +52,9 @@ export interface Goal {
   note: string;
   alerts: Alert[];
   links: Link[];
+  /** Opt-in: also surface this goal as a countdown on the Countdowns tab.
+   *  Defaults false (missing/legacy → false). */
+  showOnCountdown?: boolean;
   // Optional life-log link — when set, progress is DERIVED from the linked log
   // (never stored). All null/absent for existing manual goals (unchanged behavior).
   linkedPreset?: string | null;   // linked life-log preset id

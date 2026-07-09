@@ -84,10 +84,11 @@ export default function HomeScreen() {
   if (isAll) {
     upcomingLogItems(memories).forEach(it => upcoming.push({ kind: 'logentry', data: it }));
   }
-  // Goals with a future target date surface as countdowns too (derived from the
-  // date — the Goals tab stays as-is). Past-date goals drop off, like everything.
+  // Goals surface as countdowns ONLY when opted in (show_on_countdown) AND their
+  // target date is in the future. Off by default; the Goals tab is unaffected.
   if (isAll) {
-    goals.filter(g => daysUntil(g.date) > 0).forEach(g => upcoming.push({ kind: 'goal', data: g }));
+    goals.filter(g => g.showOnCountdown === true && daysUntil(g.date) > 0)
+      .forEach(g => upcoming.push({ kind: 'goal', data: g }));
   }
   upcoming.sort((a, b) => upcomingDays(a) - upcomingDays(b));
 

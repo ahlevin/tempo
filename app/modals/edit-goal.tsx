@@ -12,6 +12,7 @@ import { DateTimeField } from '../../components/DateTimeField';
 import { AlertsEditor } from '../../components/AlertsEditor';
 import { LinksEditor } from '../../components/LinksEditor';
 import { GoalLinkSection, GoalLink } from '../../components/GoalLinkSection';
+import { Toggle } from '../../components/FormControls';
 import { useConfirm } from '../../components/ConfirmDialog';
 
 export default function EditGoalModal() {
@@ -38,6 +39,7 @@ export default function EditGoalModal() {
     windowKind: g?.windowKind ?? null, windowYear: g?.windowYear ?? null,
     windowStart: g?.windowStart ?? null,
   });
+  const [showOnCountdown, setShowOnCountdown] = useState(g?.showOnCountdown ?? false);
 
   const fi = { backgroundColor:colors.glass, borderWidth:1,
     borderColor:colors.border, borderRadius:12, padding:12,
@@ -48,7 +50,7 @@ export default function EditGoalModal() {
   function save() {
     if (!name.trim()||!target||!date) { showToast('⚠️', 'Missing info', 'Please fill in all fields.'); return; }
     updateGoal(id, { name:name.trim(), target:parseFloat(target),
-      unit:unit.trim()||'units', step:parseFloat(step)||1, date, emoji, note:note.trim(), alerts, links, ...link });
+      unit:unit.trim()||'units', step:parseFloat(step)||1, date, emoji, note:note.trim(), alerts, links, showOnCountdown, ...link });
     router.back();
   }
 
@@ -81,6 +83,10 @@ export default function EditGoalModal() {
             keyboardType="numeric" placeholderTextColor={colors.text3} style={fi} />
           <DateTimeField mode="date" label="Deadline" value={date} onChange={setDate} />
           <GoalLinkSection value={link} onChange={setLink} createdDate={g.created} />
+          <Toggle label="⏳ Show on Countdowns" value={showOnCountdown} onChange={setShowOnCountdown} />
+          <Text style={{ fontSize:11, color:colors.text3, marginTop:-6, marginBottom:14, marginLeft:2 }}>
+            Also display this goal on your Countdowns tab.
+          </Text>
           <FL label="Icon" />
           <View style={{ flexDirection:'row', flexWrap:'wrap', gap:6, marginBottom:20 }}>
             {GOAL_EMOJIS.map(em => (
