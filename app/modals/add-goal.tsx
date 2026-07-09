@@ -12,7 +12,7 @@ import { Alert as AlertType, Link } from '../../store/types';
 import { DateTimeField } from '../../components/DateTimeField';
 import { AlertsEditor } from '../../components/AlertsEditor';
 import { LinksEditor } from '../../components/LinksEditor';
-import { GoalLinkSection, GoalLink } from '../../components/GoalLinkSection';
+import { GoalWindowPicker, GoalLogLink, GoalLink } from '../../components/GoalLinkSection';
 import { Toggle } from '../../components/FormControls';
 
 export default function AddGoalModal() {
@@ -57,15 +57,21 @@ export default function AddGoalModal() {
         <ScrollView contentContainerStyle={{ padding:20 }}
           showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
 
-          {/* 1 — GOAL */}
-          <SH label="Goal" first />
+          {/* 1 — Goal Name */}
           <FL label="Goal Name" />
           <TextInput value={name} onChangeText={setName}
             placeholder="e.g. Run 100 miles…" placeholderTextColor={colors.text3} style={fi} />
 
-          {/* 2 — TARGET & PROGRESS */}
-          <SH label="Target & Progress" />
-          <GoalLinkSection value={link} onChange={setLink} createdDate={format(new Date(), 'yyyy-MM-dd')} />
+          {/* 2–3 — Progress Window (+ Count from when By target date) */}
+          <GoalWindowPicker value={link} onChange={setLink} createdDate={format(new Date(), 'yyyy-MM-dd')} />
+
+          {/* 4 — Deadline */}
+          <DateTimeField mode="date" label="Deadline" value={date} onChange={setDate} />
+
+          {/* 5–6 — Link to a life log + collapsed Life Log picker */}
+          <GoalLogLink value={link} onChange={setLink} />
+
+          {/* 7 — Target (Unit + Increment Step only when unlinked) */}
           <FL label="Target" />
           <TextInput value={target} onChangeText={setTarget}
             placeholder={linked ? 'e.g. 2' : '100'} placeholderTextColor={colors.text3}
@@ -82,11 +88,7 @@ export default function AddGoalModal() {
             </>
           )}
 
-          {/* 3 — DEADLINE */}
-          <SH label="Deadline" />
-          <DateTimeField mode="date" value={date} onChange={setDate} />
-
-          {/* 4 — DISPLAY & REMINDERS */}
+          {/* 8 — DISPLAY & REMINDERS */}
           <SH label="Display & Reminders" />
           <Toggle label="⏳ Show on Countdowns" value={showOnCountdown} onChange={setShowOnCountdown} />
           <Text style={{ fontSize:11, color:colors.text3, marginTop:-6, marginBottom:14, marginLeft:2 }}>
@@ -94,7 +96,7 @@ export default function AddGoalModal() {
           </Text>
           <AlertsEditor value={alerts} onChange={setAlerts} />
 
-          {/* 5 — APPEARANCE */}
+          {/* 11 — APPEARANCE */}
           <SH label="Appearance" />
           <FL label="Icon" />
           <View style={{ flexDirection:'row', flexWrap:'wrap', gap:6, marginBottom:14 }}>
@@ -114,10 +116,10 @@ export default function AddGoalModal() {
             style={{ ...fi, minHeight:64, textAlignVertical:'top' }} />
           <LinksEditor value={links} onChange={setLinks} />
 
-          {/* 6 — ACTIONS */}
+          {/* 15 — Save */}
           <TouchableOpacity onPress={submit}
             style={{ backgroundColor:colors.teal, borderRadius:14, padding:15, alignItems:'center', marginTop:8 }}>
-            <Text style={{ color:'#0A0A0F', fontSize:15, fontWeight:'700' }}>Set Goal →</Text>
+            <Text style={{ color: colors.isDark ? '#0A0A0F' : '#fff', fontSize:15, fontWeight:'700' }}>Set Goal →</Text>
           </TouchableOpacity>
           <View style={{ height:40 }} />
         </ScrollView>

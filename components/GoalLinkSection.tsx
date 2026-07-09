@@ -20,11 +20,60 @@ const WINDOWS: { kind: GoalWindowKind; label: string }[] = [
   { kind: 'all_time', label: 'All-time' },
 ];
 
-// Optional "Link to a life log" editor for add/edit-goal. When linked, the goal's
-// progress is DERIVED from the chosen log within the chosen time window (see
-// utils/goals). Controlled via value/onChange; emits null link fields when off.
-// The log picker COLLAPSES to a single row once a log is chosen (Change re-opens).
-export function GoalLinkSection({ value, onChange, createdDate }: { value: GoalLink; onChange: (v: GoalLink) => void; createdDate: string }) {
+// Shared filled-chip styling (bold selected — unmistakable in both themes).
+function useChipStyles() {
+  const { colors } = useTheme();
+  const chip = (sel: boolean) => ({
+    flex: 1, paddingVertical: 9, borderRadius: 9, borderWidth: 1.5, alignItems: 'center' as const,
+    borderColor: sel ? colors.teal : colors.border,
+    backgroundColor: sel ? colors.teal : colors.glass,
+  });
+  const chipText = (sel: boolean) => ({
+    fontSize: 12, fontWeight: sel ? ('700' as const) : ('600' as const),
+    color: sel ? (colors.isDark ? '#0A0A0F' : '#fff') : colors.text2,
+  });
+  return { chip, chipText };
+}
+
+// Progress Window picker (+ Count-from when By target date). Controlled on GoalLink.
+// The window only DRIVES progress once a life log is linked; shown regardless.
+export function GoalWindowPicker({ value, onChange, createdDate }: { value: GoalLink; onChange: (v: GoalLink) => void; createdDate: string }) {
+  const { colors } = useTheme();
+  const { chip, chipText } = useChipStyles();
+  const thisYear = new Date().getFullYear();
+  const setWindow = (kind: GoalWindowKind) =>
+    onChange({ ...value, windowKind: kind, windowYear: kind === 'year' ? (value.windowYear ?? thisYear) : value.windowYear });
+
+  return (
+    <>
+      <FL label="Progress Window" />
+      <View style={{ flexDirection: 'row', gap: 6, marginBottom: 6 }}>
+        {WINDOWS.map(w => {
+          const sel = (value.windowKind ?? 'all_time') === w.kind;
+          return (
+            <TouchableOpacity key={w.kind} onPress={() => setWindow(w.kind)} style={chip(sel)}>
+              <Text style={chipText(sel)}>{w.kind === 'year' ? `${value.windowYear ?? thisYear}` : w.label}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+      {value.windowKind === 'by_date' && (
+        <DateTimeField mode="date" label="Count from"
+          value={value.windowStart ?? createdDate}
+          onChange={d => onChange({ ...value, windowStart: d })} />
+      )}
+      <Text style={{ fontSize: 11, color: colors.text3, marginTop: -2, marginBottom: 14, marginLeft: 2 }}>
+        When linked to a life log, progress counts {value.windowKind === 'year' ? `entries dated in ${value.windowYear ?? thisYear}`
+          : value.windowKind === 'by_date' ? `entries from ${value.windowStart ?? createdDate} to the target date`
+          : 'all completed entries'}.
+      </Text>
+    </>
+  );
+}
+
+// "Link to a life log" toggle + the collapsed log picker (Change re-expands).
+// Controlled on GoalLink; leaves windowKind/windowStart alone (owned by the picker).
+export function GoalLogLink({ value, onChange }: { value: GoalLink; onChange: (v: GoalLink) => void }) {
   const { colors } = useTheme();
   const logs = useStore(s => s.memories).filter(m => m.type === 'lifelog');
   const thisYear = new Date().getFullYear();
@@ -35,32 +84,19 @@ export function GoalLinkSection({ value, onChange, createdDate }: { value: GoalL
   function pickLog(logId: string) {
     const log = logs.find(l => l.id === logId);
     onChange({
+      ...value,
       linkedLogId: logId,
       linkedPreset: log?.logPreset ?? null,
       windowKind: value.windowKind ?? 'all_time',
       windowYear: value.windowYear ?? thisYear,
-      windowStart: value.windowStart ?? null,
     });
     setPickerOpen(false);
   }
   function toggle(v: boolean) {
     setOpen(v);
     if (v) setPickerOpen(!value.linkedLogId);
-    else onChange({ linkedLogId: null, linkedPreset: null, windowKind: null, windowYear: null, windowStart: null });
+    else onChange({ ...value, linkedLogId: null, linkedPreset: null });
   }
-  function setWindow(kind: GoalWindowKind) {
-    onChange({ ...value, windowKind: kind, windowYear: kind === 'year' ? (value.windowYear ?? thisYear) : value.windowYear });
-  }
-
-  const chip = (sel: boolean) => ({
-    flex: 1, paddingVertical: 9, borderRadius: 9, borderWidth: 1.5, alignItems: 'center' as const,
-    borderColor: sel ? colors.teal : colors.border,
-    backgroundColor: sel ? colors.teal : colors.glass,
-  });
-  const chipText = (sel: boolean) => ({
-    fontSize: 12, fontWeight: sel ? ('700' as const) : ('600' as const),
-    color: sel ? (colors.isDark ? '#0A0A0F' : '#fff') : colors.text2,
-  });
 
   return (
     <>
@@ -73,9 +109,8 @@ export function GoalLinkSection({ value, onChange, createdDate }: { value: GoalL
             </Text>
           ) : (
             <>
-              <FL label="Life log" />
+              <FL label="Life Log" />
               {selectedLog && !pickerOpen ? (
-                // Collapsed selected row (matches the life-log creation flow).
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12,
                   backgroundColor: colors.surf, borderWidth: 1, borderColor: colors.teal,
                   borderRadius: 12, padding: 11, marginBottom: 12 }}>
@@ -104,32 +139,6 @@ export function GoalLinkSection({ value, onChange, createdDate }: { value: GoalL
                   })}
                 </View>
               )}
-
-              {selectedLog && (
-                <>
-                  <FL label="Progress window" />
-                  <View style={{ flexDirection: 'row', gap: 6, marginBottom: 6 }}>
-                    {WINDOWS.map(w => {
-                      const sel = (value.windowKind ?? 'all_time') === w.kind;
-                      return (
-                        <TouchableOpacity key={w.kind} onPress={() => setWindow(w.kind)} style={chip(sel)}>
-                          <Text style={chipText(sel)}>{w.kind === 'year' ? `${value.windowYear ?? thisYear}` : w.label}</Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
-                  {value.windowKind === 'by_date' && (
-                    <DateTimeField mode="date" label="Count from"
-                      value={value.windowStart ?? createdDate}
-                      onChange={d => onChange({ ...value, windowStart: d })} />
-                  )}
-                  <Text style={{ fontSize: 11, color: colors.text3, marginBottom: 10, marginLeft: 2 }}>
-                    Progress counts {value.windowKind === 'year' ? `entries dated in ${value.windowYear ?? thisYear}`
-                      : value.windowKind === 'by_date' ? `entries from ${value.windowStart ?? createdDate} to the target date`
-                      : 'all completed entries'} — updates as you log.
-                  </Text>
-                </>
-              )}
             </>
           )}
         </View>
@@ -138,7 +147,7 @@ export function GoalLinkSection({ value, onChange, createdDate }: { value: GoalL
   );
 }
 
-// A compact toggle matching FormControls' Toggle but local to this section.
+// A compact toggle matching FormControls' Toggle but local to this section (teal).
 function MiniToggle({ label, value, onChange }: { label: string; value: boolean; onChange: (v: boolean) => void }) {
   const { colors } = useTheme();
   return (
