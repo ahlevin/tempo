@@ -67,7 +67,7 @@ export default function AddGoalModal() {
             placeholder="1" placeholderTextColor={colors.text3}
             keyboardType="numeric" style={fi} />
           <DateTimeField mode="date" label="Deadline" value={date} onChange={setDate} />
-          <GoalLinkSection value={link} onChange={setLink} />
+          <GoalLinkSection value={link} onChange={setLink} createdDate={format(new Date(), 'yyyy-MM-dd')} />
           <FL label="Icon" />
           <View style={{ flexDirection:'row', flexWrap:'wrap', gap:6, marginBottom:20 }}>
             {GOAL_EMOJIS.map(em => (

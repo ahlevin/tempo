@@ -3,6 +3,7 @@ import { Text, TouchableOpacity, View } from 'react-native';
 import { useTheme } from '../contexts/ThemeContext';
 import { useStore } from '../store/useStore';
 import { FL } from './FormControls';
+import { DateTimeField } from './DateTimeField';
 import type { GoalWindowKind } from '../store/types';
 
 export interface GoalLink {
@@ -10,6 +11,7 @@ export interface GoalLink {
   linkedPreset?: string | null;
   windowKind?: GoalWindowKind | null;
   windowYear?: number | null;
+  windowStart?: string | null;
 }
 
 const WINDOWS: { kind: GoalWindowKind; label: string }[] = [
@@ -21,7 +23,7 @@ const WINDOWS: { kind: GoalWindowKind; label: string }[] = [
 // Optional "Link to a life log" editor for add/edit-goal. When linked, the goal's
 // progress is DERIVED from the chosen log within the chosen time window (see
 // utils/goals). Controlled via value/onChange; emits null link fields when off.
-export function GoalLinkSection({ value, onChange }: { value: GoalLink; onChange: (v: GoalLink) => void }) {
+export function GoalLinkSection({ value, onChange, createdDate }: { value: GoalLink; onChange: (v: GoalLink) => void; createdDate: string }) {
   const { colors } = useTheme();
   const logs = useStore(s => s.memories).filter(m => m.type === 'lifelog');
   const thisYear = new Date().getFullYear();
@@ -39,7 +41,7 @@ export function GoalLinkSection({ value, onChange }: { value: GoalLink; onChange
   function toggle(v: boolean) {
     setOpen(v);
     if (v) { if (logs.length && !value.linkedLogId) pickLog(logs[0].id); }
-    else onChange({ linkedLogId: null, linkedPreset: null, windowKind: null, windowYear: null });
+    else onChange({ linkedLogId: null, linkedPreset: null, windowKind: null, windowYear: null, windowStart: null });
   }
   function setWindow(kind: GoalWindowKind) {
     onChange({ ...value, windowKind: kind, windowYear: kind === 'year' ? (value.windowYear ?? thisYear) : value.windowYear });
@@ -93,9 +95,15 @@ export function GoalLinkSection({ value, onChange }: { value: GoalLink; onChange
                   );
                 })}
               </View>
+              {value.windowKind === 'by_date' && (
+                <DateTimeField mode="date" label="Count from"
+                  value={value.windowStart ?? createdDate}
+                  onChange={d => onChange({ ...value, windowStart: d })} />
+              )}
               <Text style={{ fontSize: 11, color: colors.text3, marginBottom: 10, marginLeft: 2 }}>
                 Progress counts {value.windowKind === 'year' ? `entries dated in ${value.windowYear ?? thisYear}`
-                  : value.windowKind === 'by_date' ? 'entries on/before the target date' : 'all completed entries'} — updates as you log.
+                  : value.windowKind === 'by_date' ? `entries from ${value.windowStart ?? createdDate} to the target date`
+                  : 'all completed entries'} — updates as you log.
               </Text>
             </>
           )}

@@ -111,6 +111,7 @@ export function rowToGoal(r: any): Goal {
     linkedLogId: r.linked_log_id ?? null,
     windowKind: r.window_kind ?? null,
     windowYear: r.window_year ?? null,
+    windowStart: r.window_start ? datePart(r.window_start) : null,
   };
 }
 
@@ -132,6 +133,7 @@ export function goalToRow(g: Goal, userId: string) {
     linked_log_id: g.linkedLogId ?? null,
     window_kind: g.windowKind ?? null,
     window_year: g.windowYear ?? null,
+    window_start: dateCol(g.windowStart),
     created_at: tsFromDate(g.created),
   };
 }

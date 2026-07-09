@@ -1,5 +1,12 @@
 import type { Goal, Memory, LogEntry } from '../store/types';
 import { isCollectionLog, isUpcomingEntry } from './lifelog';
+import { fmtShort } from './dates';
+
+// Lower bound for a 'by_date' goal: the explicit window_start, else the goal's
+// creation date — so it never counts entries from before the goal existed.
+export function effectiveStart(g: Goal): string {
+  return g.windowStart || g.created;
+}
 
 // A goal is life-log-LINKED when it points at a log (by id) or a preset.
 export function isLinkedGoal(g: Goal): boolean {
@@ -29,7 +36,7 @@ export function goalDerivedProgress(g: Goal, memories: Memory[]): number {
   const inWindow = (e: LogEntry): boolean => {
     if (isUpcomingEntry(e)) return false;                 // never count future-dated
     if (win === 'year')    return !!e.date && e.date.slice(0, 4) === String(g.windowYear ?? '');
-    if (win === 'by_date') return !!e.date && !!g.date && e.date <= g.date;
+    if (win === 'by_date') { const s = effectiveStart(g); return !!e.date && e.date >= s && !!g.date && e.date <= g.date; }
     return true;                                          // all_time
   };
   const entries = log.entries.filter(inWindow);
@@ -51,6 +58,6 @@ export function goalDone(g: Goal, memories: Memory[]): boolean {
 export function windowLabel(g: Goal): string {
   const win = g.windowKind ?? 'all_time';
   if (win === 'year') return `in ${g.windowYear ?? ''}`.trim();
-  if (win === 'by_date') return 'by target date';
+  if (win === 'by_date') return `${fmtShort(effectiveStart(g))} – ${fmtShort(g.date)}`;
   return 'all-time';
 }

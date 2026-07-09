@@ -58,6 +58,7 @@ export interface Goal {
   linkedLogId?: string | null;    // linked life-log memory id (uuid)
   windowKind?: GoalWindowKind | null;
   windowYear?: number | null;     // the year, for windowKind 'year'
+  windowStart?: string | null;    // "YYYY-MM-DD" lower bound for windowKind 'by_date'; null → use created
 }
 
 export type DatePrecision = 'none' | 'year' | 'month' | 'full';

@@ -36,6 +36,7 @@ export default function EditGoalModal() {
   const [link,   setLink]   = useState<GoalLink>({
     linkedLogId: g?.linkedLogId ?? null, linkedPreset: g?.linkedPreset ?? null,
     windowKind: g?.windowKind ?? null, windowYear: g?.windowYear ?? null,
+    windowStart: g?.windowStart ?? null,
   });
 
   const fi = { backgroundColor:colors.glass, borderWidth:1,
@@ -79,7 +80,7 @@ export default function EditGoalModal() {
           <TextInput value={step} onChangeText={setStep}
             keyboardType="numeric" placeholderTextColor={colors.text3} style={fi} />
           <DateTimeField mode="date" label="Deadline" value={date} onChange={setDate} />
-          <GoalLinkSection value={link} onChange={setLink} />
+          <GoalLinkSection value={link} onChange={setLink} createdDate={g.created} />
           <FL label="Icon" />
           <View style={{ flexDirection:'row', flexWrap:'wrap', gap:6, marginBottom:20 }}>
             {GOAL_EMOJIS.map(em => (
