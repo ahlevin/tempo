@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, Modal, Pressable } from 'react-native';
 import { useTheme } from '../contexts/ThemeContext';
-import { ICON_GROUPS, ICON_COUNT } from '../constants/icons';
+import { ICON_GROUPS, ICON_COUNT, searchIcons } from '../constants/icons';
 
 // Shared icon picker used by every add/edit surface (event, memory, goal, life
 // log, custom). The form shows ONLY a compact trigger — the current icon plus a
@@ -17,18 +17,24 @@ export function IconPicker({ value, onChange, accent }: {
   const acc = accent ?? colors.accent;
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState('');
-  const query = q.trim().toLowerCase();
-
-  const groups = query
-    ? ICON_GROUPS
-        .map(g => ({
-          label: g.label,
-          icons: g.label.toLowerCase().includes(query) ? g.icons : g.icons.filter(ic => ic === q.trim()),
-        }))
-        .filter(g => g.icons.length)
-    : ICON_GROUPS;
+  const searching = q.trim().length > 0;
+  const results = searching ? searchIcons(q) : [];
 
   const selBg = colors.isDark ? hexToRgba(acc, 0.15) : colors.tint;
+
+  // A single 48px selectable tile.
+  const Tile = ({ em }: { em: string }) => {
+    const sel = em === value;
+    return (
+      <TouchableOpacity onPress={() => pick(em)}
+        style={{ width: 48, height: 48, borderRadius: 12, borderWidth: 2,
+          borderColor: sel ? acc : 'transparent',
+          backgroundColor: sel ? selBg : colors.glass,
+          alignItems: 'center', justifyContent: 'center' }}>
+        <Text style={{ fontSize: 22 }}>{em}</Text>
+      </TouchableOpacity>
+    );
+  };
 
   const pick = (em: string) => { onChange(em); setOpen(false); setQ(''); };
   const close = () => { setOpen(false); setQ(''); };
@@ -74,30 +80,34 @@ export function IconPicker({ value, onChange, accent }: {
                 fontSize: 14, marginBottom: 12 }} />
             <ScrollView style={{ flex: 1 }} keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 28 }}>
-              {groups.map(g => (
-                <View key={g.label} style={{ marginBottom: 14 }}>
+              {searching ? (
+                // Flat "Results" list while a query is active.
+                <View style={{ marginBottom: 14 }}>
                   <Text style={{ fontSize: 11, fontWeight: '700', color: colors.text3,
-                    textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>{g.label}</Text>
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                    {g.icons.map((em, i) => {
-                      const sel = em === value;
-                      return (
-                        <TouchableOpacity key={`${g.label}-${i}`} onPress={() => pick(em)}
-                          style={{ width: 48, height: 48, borderRadius: 12, borderWidth: 2,
-                            borderColor: sel ? acc : 'transparent',
-                            backgroundColor: sel ? selBg : colors.glass,
-                            alignItems: 'center', justifyContent: 'center' }}>
-                          <Text style={{ fontSize: 22 }}>{em}</Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
+                    textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>
+                    {results.length} {results.length === 1 ? 'Result' : 'Results'}
+                  </Text>
+                  {results.length > 0 ? (
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                      {results.map((em, i) => <Tile key={`r-${i}`} em={em} />)}
+                    </View>
+                  ) : (
+                    <Text style={{ color: colors.text3, fontSize: 13, paddingVertical: 8 }}>
+                      No icons match “{q.trim()}”.
+                    </Text>
+                  )}
                 </View>
-              ))}
-              {groups.length === 0 && (
-                <Text style={{ color: colors.text3, fontSize: 13, paddingVertical: 8 }}>
-                  No icons match “{q.trim()}”.
-                </Text>
+              ) : (
+                // Normal grouped view when the search is empty.
+                ICON_GROUPS.map(g => (
+                  <View key={g.label} style={{ marginBottom: 14 }}>
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: colors.text3,
+                      textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>{g.label}</Text>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                      {g.icons.map((ic, i) => <Tile key={`${g.label}-${i}`} em={ic.emoji} />)}
+                    </View>
+                  </View>
+                ))
               )}
             </ScrollView>
           </Pressable>
