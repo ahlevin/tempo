@@ -8,8 +8,9 @@ import { useStore } from '../../store/useStore';
 import { SwipeableRow } from '../../components/SwipeableRow';
 import { MemoryCard } from '../../components/MemoryCard';
 import { visibleHolidays } from '../../constants/holidays';
-import { openEventDetail, openGoalDetail, openHolidayDetail } from '../../utils/nav';
+import { openEventDetail, openGoalDetail, openHolidayDetail, openLogEntryDetail } from '../../utils/nav';
 import { nextOccurrence, daysUntil, fmtDateTime } from '../../utils/dates';
+import { isUpcomingEntry } from '../../utils/lifelog';
 
 // Favorites now lives as a sub-screen linked from Profile (was its own tab).
 export default function FavoritesScreen() {
@@ -20,16 +21,28 @@ export default function FavoritesScreen() {
   const holidayPrefs   = useStore(s => s.prefs.holidays);
   const toggleEventFav = useStore(s => s.toggleEventFav);
   const toggleGoalFav  = useStore(s => s.toggleGoalFav);
+  const toggleLogEntryFav = useStore(s => s.toggleLogEntryFav);
   const setHolidayFav  = useStore(s => s.setHolidayFav);
   const deleteEvent    = useStore(s => s.deleteEvent);
   const deleteGoal     = useStore(s => s.deleteGoal);
+  const deleteLogEntry = useStore(s => s.deleteLogEntry);
 
   const favEvents = events.filter(e => e.fav)
     .sort((a,b) => daysUntil(nextOccurrence(a)) - daysUntil(nextOccurrence(b)));
   const favGoals = goals.filter(g => g.fav);
+  // Favorited UPCOMING life-log entries (each an entry inside a lifelog memory).
+  const favLogEntries = memories
+    .filter(m => m.type === 'lifelog')
+    .flatMap(m => m.entries.map((e, index) => ({ m, e, index }))
+      .filter(({ e }) => e.fav && isUpcomingEntry(e))
+      .map(({ e, index }) => ({
+        memId: m.id, index, emoji: m.emoji, logName: m.name,
+        label: e.item || m.name, dateISO: e.date, days: daysUntil(e.date),
+      })))
+    .sort((a,b) => a.days - b.days);
   const favMemories = memories.filter(m => m.fav);
   const favHolidays = visibleHolidays(holidayPrefs).filter(h => h.fav);
-  const empty = !favEvents.length && !favGoals.length && !favMemories.length && !favHolidays.length;
+  const empty = !favEvents.length && !favGoals.length && !favLogEntries.length && !favMemories.length && !favHolidays.length;
 
   const hcolor = catColor(colors, 'holidays');
 
@@ -152,8 +165,44 @@ export default function FavoritesScreen() {
             })}
           </View>
         )}
-        {favMemories.length > 0 && (
+        {favLogEntries.length > 0 && (
           <View style={{ marginTop: (favEvents.length || favHolidays.length || favGoals.length) ? 16 : 0 }}>
+            <Text style={{ fontSize:16, fontWeight:'700', color:colors.text1, marginBottom:10 }}>Life Log</Text>
+            {favLogEntries.map(it => {
+              const uc = dayCountColor(colors, it.days);
+              const dstr = new Date(it.dateISO + 'T00:00:00').toLocaleDateString('en-US',
+                { weekday:'short', month:'short', day:'numeric' });
+              return (
+                <SwipeableRow key={`${it.memId}:${it.index}`} onDelete={() => deleteLogEntry(it.memId, it.index)}
+                  confirmTitle={`Delete "${it.label}"?`}
+                  confirmMessage="This removes it from Countdowns and its life log.">
+                <TouchableOpacity activeOpacity={0.8}
+                  onPress={() => openLogEntryDetail(it.memId, it.index)}
+                  style={{ backgroundColor:colors.surf, borderRadius:18,
+                  borderWidth:1, borderColor:colors.border, padding:14,
+                  marginBottom:8, flexDirection:'row', alignItems:'center', gap:12,
+                  ...(colors.isDark ? null : lightCardShadow) }}>
+                  <Text style={{ fontSize:22 }}>{it.emoji}</Text>
+                  <View style={{ flex:1 }}>
+                    <Text style={{ fontSize:14, fontWeight:'600', color:colors.text1 }}>{it.label}</Text>
+                    <Text style={{ fontSize:13, color:colors.text2, marginTop:2 }}>{it.logName} · {dstr}</Text>
+                  </View>
+                  <View style={{ alignItems:'flex-end', gap:4 }}>
+                    <Text style={{ fontSize:20, fontWeight:'800', color:uc }}>{it.days}</Text>
+                    <Text style={{ fontSize:9, color:colors.text3, textTransform:'uppercase' }}>{it.days===1?'day':'days'}</Text>
+                    <TouchableOpacity hitSlop={{ top:8, bottom:8, left:8, right:8 }}
+                      onPress={(ev) => { ev.stopPropagation(); toggleLogEntryFav(it.memId, it.index); }}>
+                      <Text style={{ fontSize:16 }}>⭐</Text>
+                    </TouchableOpacity>
+                  </View>
+                </TouchableOpacity>
+                </SwipeableRow>
+              );
+            })}
+          </View>
+        )}
+        {favMemories.length > 0 && (
+          <View style={{ marginTop: (favEvents.length || favHolidays.length || favGoals.length || favLogEntries.length) ? 16 : 0 }}>
             <Text style={{ fontSize:16, fontWeight:'700', color:colors.text1, marginBottom:10 }}>Memories</Text>
             {favMemories.map(m => <MemoryCard key={m.id} memory={m} />)}
           </View>

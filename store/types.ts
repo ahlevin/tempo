@@ -81,6 +81,8 @@ export interface LogEntry {
   /** Reminders for an UPCOMING (future-dated) entry — same shape as Event.alerts.
    *  Carried through the attach flow; absent on older entries → treated as []. */
   alerts?: Alert[];
+  /** Favorited (pinned to Favorites / hero). Absent on older entries → false. */
+  fav?: boolean;
 }
 
 export interface Memory {

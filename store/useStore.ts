@@ -63,6 +63,7 @@ interface TempoStore {
   toggleMemoryFav: (id: string) => void;
   addLogEntry: (memId: string, entry: { date: string; note: string; item?: string; datePrecision?: import('./types').DatePrecision; links?: import('./types').Link[]; alerts?: import('./types').Alert[] }) => void;
   updateLogEntry: (memId: string, index: number, patch: Partial<import('./types').LogEntry>) => void;
+  toggleLogEntryFav: (memId: string, index: number) => void;
   deleteLogEntry: (memId: string, index: number) => void;
   // Universe admin rename-safety: rename this user's matching logged items.
   renameLogItems: (renames: { preset: string; from: string; to: string }[]) => number;
@@ -379,6 +380,12 @@ export const useStore = create<TempoStore>()(
           set(s => ({ memories: s.memories.map(m => m.id !== memId ? m
             : { ...m, entries: m.entries.map((e, i) => i === index ? { ...e, ...patch } : e) }) }));
           enqueue({ kind: 'upsert', table: 'memories', id: memId });
+        },
+        // Toggle an upcoming entry's fav flag. Persists inside the memory's
+        // entries jsonb (round-trips wholesale, no schema change) via a memory upsert.
+        toggleLogEntryFav: (memId, index) => {
+          const cur = !!get().memories.find(m => m.id === memId)?.entries[index]?.fav;
+          get().updateLogEntry(memId, index, { fav: !cur });
         },
         deleteLogEntry: (memId, index) => {
           set(s => ({ memories: s.memories.map(m => m.id !== memId ? m
