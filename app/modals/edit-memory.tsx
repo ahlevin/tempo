@@ -56,7 +56,14 @@ export default function EditMemoryModal() {
 
   async function del() {
     const ok = await confirm({ title:`Delete "${m!.name}"?`, message:'All entries will be lost.', confirmLabel:'Delete', destructive:true });
-    if (ok) { deleteMemory(id); router.back(); }
+    if (ok) {
+      const wasLifelog = m!.type === 'lifelog';
+      deleteMemory(id);
+      // Return to the tab this memory lives on — life logs → Life Log tab,
+      // birthdays/anniversaries/memorials → Countdowns. dismissTo pops the whole
+      // modal stack deterministically (the plain back() landed on Countdowns).
+      router.dismissTo(wasLifelog ? '/tabs/lifelog' : '/tabs');
+    }
   }
 
   // Convert to an Event, or to another memory type. Options exclude the current type.

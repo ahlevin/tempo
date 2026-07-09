@@ -1,27 +1,56 @@
-import { ScrollView, View, Text, TouchableOpacity } from 'react-native';
+import { useState } from 'react';
+import { ScrollView, Text, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useStore } from '../../store/useStore';
 import { GoalCard } from '../../components/GoalCard';
 import { SectionHeader, EmptyPrompt, ScreenTitle } from '../../components/SectionUI';
+import { StatCard, StatRow, SearchBar } from '../../components/ListControls';
+import { goalDone } from '../../utils/goals';
 
-// The Goals tab — ONLY goals, moved out of the Countdowns screen.
+// The Goals tab — ONLY goals, moved out of the Countdowns screen. Header shows
+// headline metrics; a search box filters the list by name.
 export default function GoalsScreen() {
   const { colors } = useTheme();
   const goals = useStore(s => s.goals);
+  const memories = useStore(s => s.memories);   // linked goals derive progress from logs
   const add = () => router.push('/modals/add-goal');
+
+  const completed = goals.filter(g => goalDone(g, memories)).length;
+  const active = goals.length - completed;
+
+  const [q, setQ] = useState('');
+  const query = q.trim().toLowerCase();
+  const shown = query ? goals.filter(g => g.name.toLowerCase().includes(query)) : goals;
 
   return (
     <SafeAreaView style={{ flex:1, backgroundColor:colors.bg }} edges={['top']}>
       <ScreenTitle title="Goals" />
       <ScrollView contentContainerStyle={{ paddingHorizontal:16, paddingBottom:120 }}
-        showsVerticalScrollIndicator={false}>
-        <SectionHeader title={goals.length ? 'Your goals' : 'Goals'} onAdd={add} />
-        {goals.length === 0
-          ? <EmptyPrompt icon="🎯" text="No goals yet — tap to set something you're working toward."
+        showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+        {goals.length === 0 ? (
+          <>
+            <SectionHeader title="Goals" onAdd={add} />
+            <EmptyPrompt icon="🎯" text="No goals yet — tap to set something you're working toward."
               onPress={add} />
-          : goals.map(g => <GoalCard key={g.id} goal={g} />)}
+          </>
+        ) : (
+          <>
+            <StatRow>
+              <StatCard value={goals.length} label={goals.length === 1 ? 'Goal' : 'Goals'}
+                sub={`${active} active · ${completed} completed`} />
+              <StatCard value={completed} label="Completed" />
+            </StatRow>
+            <SearchBar value={q} onChange={setQ} placeholder="Search goals…" />
+            <SectionHeader title="Your goals" onAdd={add} />
+            {shown.length === 0
+              ? <Text style={{ color:colors.text3, fontSize:14, textAlign:'center', paddingVertical:24 }}>
+                  No goals match “{q.trim()}”.
+                </Text>
+              : shown.map(g => <GoalCard key={g.id} goal={g} />)}
+          </>
+        )}
       </ScrollView>
 
       <TouchableOpacity onPress={add}

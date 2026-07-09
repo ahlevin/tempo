@@ -58,7 +58,12 @@ export default function EditGoalModal() {
 
   async function del() {
     const ok = await confirm({ title:`Delete "${g!.name}"?`, message:'This cannot be undone.', confirmLabel:'Delete', destructive:true });
-    if (ok) { deleteGoal(id); router.back(); }
+    if (ok) {
+      deleteGoal(id);
+      // Return to the Goals tab (plain back() landed on Countdowns). dismissTo
+      // pops the whole modal stack deterministically.
+      router.dismissTo('/tabs/goals');
+    }
   }
 
   return (
