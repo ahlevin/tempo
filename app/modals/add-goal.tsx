@@ -34,6 +34,8 @@ export default function AddGoalModal() {
   const fi = { backgroundColor:colors.glass, borderWidth:1,
     borderColor:colors.border, borderRadius:12, padding:12,
     color:colors.text1, fontSize:15, marginBottom:14 };
+  // Linked goals derive progress → Unit/Increment Step are meaningless, so hidden.
+  const linked = !!(link.linkedLogId || link.linkedPreset);
 
   function submit() {
     if (!name.trim() || !target || !date) { showToast('⚠️', 'Missing info', 'Please fill in all fields.'); return; }
@@ -54,28 +56,48 @@ export default function AddGoalModal() {
         </View>
         <ScrollView contentContainerStyle={{ padding:20 }}
           showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+
+          {/* 1 — GOAL */}
+          <SH label="Goal" first />
           <FL label="Goal Name" />
           <TextInput value={name} onChangeText={setName}
             placeholder="e.g. Run 100 miles…" placeholderTextColor={colors.text3} style={fi} />
+
+          {/* 2 — TARGET & PROGRESS */}
+          <SH label="Target & Progress" />
+          <GoalLinkSection value={link} onChange={setLink} createdDate={format(new Date(), 'yyyy-MM-dd')} />
           <FL label="Target" />
           <TextInput value={target} onChangeText={setTarget}
-            placeholder="100" placeholderTextColor={colors.text3}
+            placeholder={linked ? 'e.g. 2' : '100'} placeholderTextColor={colors.text3}
             keyboardType="numeric" style={fi} />
-          <FL label="Unit" />
-          <TextInput value={unit} onChangeText={setUnit}
-            placeholder="miles, books, $…" placeholderTextColor={colors.text3} style={fi} />
-          <FL label="Increment Step" />
-          <TextInput value={step} onChangeText={setStep}
-            placeholder="1" placeholderTextColor={colors.text3}
-            keyboardType="numeric" style={fi} />
-          <DateTimeField mode="date" label="Deadline" value={date} onChange={setDate} />
-          <GoalLinkSection value={link} onChange={setLink} createdDate={format(new Date(), 'yyyy-MM-dd')} />
+          {!linked && (
+            <>
+              <FL label="Unit" />
+              <TextInput value={unit} onChangeText={setUnit}
+                placeholder="miles, books, $…" placeholderTextColor={colors.text3} style={fi} />
+              <FL label="Increment Step" />
+              <TextInput value={step} onChangeText={setStep}
+                placeholder="1" placeholderTextColor={colors.text3}
+                keyboardType="numeric" style={fi} />
+            </>
+          )}
+
+          {/* 3 — DEADLINE */}
+          <SH label="Deadline" />
+          <DateTimeField mode="date" value={date} onChange={setDate} />
+
+          {/* 4 — DISPLAY & REMINDERS */}
+          <SH label="Display & Reminders" />
           <Toggle label="⏳ Show on Countdowns" value={showOnCountdown} onChange={setShowOnCountdown} />
           <Text style={{ fontSize:11, color:colors.text3, marginTop:-6, marginBottom:14, marginLeft:2 }}>
             Also display this goal on your Countdowns tab.
           </Text>
+          <AlertsEditor value={alerts} onChange={setAlerts} />
+
+          {/* 5 — APPEARANCE */}
+          <SH label="Appearance" />
           <FL label="Icon" />
-          <View style={{ flexDirection:'row', flexWrap:'wrap', gap:6, marginBottom:20 }}>
+          <View style={{ flexDirection:'row', flexWrap:'wrap', gap:6, marginBottom:14 }}>
             {GOAL_EMOJIS.map(em => (
               <TouchableOpacity key={em} onPress={() => setEmoji(em)}
                 style={{ width:44, height:44, borderRadius:10, borderWidth:2,
@@ -91,9 +113,10 @@ export default function AddGoalModal() {
             placeholder="Add a note…" placeholderTextColor={colors.text3}
             style={{ ...fi, minHeight:64, textAlignVertical:'top' }} />
           <LinksEditor value={links} onChange={setLinks} />
-          <AlertsEditor value={alerts} onChange={setAlerts} />
+
+          {/* 6 — ACTIONS */}
           <TouchableOpacity onPress={submit}
-            style={{ backgroundColor:colors.teal, borderRadius:14, padding:15, alignItems:'center' }}>
+            style={{ backgroundColor:colors.teal, borderRadius:14, padding:15, alignItems:'center', marginTop:8 }}>
             <Text style={{ color:'#0A0A0F', fontSize:15, fontWeight:'700' }}>Set Goal →</Text>
           </TouchableOpacity>
           <View style={{ height:40 }} />
@@ -107,4 +130,12 @@ function FL({ label }: { label: string }) {
   const { colors } = useTheme();
   return <Text style={{ fontSize:11, fontWeight:'600', color:colors.text3,
     textTransform:'uppercase', letterSpacing:0.5, marginBottom:6 }}>{label}</Text>;
+}
+
+// Grouped section header (underlined) — matches the app's grouped-form style.
+function SH({ label, first }: { label: string; first?: boolean }) {
+  const { colors } = useTheme();
+  return <Text style={{ fontSize:12, fontWeight:'800', color:colors.text1, letterSpacing:0.4,
+    textTransform:'uppercase', marginTop: first ? 0 : 22, marginBottom:12,
+    borderBottomWidth:1, borderBottomColor:colors.border, paddingBottom:8 }}>{label}</Text>;
 }
