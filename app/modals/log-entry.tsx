@@ -226,7 +226,7 @@ export default function LogEntryModal() {
           {precision === 'full' && (
             <>
               <View style={{ flexDirection:'row', gap:8, marginBottom:14 }}>
-                {[{l:'Today',v:false},{l:'Past date',v:true}].map(opt => (
+                {[{l:'Today',v:false},{l:'Date',v:true}].map(opt => (
                   <TouchableOpacity key={String(opt.v)} onPress={() => setUsePast(opt.v)}
                     style={{ flex:1, padding:10, borderRadius:9, borderWidth:1.5,
                       borderColor: usePast===opt.v ? colors.teal : colors.border,
