@@ -26,7 +26,6 @@ export default function EditEventModal() {
   const updateEvent = useStore(s => s.updateEvent);
   const deleteEvent = useStore(s => s.deleteEvent);
   const attachEventToLog       = useStore(s => s.attachEventToLog);
-  const convertEventToMemory   = useStore(s => s.convertEventToMemory);
   const confirm     = useConfirm();
   const { showToast } = useToast();
   const event = events.find(e => e.id === id);
@@ -82,20 +81,6 @@ export default function EditEventModal() {
     const startIso = allDay ? `${start.slice(0, 10)}T00:00:00` : start;
     attachEventToLog(id, r.targetId, { date: startIso.slice(0, 10), note: note.trim(), item: canonItem(r.universe, name.trim()), datePrecision: 'full', alerts });
     router.back();
-  }
-
-  // Reversible type change (confirmed): this event was created as the wrong kind.
-  // Reuses the id-preserving, outbox-backed convertEventToMemory — no inference.
-  const CONVERT_TO: { type: 'birthday'|'anniversary'|'memorial'; label: string; emoji: string }[] = [
-    { type:'birthday',    label:'Birthday',    emoji:'🎂' },
-    { type:'anniversary', label:'Anniversary', emoji:'💑' },
-    { type:'memorial',    label:'Memorial',    emoji:'🕊️' },
-  ];
-  async function toMemType(t: typeof CONVERT_TO[number]) {
-    const ok = await confirm({ title:`Change to ${t.label}?`,
-      message:`"${name.trim() || event!.name}" will move to your Memories as a ${t.label}. Its date, note, reminders, and star are kept.`,
-      confirmLabel:'Change' });
-    if (ok) { convertEventToMemory(id, t.type); router.back(); }
   }
 
   return (
@@ -165,18 +150,6 @@ export default function EditEventModal() {
               </TouchableOpacity>
             </>
           )}
-
-          <FL label="Change type" />
-          <View style={{ flexDirection:'row', flexWrap:'wrap', gap:7, marginBottom:16 }}>
-            {CONVERT_TO.map(t => (
-              <TouchableOpacity key={t.type} onPress={() => toMemType(t)}
-                style={{ flexDirection:'row', alignItems:'center', gap:6, paddingVertical:9, paddingHorizontal:12,
-                  borderRadius:11, borderWidth:1, borderColor:colors.border, backgroundColor:colors.glass }}>
-                <Text style={{ fontSize:15 }}>{t.emoji}</Text>
-                <Text style={{ fontSize:13, fontWeight:'600', color:colors.text2 }}>{t.label}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
 
           <TouchableOpacity onPress={del}
             style={{ backgroundColor:(colors.isDark ? 'rgba(232,80,122,0.15)' : 'rgba(197,0,26,0.10)'), borderWidth:1,

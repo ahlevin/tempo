@@ -1,19 +1,21 @@
 import { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, Modal, Pressable } from 'react-native';
 import { useTheme } from '../contexts/ThemeContext';
-import { ICON_GROUPS } from '../constants/icons';
+import { ICON_GROUPS, ICON_COUNT } from '../constants/icons';
 
-// Shared icon picker used by every add/edit screen (event, memory, goal, life
-// log, custom). Renders the domain-grouped catalog in a bounded, scrollable
-// panel with a trivial search that filters by group name (or an exact emoji).
-// Selection just calls onChange(emoji) — storage is unchanged (a single emoji).
-// `accent` themes the selected tile so each surface keeps its brand color
-// (event → violet, memory → rose, goal/log → teal).
+// Shared icon picker used by every add/edit surface (event, memory, goal, life
+// log, custom). The form shows ONLY a compact trigger — the current icon plus a
+// "Change" chip. Tapping opens a bottom DRAWER whose grouped icon list scrolls
+// on its own dedicated surface, so there's no scroll-within-scroll fight with
+// the form page. Selecting sets the emoji (storage is unchanged) and closes.
+// `accent` themes the selection per surface (event → violet, memory → rose,
+// goal/log → teal).
 export function IconPicker({ value, onChange, accent }: {
   value: string; onChange: (e: string) => void; accent?: string;
 }) {
   const { colors } = useTheme();
   const acc = accent ?? colors.accent;
+  const [open, setOpen] = useState(false);
   const [q, setQ] = useState('');
   const query = q.trim().toLowerCase();
 
@@ -21,8 +23,6 @@ export function IconPicker({ value, onChange, accent }: {
     ? ICON_GROUPS
         .map(g => ({
           label: g.label,
-          // Match by group name → keep the whole group; otherwise keep only an
-          // icon that IS the typed emoji (paste-to-find).
           icons: g.label.toLowerCase().includes(query) ? g.icons : g.icons.filter(ic => ic === q.trim()),
         }))
         .filter(g => g.icons.length)
@@ -30,42 +30,80 @@ export function IconPicker({ value, onChange, accent }: {
 
   const selBg = colors.isDark ? hexToRgba(acc, 0.15) : colors.tint;
 
+  const pick = (em: string) => { onChange(em); setOpen(false); setQ(''); };
+  const close = () => { setOpen(false); setQ(''); };
+
   return (
-    <View style={{ marginBottom: 14 }}>
-      <TextInput value={q} onChangeText={setQ} placeholder="Search icons…"
-        placeholderTextColor={colors.text3} autoCapitalize="none" autoCorrect={false}
-        style={{ backgroundColor: colors.glass, borderWidth: 1, borderColor: colors.border,
-          borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, color: colors.text1,
-          fontSize: 14, marginBottom: 10 }} />
-      <ScrollView style={{ maxHeight: 300 }} nestedScrollEnabled
-        keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-        {groups.map(g => (
-          <View key={g.label} style={{ marginBottom: 12 }}>
-            <Text style={{ fontSize: 11, fontWeight: '700', color: colors.text3,
-              textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>{g.label}</Text>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-              {g.icons.map((em, i) => {
-                const sel = em === value;
-                return (
-                  <TouchableOpacity key={`${g.label}-${i}`} onPress={() => onChange(em)}
-                    style={{ width: 44, height: 44, borderRadius: 10, borderWidth: 2,
-                      borderColor: sel ? acc : 'transparent',
-                      backgroundColor: sel ? selBg : colors.glass,
-                      alignItems: 'center', justifyContent: 'center' }}>
-                    <Text style={{ fontSize: 20 }}>{em}</Text>
-                  </TouchableOpacity>
-                );
-              })}
+    <>
+      {/* Compact trigger — no inline grid in the form. */}
+      <TouchableOpacity onPress={() => setOpen(true)}
+        style={{ flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 14,
+          padding: 10, borderRadius: 14, borderWidth: 1, borderColor: colors.border,
+          backgroundColor: colors.glass }}>
+        <View style={{ width: 52, height: 52, borderRadius: 13, borderWidth: 2, borderColor: acc,
+          backgroundColor: selBg, alignItems: 'center', justifyContent: 'center' }}>
+          <Text style={{ fontSize: 26 }}>{value}</Text>
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 14, fontWeight: '700', color: colors.text1 }}>Tap to change icon</Text>
+          <Text style={{ fontSize: 12, color: colors.text3, marginTop: 1 }}>Choose from {ICON_COUNT} icons</Text>
+        </View>
+        <View style={{ paddingVertical: 6, paddingHorizontal: 12, borderRadius: 20, backgroundColor: selBg }}>
+          <Text style={{ fontSize: 13, fontWeight: '700', color: acc }}>Change ›</Text>
+        </View>
+      </TouchableOpacity>
+
+      {/* Bottom drawer — its own scroll surface, tall for comfortable browsing. */}
+      <Modal visible={open} transparent animationType="slide" onRequestClose={close}>
+        <Pressable onPress={close} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
+          {/* Empty onPress stops taps inside the sheet from closing it. */}
+          <Pressable onPress={() => {}} style={{ height: '80%', backgroundColor: colors.surf2,
+            borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingTop: 10, paddingHorizontal: 16 }}>
+            <View style={{ width: 40, height: 4, backgroundColor: colors.border, borderRadius: 2,
+              alignSelf: 'center', marginBottom: 12 }} />
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text1 }}>Choose an Icon</Text>
+              <TouchableOpacity onPress={close} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Text style={{ fontSize: 15, fontWeight: '700', color: acc }}>Done</Text>
+              </TouchableOpacity>
             </View>
-          </View>
-        ))}
-        {groups.length === 0 && (
-          <Text style={{ color: colors.text3, fontSize: 13, paddingVertical: 8 }}>
-            No icons match “{q.trim()}”.
-          </Text>
-        )}
-      </ScrollView>
-    </View>
+            <TextInput value={q} onChangeText={setQ} placeholder="Search icons…"
+              placeholderTextColor={colors.text3} autoCapitalize="none" autoCorrect={false}
+              style={{ backgroundColor: colors.glass, borderWidth: 1, borderColor: colors.border,
+                borderRadius: 10, paddingHorizontal: 12, paddingVertical: 9, color: colors.text1,
+                fontSize: 14, marginBottom: 12 }} />
+            <ScrollView style={{ flex: 1 }} keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 28 }}>
+              {groups.map(g => (
+                <View key={g.label} style={{ marginBottom: 14 }}>
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: colors.text3,
+                    textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>{g.label}</Text>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                    {g.icons.map((em, i) => {
+                      const sel = em === value;
+                      return (
+                        <TouchableOpacity key={`${g.label}-${i}`} onPress={() => pick(em)}
+                          style={{ width: 48, height: 48, borderRadius: 12, borderWidth: 2,
+                            borderColor: sel ? acc : 'transparent',
+                            backgroundColor: sel ? selBg : colors.glass,
+                            alignItems: 'center', justifyContent: 'center' }}>
+                          <Text style={{ fontSize: 22 }}>{em}</Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
+              ))}
+              {groups.length === 0 && (
+                <Text style={{ color: colors.text3, fontSize: 13, paddingVertical: 8 }}>
+                  No icons match “{q.trim()}”.
+                </Text>
+              )}
+            </ScrollView>
+          </Pressable>
+        </Pressable>
+      </Modal>
+    </>
   );
 }
 
