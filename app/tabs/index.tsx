@@ -20,13 +20,24 @@ import { visibleHolidays, HolidayItem } from '../../constants/holidays';
 import { upcomingLogItems, UpcomingLogItem } from '../../utils/lifelog';
 import { nextOccurrence, nextAnnual, daysUntil } from '../../utils/dates';
 
-// Countdowns filter pills: All, the 7 event categories, and the 3 recurring
-// memory types. (Goals and Life Logs live in their own tabs now.)
+// Countdowns filter pills, in a fixed presentation order: All, the recurring
+// memory types and 7 event categories interleaved. (Goals and Life Logs live in
+// their own tabs now.)
+const CAT = (id: string) => {
+  const c = CATEGORIES.find(x => x.id === id)!;
+  return { id: c.id, label: c.short, emoji: c.emoji };
+};
 const FILTERS: { id: string; label: string; emoji: string }[] = [
   { id: 'all', label: 'All', emoji: '' },
-  ...CATEGORIES.map(c => ({ id: c.id, label: c.short, emoji: c.emoji })),
   { id: 'birthday',    label: 'Birthdays',     emoji: '🎂' },
   { id: 'anniversary', label: 'Anniversaries', emoji: '💍' },
+  CAT('travel'),
+  CAT('holidays'),
+  CAT('parties'),     // "Parties"
+  CAT('work'),        // "Work/School"
+  CAT('money'),
+  CAT('medical'),
+  CAT('house'),       // "House/Vehicle"
   { id: 'memorial',    label: 'Memorials',     emoji: '🕊️' },
 ];
 

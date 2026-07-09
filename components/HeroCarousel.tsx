@@ -404,6 +404,14 @@ export function HeroCarousel() {
         snapToInterval={W + 12}
         decelerationRate="fast"
         contentContainerStyle={{ gap:12 }}
+        scrollEventThrottle={16}
+        // Keep dots/arrows in sync whether the user SWIPES or taps an arrow.
+        // onScroll tracks live (web has no reliable momentum-end); momentum-end
+        // is the native settle. Both compute the same offset→index.
+        onScroll={e => {
+          const i = Math.max(0, Math.min(Math.round(e.nativeEvent.contentOffset.x / (W + 12)), items.length - 1));
+          if (i !== idx) setIdx(i);
+        }}
         onMomentumScrollEnd={e => {
           const i = Math.round(e.nativeEvent.contentOffset.x / (W + 12));
           setIdx(Math.max(0, Math.min(i, items.length - 1)));
