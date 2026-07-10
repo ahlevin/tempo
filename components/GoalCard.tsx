@@ -5,7 +5,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { lightCardShadow, dayCountColor } from '../constants/colors';
 import { useStore } from '../store/useStore';
 import { Goal } from '../store/types';
-import { daysUntil } from '../utils/dates';
+import { daysUntil, fmtShort } from '../utils/dates';
 import { openGoalDetail } from '../utils/nav';
 import { isLinkedGoal, goalDerivedProgress, goalDone, linkedLog, windowLabel, isRecurringGoal, hasDeadline } from '../utils/goals';
 import { currentPeriodProgress, goalStreak, goalPeriodKind, goalPeriodTarget, periodLabel, periodNoun } from '../utils/recurring';
@@ -89,7 +89,14 @@ export function GoalCard({ goal: g }: { goal: Goal }) {
             </>
           ) : (
             <>
-              {showDeadline && !!dstr && <Text style={{ fontSize: 13, color: colors.text2, marginTop: 2 }}>{dstr}</Text>}
+              {showDeadline && (() => {
+                // Active → target date; done → completion date (fall back to the
+                // target date if no completedAt was captured yet).
+                const line = done
+                  ? (g.completedAt && fmtShort(g.completedAt) ? `Completed ${fmtShort(g.completedAt)}` : dstr)
+                  : dstr;
+                return !!line && <Text style={{ fontSize: 13, color: colors.text2, marginTop: 2 }}>{line}</Text>;
+              })()}
               {linked && (
                 <Text style={{ fontSize: 12, color: colors.teal, marginTop: 2, fontWeight: '600' }} numberOfLines={1}>
                   🔗 {log ? log.name : 'Linked log'} · {windowLabel(g)}

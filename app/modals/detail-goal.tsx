@@ -91,14 +91,15 @@ export default function GoalDetailModal() {
           </Section>
         )}
         <LinksSection links={g.links} />
-        {/* Subtle metadata footer — created always, completed when applicable. */}
+        {/* Labeled date metadata — subordinate to Progress/Target but clearly
+            captioned. Created always; Completed when captured (non-recurring). */}
         {!!fmtShort(g.created) && (
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: 16 }}>
-            <Text style={{ fontSize: 12, color: colors.text3 }}>Created {fmtShort(g.created)}</Text>
+          <Section label="Dates">
+            <Field label="Created" value={fmtShort(g.created)} />
             {!recurring && !!g.completedAt && !!fmtShort(g.completedAt) && (
-              <Text style={{ fontSize: 12, color: colors.text3 }}>{'   ·   '}Completed {fmtShort(g.completedAt)}</Text>
+              <Field label="Completed" value={fmtShort(g.completedAt)} />
             )}
-          </View>
+          </Section>
         )}
         <View style={{ height: 4 }} />
       </DetailCard>
