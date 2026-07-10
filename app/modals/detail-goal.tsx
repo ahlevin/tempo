@@ -3,7 +3,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useStore } from '../../store/useStore';
 import { useTheme } from '../../contexts/ThemeContext';
 import { dayCountColor } from '../../constants/colors';
-import { daysUntil, fmtDateTimeFull } from '../../utils/dates';
+import { daysUntil, fmtDateTimeFull, fmtShort } from '../../utils/dates';
 import { DetailScreen, DetailCard, DetailHeader, StatRow, Section, Field, remindersText, LinksSection } from '../../components/DetailView';
 import { isLinkedGoal, goalDerivedProgress, goalDone, linkedLog, windowLabel, isRecurringGoal, hasDeadline } from '../../utils/goals';
 import { currentPeriodProgress, goalStreak, goalPeriodKind, goalPeriodTarget, periodLabel, periodNoun } from '../../utils/recurring';
@@ -93,6 +93,12 @@ export default function GoalDetailModal() {
           </Section>
         )}
         <LinksSection links={g.links} />
+        {/* Low-emphasis metadata — created date (goals store no completion date). */}
+        {!!fmtShort(g.created) && (
+          <Text style={{ fontSize: 11, color: colors.text3, marginTop: 12 }}>
+            Created {fmtShort(g.created)}
+          </Text>
+        )}
         <View style={{ height: 4 }} />
       </DetailCard>
     </DetailScreen>
