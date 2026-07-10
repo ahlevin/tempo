@@ -113,6 +113,10 @@ export function rowToGoal(r: any): Goal {
     windowKind: r.window_kind ?? null,
     windowYear: r.window_year ?? null,
     windowStart: r.window_start ? datePart(r.window_start) : null,
+    repeats: !!r.repeats,
+    periodKind: r.period_kind ?? null,
+    periodTarget: r.period_target != null ? Number(r.period_target) : null,
+    manualPeriods: Array.isArray(r.manual_periods) ? r.manual_periods : [],
   };
 }
 
@@ -136,6 +140,10 @@ export function goalToRow(g: Goal, userId: string) {
     window_kind: g.windowKind ?? null,
     window_year: g.windowYear ?? null,
     window_start: dateCol(g.windowStart),
+    repeats: g.repeats ?? false,
+    period_kind: g.periodKind ?? null,
+    period_target: g.periodTarget ?? null,
+    manual_periods: g.manualPeriods ?? [],
     created_at: tsFromDate(g.created),
   };
 }

@@ -38,6 +38,15 @@ export interface Event {
 
 export type GoalWindowKind = 'year' | 'by_date' | 'all_time';
 
+export type GoalPeriodKind = 'day' | 'week' | 'month';
+
+/** One period's manual progress for a RECURRING manual goal. `key` is the
+ *  period key (e.g. "2026-07-09" | "2026-W28" | "2026-07"); `n` the tapped
+ *  count in that period. A period counts as "met" when n >= periodTarget.
+ *  Storing per-period records makes rollover automatic (a new period simply has
+ *  no record yet → 0) and streaks drift-proof (derive met keys from this list). */
+export interface ManualPeriod { key: string; n: number; }
+
 export interface Goal {
   id: string;
   name: string;
@@ -62,6 +71,14 @@ export interface Goal {
   windowKind?: GoalWindowKind | null;
   windowYear?: number | null;     // the year, for windowKind 'year'
   windowStart?: string | null;    // "YYYY-MM-DD" lower bound for windowKind 'by_date'; null → use created
+  // Recurring (repeating) goals: hit a per-period target, build a streak. A
+  // recurring goal has NO single deadline. All absent/null for one-shot goals
+  // (unchanged behavior). Progress is LINKED (derived from a life log's entries
+  // dated in the current period) or MANUAL (the manualPeriods counter below).
+  repeats?: boolean;              // default false → one-shot goal (today's behavior)
+  periodKind?: GoalPeriodKind | null;
+  periodTarget?: number | null;   // target hits per period
+  manualPeriods?: ManualPeriod[]; // MANUAL recurring only; derived streak source
 }
 
 export type DatePrecision = 'none' | 'year' | 'month' | 'full';

@@ -17,7 +17,8 @@ export interface CountdownCardProps {
   badges?: ReactNode;        // recur / alert / link / type-pill nodes on the title row
   subtitle?: ReactNode;      // the date / status line (string or nested <Text>s)
   note?: string;
-  days: number;
+  days: number | string;     // the big value (days-until, or a period score)
+  daysLabel?: string;        // overrides the 'day'/'days' caption (e.g. 'of 5')
   dayColor: string;          // 30-day urgency color (crimson ≤30, else navy/teal)
   progressPct: number;       // thin progress bar, colored by dayColor
   fav: boolean;
@@ -30,7 +31,7 @@ export interface CountdownCardProps {
 
 export function CountdownCard({
   emoji, emojiBg, accentBar, title, titleMaxWidth = '70%', badges, subtitle, note,
-  days, dayColor, progressPct, fav, onFav, onPress, onDelete, confirmTitle, confirmMessage,
+  days, daysLabel, dayColor, progressPct, fav, onFav, onPress, onDelete, confirmTitle, confirmMessage,
 }: CountdownCardProps) {
   const { colors } = useTheme();
   return (
@@ -64,7 +65,7 @@ export function CountdownCard({
         <View style={{ alignItems: 'center' }}>
           <View style={{ alignItems: 'flex-end' }}>
             <Text style={{ fontSize: 20, fontWeight: '800', color: dayColor }}>{days}</Text>
-            <Text style={{ fontSize: 9, color: colors.text3, textTransform: 'uppercase' }}>{days === 1 ? 'day' : 'days'}</Text>
+            <Text style={{ fontSize: 9, color: colors.text3, textTransform: 'uppercase' }}>{daysLabel ?? (days === 1 ? 'day' : 'days')}</Text>
           </View>
           <FavStar active={fav} onToggle={onFav} />
         </View>

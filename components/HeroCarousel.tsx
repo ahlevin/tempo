@@ -6,6 +6,8 @@ import { openEventDetail, openGoalDetail, openMemoryDetail, openHolidayDetail, o
 import { CATEGORIES } from '../constants/data';
 import { visibleHolidays, HolidayItem } from '../constants/holidays';
 import { logCount, logVisits, upcomingCount, isCollectionLog, logUniverse, isUpcomingEntry } from '../utils/lifelog';
+import { isRecurringGoal, isLinkedGoal, hasDeadline, goalDerivedProgress } from '../utils/goals';
+import { currentPeriodProgress, goalStreak, goalPeriodKind, goalPeriodTarget, periodLabel, periodNoun } from '../utils/recurring';
 import { useTheme } from '../contexts/ThemeContext';
 import { useTick } from '../contexts/TickContext';
 import { useStore } from '../store/useStore';
@@ -158,14 +160,62 @@ function EventCard({ event: e, active }: { event: any; active: boolean }) {
 
 function GoalCard({ goal: g }: { goal: any }) {
   const { colors } = useTheme();
+  const memories  = useStore(s => s.memories);
   const nudge     = useStore(s => s.nudgeGoal);
+  const incPeriod = useStore(s => s.incrementGoalPeriod);
   const toggleFav = useStore(s => s.toggleGoalFav);
-  const gp  = Math.round(Math.min(100, (g.current / g.target) * 100));
+
+  // RECURRING → current-period progress + streak (no deadline countdown).
+  if (isRecurringGoal(g)) {
+    const kind = goalPeriodKind(g);
+    const pt   = goalPeriodTarget(g);
+    const linked = isLinkedGoal(g);
+    const prog = currentPeriodProgress(g, memories);
+    const streak = goalStreak(g, memories);
+    const gp = pt > 0 ? Math.round(Math.min(100, (prog / pt) * 100)) : 0;
+    const periodTitle = kind === 'day' ? 'Today' : kind === 'week' ? 'This week' : 'This month';
+    return (
+      <HeroFrame bgDark="#0F1E1A" borderDark="rgba(62,207,178,0.25)" fav={g.fav} onFav={() => toggleFav(g.id)}
+        onPress={() => openGoalDetail(g.id)}>
+        <Eyebrow color={colors.teal}>{kind === 'day' ? 'Daily' : kind === 'week' ? 'Weekly' : 'Monthly'} Goal</Eyebrow>
+        <CardName>{g.emoji} {g.name}</CardName>
+        <Secondary color={colors.teal}>🔥 {streak.current} {periodNoun(kind)} streak · best {streak.best} · {streak.total} total</Secondary>
+        <View style={tileRow}>
+          <HeroTile value={prog} label={`of ${pt}`} accent={colors.teal} bg={heroTintBg(colors, colors.teal)} />
+          <InfoColumn line1={periodTitle} line2={`${gp}% ${periodLabel(kind)}`}>
+            {linked ? (
+              <Text style={{ fontSize: 11, color: colors.text2 }}>🔗 Auto from linked log</Text>
+            ) : (
+              <View style={{ flexDirection: 'row', gap: 5 }}>
+                <TouchableOpacity onPress={() => incPeriod(g.id, -1)}
+                  style={{ width: 28, height: 28, borderRadius: 14,
+                    backgroundColor: (colors.isDark ? 'rgba(255,255,255,0.08)' : colors.tint),
+                    alignItems: 'center', justifyContent: 'center' }}>
+                  <Text style={{ color: colors.text2, fontWeight: '700' }}>−</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => incPeriod(g.id, 1)}
+                  style={{ width: 28, height: 28, borderRadius: 14,
+                    backgroundColor: colors.teal, alignItems: 'center', justifyContent: 'center' }}>
+                  <Text style={{ color: colors.isDark ? '#0A0A0F' : '#fff', fontWeight: '700' }}>+</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </InfoColumn>
+        </View>
+      </HeroFrame>
+    );
+  }
+
+  // ONE-SHOT with a deadline → the classic days-left goal card.
+  const linked = isLinkedGoal(g);
+  const prog = linked ? goalDerivedProgress(g, memories) : g.current;
+  const gp  = g.target > 0 ? Math.round(Math.min(100, (prog / g.target) * 100)) : 0;
+  const deadlined = hasDeadline(g) && !!g.date;
   const target = new Date(g.date + 'T00:00:00');
   const ms  = target.getTime() - Date.now();
   const d   = ms > 0 ? Math.floor(ms / 86400000) : 0;
-  const wday = target.toLocaleDateString('en-US', { weekday: 'long' });
-  const dstr = target.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  const wday = deadlined ? target.toLocaleDateString('en-US', { weekday: 'long' }) : 'All-time';
+  const dstr = deadlined ? target.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'No deadline';
 
   return (
     <HeroFrame bgDark="#0F1E1A" borderDark="rgba(62,207,178,0.25)" fav={g.fav} onFav={() => toggleFav(g.id)}
@@ -174,29 +224,33 @@ function GoalCard({ goal: g }: { goal: any }) {
       <CardName>{g.emoji} {g.name}</CardName>
       <Secondary color={colors.teal}>Goal: {g.target.toLocaleString()} {g.unit}</Secondary>
       <View style={tileRow}>
-        <HeroTile value={d} label={d === 1 ? 'Day Left' : 'Days Left'} accent={colors.teal} bg={heroTintBg(colors, colors.teal)} />
+        {deadlined
+          ? <HeroTile value={d} label={d === 1 ? 'Day Left' : 'Days Left'} accent={colors.teal} bg={heroTintBg(colors, colors.teal)} />
+          : <HeroTile value={`${gp}%`} label="Complete" accent={colors.teal} bg={heroTintBg(colors, colors.teal)} />}
         <InfoColumn line1={wday} line2={dstr}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <View>
               <Text style={{ fontSize: 15, fontWeight: '800', color: colors.teal }}>
-                {g.current.toLocaleString()}
+                {prog.toLocaleString()}
                 <Text style={{ fontSize: 11, color: colors.text3 }}>/{g.target.toLocaleString()}</Text>
               </Text>
               <Text style={{ fontSize: 9, color: colors.text3, textTransform: 'uppercase' }}>{g.unit} · {gp}%</Text>
             </View>
-            <View style={{ flexDirection: 'row', gap: 5 }}>
-              <TouchableOpacity onPress={() => nudge(g.id, -1)}
-                style={{ width: 28, height: 28, borderRadius: 14,
-                  backgroundColor: (colors.isDark ? 'rgba(255,255,255,0.08)' : colors.tint),
-                  alignItems: 'center', justifyContent: 'center' }}>
-                <Text style={{ color: colors.text2, fontWeight: '700' }}>−</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => nudge(g.id, 1)}
-                style={{ width: 28, height: 28, borderRadius: 14,
-                  backgroundColor: colors.teal, alignItems: 'center', justifyContent: 'center' }}>
-                <Text style={{ color: colors.isDark ? '#0A0A0F' : '#fff', fontWeight: '700' }}>+</Text>
-              </TouchableOpacity>
-            </View>
+            {!linked && (
+              <View style={{ flexDirection: 'row', gap: 5 }}>
+                <TouchableOpacity onPress={() => nudge(g.id, -1)}
+                  style={{ width: 28, height: 28, borderRadius: 14,
+                    backgroundColor: (colors.isDark ? 'rgba(255,255,255,0.08)' : colors.tint),
+                    alignItems: 'center', justifyContent: 'center' }}>
+                  <Text style={{ color: colors.text2, fontWeight: '700' }}>−</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => nudge(g.id, 1)}
+                  style={{ width: 28, height: 28, borderRadius: 14,
+                    backgroundColor: colors.teal, alignItems: 'center', justifyContent: 'center' }}>
+                  <Text style={{ color: colors.isDark ? '#0A0A0F' : '#fff', fontWeight: '700' }}>+</Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
         </InfoColumn>
       </View>
@@ -348,7 +402,7 @@ export function HeroCarousel() {
   // sorted by soonest upcoming date.
   const items: { kind: 'event' | 'goal' | 'memory' | 'holiday' | 'logentry'; data: any; days: number }[] = [];
   events.filter(e => e.fav).forEach(e => items.push({ kind:'event', data:e, days: daysUntil(nextOccurrence(e)) }));
-  goals.filter(g => g.fav).forEach(g => items.push({ kind:'goal', data:g, days: daysUntil(g.date) }));
+  goals.filter(g => g.fav).forEach(g => items.push({ kind:'goal', data:g, days: (isRecurringGoal(g) || !hasDeadline(g)) ? 0 : daysUntil(g.date) }));
   memories
     .filter(m => m.fav && (m.type === 'birthday' || m.type === 'anniversary' || m.type === 'memorial' || m.type === 'lifelog'))
     .forEach(m => {

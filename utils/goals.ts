@@ -13,6 +13,21 @@ export function isLinkedGoal(g: Goal): boolean {
   return !!(g.linkedLogId || g.linkedPreset);
 }
 
+// A RECURRING goal repeats against a per-period target (no single deadline).
+export function isRecurringGoal(g: Goal): boolean {
+  return !!g.repeats;
+}
+
+// Whether the goal has a meaningful single DEADLINE (target date). It does NOT
+// when it recurs (period-based, no end), nor when it's a LINKED all-time goal
+// (all-time = no time bound — the leftover target date must not surface as a
+// countdown). One-shot goals (incl. unlinked) keep their deadline as before.
+export function hasDeadline(g: Goal): boolean {
+  if (g.repeats) return false;
+  if (isLinkedGoal(g) && (g.windowKind ?? 'all_time') === 'all_time') return false;
+  return true;
+}
+
 // Resolve the linked life log — by explicit id first, else the user's log for
 // the linked preset. Undefined when unlinked or the log no longer exists.
 export function linkedLog(g: Goal, memories: Memory[]): Memory | undefined {

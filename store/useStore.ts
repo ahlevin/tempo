@@ -9,6 +9,7 @@ import {
   eventToRow, goalToRow, memoryToRow, prefsToRow, uuid, CloudTable,
 } from '../lib/db';
 import { fetchUniverses, setUniverseOverlay, UniverseRow } from '../lib/universes';
+import { currentPeriodKey } from '../utils/recurring';
 
 const today = () => format(new Date(), 'yyyy-MM-dd');
 
@@ -55,6 +56,7 @@ interface TempoStore {
   updateGoal: (id: string, patch: Partial<Goal>) => void;
   deleteGoal: (id: string) => void;
   nudgeGoal: (id: string, dir: 1 | -1) => void;
+  incrementGoalPeriod: (id: string, dir: 1 | -1) => void;
   setGoalProgress: (id: string, value: number) => void;
   toggleGoalFav: (id: string) => void;
   addMemory: (m: Omit<Memory, 'id'>) => string;
@@ -314,6 +316,24 @@ export const useStore = create<TempoStore>()(
         },
         nudgeGoal: (id, dir) => {
           set(s => ({ goals: s.goals.map(g => g.id !== id ? g : { ...g, current: Math.max(0, Math.min(g.target, g.current + dir * (g.step || 1))) }) }));
+          enqueue({ kind: 'upsert', table: 'goals', id });
+        },
+        // MANUAL recurring: tap the CURRENT period's counter up/down. Records live
+        // per-period in manualPeriods, so a rolled-over period just starts fresh
+        // (no stored record yet → 0) — no reset bookkeeping, drift-proof streaks.
+        incrementGoalPeriod: (id, dir) => {
+          set(s => ({ goals: s.goals.map(g => {
+            if (g.id !== id) return g;
+            const kind = g.periodKind ?? 'week';
+            const key = currentPeriodKey(kind);
+            const target = (g.periodTarget ?? 1) > 0 ? (g.periodTarget ?? 1) : 1;
+            const list = [...(g.manualPeriods ?? [])];
+            const i = list.findIndex(r => r.key === key);
+            const nextN = Math.max(0, Math.min(target, (i >= 0 ? list[i].n : 0) + dir));
+            if (i >= 0) list[i] = { key, n: nextN };
+            else if (nextN > 0) list.push({ key, n: nextN });
+            return { ...g, manualPeriods: list };
+          }) }));
           enqueue({ kind: 'upsert', table: 'goals', id });
         },
         setGoalProgress: (id, value) => {

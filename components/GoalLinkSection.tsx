@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useTheme } from '../contexts/ThemeContext';
 import { useStore } from '../store/useStore';
 import { FL } from './FormControls';
 import { DateTimeField } from './DateTimeField';
-import type { GoalWindowKind } from '../store/types';
+import type { GoalWindowKind, GoalPeriodKind } from '../store/types';
 
 export interface GoalLink {
   linkedLogId?: string | null;
@@ -67,6 +67,52 @@ export function GoalWindowPicker({ value, onChange, createdDate }: { value: Goal
           : value.windowKind === 'by_date' ? `entries from ${value.windowStart ?? createdDate} to the target date`
           : 'all completed entries'}.
       </Text>
+    </>
+  );
+}
+
+const PERIODS: { kind: GoalPeriodKind; label: string; noun: string }[] = [
+  { kind: 'day',   label: 'Daily',   noun: 'day' },
+  { kind: 'week',  label: 'Weekly',  noun: 'week' },
+  { kind: 'month', label: 'Monthly', noun: 'month' },
+];
+
+// Recurring toggle + period picker + target-per-period. When repeats is ON the
+// caller hides the one-shot fields (single target / deadline / progress window).
+export function GoalRepeatSection({ repeats, onRepeats, periodKind, onPeriodKind, periodTarget, onPeriodTarget }: {
+  repeats: boolean; onRepeats: (v: boolean) => void;
+  periodKind: GoalPeriodKind; onPeriodKind: (k: GoalPeriodKind) => void;
+  periodTarget: string; onPeriodTarget: (v: string) => void;
+}) {
+  const { colors } = useTheme();
+  const { chip, chipText } = useChipStyles();
+  const noun = PERIODS.find(p => p.kind === periodKind)?.noun ?? 'period';
+  const fi = { backgroundColor: colors.glass, borderWidth: 1, borderColor: colors.border,
+    borderRadius: 12, padding: 12, color: colors.text1, fontSize: 15, marginBottom: 14 };
+  return (
+    <>
+      <MiniToggle label="🔁 Repeats (streak goal)" value={repeats} onChange={onRepeats} />
+      {repeats && (
+        <>
+          <FL label="Period" />
+          <View style={{ flexDirection: 'row', gap: 6, marginBottom: 14 }}>
+            {PERIODS.map(p => {
+              const sel = periodKind === p.kind;
+              return (
+                <TouchableOpacity key={p.kind} onPress={() => onPeriodKind(p.kind)} style={chip(sel)}>
+                  <Text style={chipText(sel)}>{p.label}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+          <FL label={`Target per ${noun}`} />
+          <TextInput value={periodTarget} onChangeText={onPeriodTarget} keyboardType="numeric"
+            placeholder="e.g. 5" placeholderTextColor={colors.text3} style={fi} />
+          <Text style={{ fontSize: 11, color: colors.text3, marginTop: -8, marginBottom: 12, marginLeft: 2 }}>
+            How many to hit each {noun}. Link a life log to count entries automatically, or leave unlinked for a manual counter. No single deadline — it repeats and builds a streak.
+          </Text>
+        </>
+      )}
     </>
   );
 }

@@ -12,8 +12,9 @@ import { Alert as AlertType, Link } from '../../store/types';
 import { DateTimeField } from '../../components/DateTimeField';
 import { AlertsEditor } from '../../components/AlertsEditor';
 import { LinksEditor } from '../../components/LinksEditor';
-import { GoalWindowPicker, GoalLogLink, GoalLink } from '../../components/GoalLinkSection';
+import { GoalWindowPicker, GoalLogLink, GoalRepeatSection, GoalLink } from '../../components/GoalLinkSection';
 import { Toggle } from '../../components/FormControls';
+import type { GoalPeriodKind } from '../../store/types';
 
 export default function AddGoalModal() {
   const { colors } = useTheme();
@@ -30,6 +31,9 @@ export default function AddGoalModal() {
   const [links,  setLinks]  = useState<Link[]>([]);
   const [link,   setLink]   = useState<GoalLink>({});
   const [showOnCountdown, setShowOnCountdown] = useState(false);
+  const [repeats, setRepeats] = useState(false);
+  const [periodKind, setPeriodKind] = useState<GoalPeriodKind>('week');
+  const [periodTarget, setPeriodTarget] = useState('');
 
   const fi = { backgroundColor:colors.glass, borderWidth:1,
     borderColor:colors.border, borderRadius:12, padding:12,
@@ -38,6 +42,18 @@ export default function AddGoalModal() {
   const linked = !!(link.linkedLogId || link.linkedPreset);
 
   function submit() {
+    if (repeats) {
+      // Recurring goal: per-period target, NO single deadline. Progress is
+      // linked (from a life log) or manual (the tap counter). target mirrors
+      // periodTarget so pct math stays valid.
+      const pt = parseFloat(periodTarget);
+      if (!name.trim() || !pt) { showToast('⚠️', 'Missing info', 'Name and a target per period are required.'); return; }
+      addGoal({ name:name.trim(), emoji, target:pt, unit:unit.trim()||'units', step:1, date:'', fav:false,
+        note:note.trim(), alerts, links, showOnCountdown,
+        repeats:true, periodKind, periodTarget:pt, manualPeriods:[], ...link });
+      router.back();
+      return;
+    }
     if (!name.trim() || !target || !date) { showToast('⚠️', 'Missing info', 'Please fill in all fields.'); return; }
     addGoal({ name:name.trim(), emoji, target:parseFloat(target),
       unit:unit.trim()||'units', step:parseFloat(step)||1, date, fav:false, note:note.trim(), alerts, links, showOnCountdown, ...link });
@@ -62,29 +78,42 @@ export default function AddGoalModal() {
           <TextInput value={name} onChangeText={setName}
             placeholder="e.g. Run 100 miles…" placeholderTextColor={colors.text3} style={fi} />
 
-          {/* 2–3 — Progress Window (+ Count from when By target date) */}
-          <GoalWindowPicker value={link} onChange={setLink} createdDate={format(new Date(), 'yyyy-MM-dd')} />
+          {/* Repeats (streak) toggle + period/target when on */}
+          <GoalRepeatSection repeats={repeats} onRepeats={setRepeats}
+            periodKind={periodKind} onPeriodKind={setPeriodKind}
+            periodTarget={periodTarget} onPeriodTarget={setPeriodTarget} />
 
-          {/* 4 — Deadline */}
-          <DateTimeField mode="date" label="Deadline" value={date} onChange={setDate} />
+          {/* One-shot fields — hidden for recurring goals (period target replaces them) */}
+          {!repeats && (
+            <>
+              {/* 2–3 — Progress Window (+ Count from when By target date) */}
+              <GoalWindowPicker value={link} onChange={setLink} createdDate={format(new Date(), 'yyyy-MM-dd')} />
+              {/* 4 — Deadline */}
+              <DateTimeField mode="date" label="Deadline" value={date} onChange={setDate} />
+            </>
+          )}
 
-          {/* 5–6 — Link to a life log + collapsed Life Log picker */}
+          {/* 5–6 — Link to a life log + collapsed Life Log picker (both modes) */}
           <GoalLogLink value={link} onChange={setLink} />
 
-          {/* 7 — Target (Unit + Increment Step only when unlinked) */}
-          <FL label="Target" />
-          <TextInput value={target} onChangeText={setTarget}
-            placeholder={linked ? 'e.g. 2' : '100'} placeholderTextColor={colors.text3}
-            keyboardType="numeric" style={fi} />
-          {!linked && (
+          {/* 7 — Target (one-shot only; recurring uses Target per period above) */}
+          {!repeats && (
             <>
-              <FL label="Unit" />
-              <TextInput value={unit} onChangeText={setUnit}
-                placeholder="miles, books, $…" placeholderTextColor={colors.text3} style={fi} />
-              <FL label="Increment Step" />
-              <TextInput value={step} onChangeText={setStep}
-                placeholder="1" placeholderTextColor={colors.text3}
+              <FL label="Target" />
+              <TextInput value={target} onChangeText={setTarget}
+                placeholder={linked ? 'e.g. 2' : '100'} placeholderTextColor={colors.text3}
                 keyboardType="numeric" style={fi} />
+              {!linked && (
+                <>
+                  <FL label="Unit" />
+                  <TextInput value={unit} onChangeText={setUnit}
+                    placeholder="miles, books, $…" placeholderTextColor={colors.text3} style={fi} />
+                  <FL label="Increment Step" />
+                  <TextInput value={step} onChangeText={setStep}
+                    placeholder="1" placeholderTextColor={colors.text3}
+                    keyboardType="numeric" style={fi} />
+                </>
+              )}
             </>
           )}
 

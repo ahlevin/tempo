@@ -7,7 +7,8 @@ import { useStore } from '../store/useStore';
 import { Goal } from '../store/types';
 import { daysUntil } from '../utils/dates';
 import { openGoalDetail } from '../utils/nav';
-import { isLinkedGoal, goalDerivedProgress, goalDone, linkedLog, windowLabel } from '../utils/goals';
+import { isLinkedGoal, goalDerivedProgress, goalDone, linkedLog, windowLabel, isRecurringGoal, hasDeadline } from '../utils/goals';
+import { currentPeriodProgress, goalStreak, goalPeriodKind, goalPeriodTarget, periodLabel, periodNoun } from '../utils/recurring';
 import { Confetti } from './Confetti';
 import { SwipeableRow } from './SwipeableRow';
 import { FavStar } from './FavStar';
@@ -19,21 +20,26 @@ export function GoalCard({ goal: g }: { goal: Goal }) {
   const memories   = useStore(s => s.memories);
   const toggleFav  = useStore(s => s.toggleGoalFav);
   const nudgeGoal  = useStore(s => s.nudgeGoal);
+  const incPeriod  = useStore(s => s.incrementGoalPeriod);
   const deleteGoal = useStore(s => s.deleteGoal);
-  // Tap the header opens the read-only detail view (which has its own Edit button).
   const edit = () => openGoalDetail(g.id);
 
-  // Linked goals DERIVE progress from their life log (never stored); unlinked
-  // goals use the manual counter exactly as before.
+  const recurring = isRecurringGoal(g);
   const linked = isLinkedGoal(g);
-  const prog = linked ? goalDerivedProgress(g, memories) : g.current;
   const log  = linked ? linkedLog(g, memories) : undefined;
-  const gp   = g.target > 0 ? Math.round(Math.min(100, (prog / g.target) * 100)) : 0;
-  const d    = daysUntil(g.date);
-  const done = linked ? goalDone(g, memories) : g.current >= g.target;
+  const showDeadline = hasDeadline(g);
+  const d = daysUntil(g.date);
 
-  // Fire confetti on the transition into completion (not on initial mount of an
-  // already-complete goal).
+  // Progress + completion depend on the goal shape.
+  const kind = goalPeriodKind(g);
+  const pt   = goalPeriodTarget(g);
+  const prog = recurring ? currentPeriodProgress(g, memories) : (linked ? goalDerivedProgress(g, memories) : g.current);
+  const denom = recurring ? pt : g.target;
+  const gp   = denom > 0 ? Math.round(Math.min(100, (prog / denom) * 100)) : 0;
+  const done = recurring ? prog >= pt : (linked ? goalDone(g, memories) : g.current >= g.target);
+  const streak = recurring ? goalStreak(g, memories) : null;
+
+  // Fire confetti on the transition into completion / period-met.
   const wasDone = useRef(done);
   const [burst, setBurst] = useState(0);
   useEffect(() => {
@@ -41,8 +47,8 @@ export function GoalCard({ goal: g }: { goal: Goal }) {
     wasDone.current = done;
   }, [done]);
 
-  const dstr = new Date(g.date + 'T00:00:00').toLocaleDateString('en-US',
-    { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+  const dstr = g.date ? new Date(g.date + 'T00:00:00').toLocaleDateString('en-US',
+    { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) : '';
 
   return (
     <SwipeableRow onDelete={() => deleteGoal(g.id)}
@@ -54,7 +60,6 @@ export function GoalCard({ goal: g }: { goal: Goal }) {
     }}>
       <Confetti fire={burst} height={180} onDone={() => setBurst(0)} />
       {colors.isDark && <View style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, backgroundColor: colors.teal, borderRadius: 2 }} />}
-      {/* Tap the header to edit; the progress row below owns its own controls. */}
       <TouchableOpacity activeOpacity={0.7} onPress={edit}
         style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 10 }}>
         <View style={{ width: 42, height: 42, borderRadius: 12, backgroundColor: colors.isDark ? 'rgba(62,207,178,0.11)' : colors.tint, alignItems: 'center', justifyContent: 'center' }}>
@@ -62,39 +67,58 @@ export function GoalCard({ goal: g }: { goal: Goal }) {
         </View>
         <View style={{ flex: 1 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-            <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text1, maxWidth: '80%' }} numberOfLines={1}>{g.name}</Text>
+            <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text1, maxWidth: '78%' }} numberOfLines={1}>{g.name}</Text>
             {done && (
               <View style={{ backgroundColor: colors.isDark ? 'rgba(62,207,178,0.18)' : colors.tint, borderRadius: 8, paddingVertical: 2, paddingHorizontal: 7 }}>
-                <Text style={{ fontSize: 10, fontWeight: '800', color: colors.teal }}>✓ Complete!</Text>
+                <Text style={{ fontSize: 10, fontWeight: '800', color: colors.teal }}>{recurring ? `✓ ${periodLabel(kind)}!` : '✓ Complete!'}</Text>
               </View>
             )}
             <AlertBadge count={g.alerts?.length} />
             <LinkBadge count={g.links?.length} />
           </View>
-          <Text style={{ fontSize: 13, color: colors.text2, marginTop: 2 }}>{dstr}</Text>
-          {linked && (
-            <Text style={{ fontSize: 12, color: colors.teal, marginTop: 2, fontWeight: '600' }} numberOfLines={1}>
-              🔗 {log ? log.name : 'Linked log'} · {windowLabel(g)}
-            </Text>
+          {recurring ? (
+            <>
+              <Text style={{ fontSize: 13, color: colors.text2, marginTop: 2 }} numberOfLines={1}>
+                🔁 {kind === 'day' ? 'Daily' : kind === 'week' ? 'Weekly' : 'Monthly'} · {linked ? (log ? log.name : 'Linked log') : 'Manual'}
+              </Text>
+              {!!streak && (
+                <Text style={{ fontSize: 12, color: colors.teal, marginTop: 2, fontWeight: '600' }} numberOfLines={1}>
+                  🔥 {streak.current} {periodNoun(kind)} streak · best {streak.best} · {streak.total} total
+                </Text>
+              )}
+            </>
+          ) : (
+            <>
+              {showDeadline && !!dstr && <Text style={{ fontSize: 13, color: colors.text2, marginTop: 2 }}>{dstr}</Text>}
+              {linked && (
+                <Text style={{ fontSize: 12, color: colors.teal, marginTop: 2, fontWeight: '600' }} numberOfLines={1}>
+                  🔗 {log ? log.name : 'Linked log'} · {windowLabel(g)}
+                </Text>
+              )}
+            </>
           )}
           {!!g.note && (
-            <Text style={{ fontSize: 13, color: colors.text2, marginTop: 2, fontStyle: 'italic' }} numberOfLines={1}>
-              {g.note}
-            </Text>
+            <Text style={{ fontSize: 13, color: colors.text2, marginTop: 2, fontStyle: 'italic' }} numberOfLines={1}>{g.note}</Text>
           )}
         </View>
         <View style={{ alignItems: 'center' }}>
-          <View style={{ alignItems: 'flex-end' }}>
-            <Text style={{ fontSize: 18, fontWeight: '800', color: dayCountColor(colors, d) }}>{d}</Text>
-            <Text style={{ fontSize: 9, color: colors.text3, textTransform: 'uppercase' }}>days</Text>
-          </View>
+          {!recurring && showDeadline && (
+            <View style={{ alignItems: 'flex-end' }}>
+              <Text style={{ fontSize: 18, fontWeight: '800', color: dayCountColor(colors, d) }}>{d}</Text>
+              <Text style={{ fontSize: 9, color: colors.text3, textTransform: 'uppercase' }}>days</Text>
+            </View>
+          )}
           <FavStar active={g.fav} onToggle={() => toggleFav(g.id)} />
         </View>
       </TouchableOpacity>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
         <View style={{ flex: 1 }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
-            {linked ? (
+            {recurring ? (
+              <Text style={{ fontSize: 12, fontWeight: '700', color: colors.teal }}>
+                {prog} of {pt} {periodLabel(kind)}
+              </Text>
+            ) : linked ? (
               <Text style={{ fontSize: 12, fontWeight: '700', color: colors.teal }}>
                 {prog.toLocaleString()} {g.unit}
               </Text>
@@ -105,20 +129,23 @@ export function GoalCard({ goal: g }: { goal: Goal }) {
                 </Text>
               </TouchableOpacity>
             )}
-            <Text style={{ fontSize: 12, color: colors.text2 }}>{g.target.toLocaleString()} {g.unit}</Text>
+            <Text style={{ fontSize: 12, color: colors.text2 }}>
+              {recurring ? `${pt} / ${periodNoun(kind)}` : `${g.target.toLocaleString()} ${g.unit}`}
+            </Text>
           </View>
           <View style={{ height: 6, backgroundColor: colors.track, borderRadius: 3, overflow: 'hidden' }}>
             <View style={{ height: '100%', width: `${gp}%` as DimensionValue, backgroundColor: colors.teal, borderRadius: 3 }} />
           </View>
         </View>
         <Text style={{ fontSize: 11, fontWeight: '700', color: colors.teal }}>{gp}%</Text>
-        {!done && !linked && (
+        {/* Manual counters: one-shot unlinked → nudgeGoal; recurring manual → incrementGoalPeriod */}
+        {!linked && (recurring || !done) && (
           <View style={{ flexDirection: 'row', gap: 5 }}>
-            <TouchableOpacity onPress={() => nudgeGoal(g.id, -1)}
+            <TouchableOpacity onPress={() => (recurring ? incPeriod(g.id, -1) : nudgeGoal(g.id, -1))}
               style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: colors.tint, alignItems: 'center', justifyContent: 'center' }}>
               <Text style={{ color: colors.text2, fontWeight: '700', fontSize: 18 }}>−</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => nudgeGoal(g.id, 1)}
+            <TouchableOpacity onPress={() => (recurring ? incPeriod(g.id, 1) : nudgeGoal(g.id, 1))}
               style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: colors.isDark ? 'rgba(62,207,178,0.18)' : colors.tint, alignItems: 'center', justifyContent: 'center' }}>
               <Text style={{ color: colors.teal, fontWeight: '700', fontSize: 18 }}>+</Text>
             </TouchableOpacity>

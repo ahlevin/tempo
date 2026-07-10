@@ -18,6 +18,7 @@ import { CATEGORIES } from '../../constants/data';
 import { catColor } from '../../constants/colors';
 import { visibleHolidays, HolidayItem } from '../../constants/holidays';
 import { upcomingLogItems, UpcomingLogItem } from '../../utils/lifelog';
+import { isRecurringGoal, hasDeadline } from '../../utils/goals';
 import { nextOccurrence, nextAnnual, daysUntil } from '../../utils/dates';
 
 // Countdowns filter pills, in a fixed presentation order: All, the recurring
@@ -52,7 +53,7 @@ type UpcomingItem =
 const upcomingDays = (it: UpcomingItem) =>
   it.kind === 'event' ? daysUntil(nextOccurrence(it.data))
   : it.kind === 'memory' ? daysUntil(nextAnnual(it.data.originDate))
-  : it.kind === 'goal' ? daysUntil(it.data.date)
+  : it.kind === 'goal' ? (isRecurringGoal(it.data) ? 0 : daysUntil(it.data.date))
   : it.data.days;
 
 export default function HomeScreen() {
@@ -95,10 +96,12 @@ export default function HomeScreen() {
   if (isAll) {
     upcomingLogItems(memories).forEach(it => upcoming.push({ kind: 'logentry', data: it }));
   }
-  // Goals surface as countdowns ONLY when opted in (show_on_countdown) AND their
-  // target date is in the future. Off by default; the Goals tab is unaffected.
+  // Goals surface as countdowns ONLY when opted in (show_on_countdown). Recurring
+  // goals show current-period progress (no deadline); one-shot goals need a
+  // future deadline. All-time goals (no time bound) never appear here.
   if (isAll) {
-    goals.filter(g => g.showOnCountdown === true && daysUntil(g.date) > 0)
+    goals.filter(g => g.showOnCountdown === true &&
+      (isRecurringGoal(g) ? true : (hasDeadline(g) && daysUntil(g.date) > 0)))
       .forEach(g => upcoming.push({ kind: 'goal', data: g }));
   }
   upcoming.sort((a, b) => upcomingDays(a) - upcomingDays(b));
