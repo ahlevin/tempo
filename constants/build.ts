@@ -2,4 +2,4 @@
 // you need to confirm a fresh deploy actually went live (Cloudflare Pages can lag
 // or cache) — if the footer still shows the old marker after a hard refresh, the
 // new build hasn't deployed yet, so the issue is the deploy, not the code.
-export const BUILD_ID = '2026-07-08 · list search only on Goals/Life Log (no metrics)';
+export const BUILD_ID = '2026-07-09 · attach event to multiple life logs';

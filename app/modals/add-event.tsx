@@ -16,7 +16,6 @@ import { AlertsEditor } from '../../components/AlertsEditor';
 import { LifelogAttachSection, AttachHandle } from '../../components/LifelogAttachSection';
 import { LinksEditor } from '../../components/LinksEditor';
 import { Link } from '../../store/types';
-import { canonItem } from '../../utils/lifelog';
 
 export default function AddEventModal() {
   const { colors } = useTheme();
@@ -44,11 +43,14 @@ export default function AddEventModal() {
     const startIso = allDay ? `${start.slice(0, 10)}T00:00:00` : start;
 
     if (attachLog) {
-      // ONE source of truth: a future-dated entry in the chosen life log. No
-      // standalone event; it graduates automatically once its date passes.
-      const r = attachRef.current?.resolve();
-      if (!r) return; // the picker surfaced the reason
-      addLogEntry(r.targetId, { date: startIso.slice(0, 10), note: note.trim(), item: canonItem(r.universe, name.trim()), datePrecision: 'full', alerts });
+      // ONE source of truth per log: a future-dated entry in EACH selected life
+      // log. No standalone event; each entry graduates independently once its
+      // date passes. The entries are independent — no cross-linkage.
+      const targets = attachRef.current?.resolve();
+      if (!targets) return; // the picker surfaced the reason
+      const date = startIso.slice(0, 10);
+      targets.forEach(t => addLogEntry(t.targetId,
+        { date, note: note.trim(), item: t.item, datePrecision: 'full', links, alerts }));
       router.back();
       return;
     }
@@ -127,7 +129,7 @@ export default function AddEventModal() {
           <Toggle label="📓 Also log this in a Life Log" value={attachLog} onChange={setAttachLog} />
           {attachLog && (
             <>
-              <LifelogAttachSection ref={attachRef} emoji={emoji} />
+              <LifelogAttachSection ref={attachRef} emoji={emoji} eventName={name} />
               <Text style={{ fontSize:12, color:colors.text3, marginBottom:8, marginLeft:2 }}>
                 Logs “{name.trim() || '…'}” on {start.slice(0,10)}. It counts down until then, then reads as completed.
               </Text>

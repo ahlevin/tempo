@@ -16,7 +16,6 @@ import { AlertsEditor } from '../../components/AlertsEditor';
 import { LinksEditor } from '../../components/LinksEditor';
 import { LifelogAttachSection, AttachHandle } from '../../components/LifelogAttachSection';
 import { useConfirm } from '../../components/ConfirmDialog';
-import { canonItem } from '../../utils/lifelog';
 import { toDate } from '../../utils/dates';
 
 export default function EditEventModal() {
@@ -25,7 +24,7 @@ export default function EditEventModal() {
   const events      = useStore(s => s.events);
   const updateEvent = useStore(s => s.updateEvent);
   const deleteEvent = useStore(s => s.deleteEvent);
-  const attachEventToLog       = useStore(s => s.attachEventToLog);
+  const addLogEntry = useStore(s => s.addLogEntry);
   const confirm     = useConfirm();
   const { showToast } = useToast();
   const event = events.find(e => e.id === id);
@@ -66,20 +65,27 @@ export default function EditEventModal() {
     if (ok) { deleteEvent(id); router.back(); }
   }
 
-  // Move this standalone event INTO a life log as a single future-dated entry
-  // (single source of truth — the event row is removed).
+  // Move this standalone event INTO one or more life logs — the event row is
+  // removed and ONE INDEPENDENT future-dated entry is created in each selected
+  // log (single source of truth per entry; no cross-linkage).
   async function moveIntoLog() {
     if (!name.trim()) { showToast('⚠️', 'Missing info', 'Please enter a name.'); return; }
     const d = attachRef.current?.describe();
     if (!d) return; // the picker surfaced the reason
-    const ok = await confirm({ title:`Move into “${d.name}”?`,
-      message:`"${name.trim()}" becomes an entry in ${d.willCreate ? `a new “${d.name}”` : `“${d.name}”`} and stops being a standalone event. It counts down until its date, then completes.`,
+    const n = d.names.length;
+    const list = d.names.map(x => `“${x}”`).join(', ');
+    const ok = await confirm({ title: n === 1 ? `Move into ${list}?` : `Move into ${n} logs?`,
+      message:`"${name.trim()}" becomes ${n === 1 ? 'an entry' : `${n} independent entries`} in ${list} and stops being a standalone event. Each counts down until its date, then completes.`,
       confirmLabel:'Move' });
     if (!ok) return;
-    const r = attachRef.current?.resolve();
-    if (!r) return;
+    const targets = attachRef.current?.resolve();
+    if (!targets) return;
     const startIso = allDay ? `${start.slice(0, 10)}T00:00:00` : start;
-    attachEventToLog(id, r.targetId, { date: startIso.slice(0, 10), note: note.trim(), item: canonItem(r.universe, name.trim()), datePrecision: 'full', alerts });
+    const date = startIso.slice(0, 10);
+    // Remove the standalone event once, then add each independent entry.
+    deleteEvent(id);
+    targets.forEach(t => addLogEntry(t.targetId,
+      { date, note: note.trim(), item: t.item, datePrecision: 'full', links, alerts }));
     router.back();
   }
 
@@ -143,7 +149,7 @@ export default function EditEventModal() {
           <Toggle label="📓 Move into a life log" value={attachOpen} onChange={setAttachOpen} />
           {attachOpen && (
             <>
-              <LifelogAttachSection ref={attachRef} emoji={emoji} />
+              <LifelogAttachSection ref={attachRef} emoji={emoji} eventName={name} />
               <TouchableOpacity onPress={moveIntoLog}
                 style={{ backgroundColor:colors.teal, borderRadius:14, padding:15, alignItems:'center', marginBottom:16 }}>
                 <Text style={{ color: colors.isDark ? '#0A0A0F' : '#fff', fontSize:15, fontWeight:'700' }}>Move into life log →</Text>
