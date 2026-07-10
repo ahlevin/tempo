@@ -117,6 +117,7 @@ export function rowToGoal(r: any): Goal {
     periodKind: r.period_kind ?? null,
     periodTarget: r.period_target != null ? Number(r.period_target) : null,
     manualPeriods: Array.isArray(r.manual_periods) ? r.manual_periods : [],
+    completedAt: r.completed_at ?? null,
   };
 }
 
@@ -144,6 +145,7 @@ export function goalToRow(g: Goal, userId: string) {
     period_kind: g.periodKind ?? null,
     period_target: g.periodTarget ?? null,
     manual_periods: g.manualPeriods ?? [],
+    completed_at: g.completedAt ?? null,
     created_at: tsFromDate(g.created),
   };
 }

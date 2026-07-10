@@ -1,6 +1,8 @@
+import { useEffect } from 'react';
 import { Tabs } from 'expo-router';
 import { Text, View } from 'react-native';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useStore } from '../../store/useStore';
 
 function TabIcon({ label, icon, focused }: { label: string; icon: string; focused: boolean }) {
   const { colors } = useTheme();
@@ -16,6 +18,15 @@ function TabIcon({ label, icon, focused }: { label: string; icon: string; focuse
 
 export default function TabLayout() {
   const { colors } = useTheme();
+  // One-time completion capture, app-wide: whenever goals or their linked logs
+  // change (progress moves, data loads), stamp completedAt for any newly-done
+  // one-shot goal. The action no-ops without a state write when nothing is due,
+  // so this effect can't loop.
+  const goals    = useStore(s => s.goals);
+  const memories = useStore(s => s.memories);
+  const reconcileGoalCompletions = useStore(s => s.reconcileGoalCompletions);
+  useEffect(() => { reconcileGoalCompletions(); }, [goals, memories, reconcileGoalCompletions]);
+
   return (
     <Tabs
       screenOptions={{

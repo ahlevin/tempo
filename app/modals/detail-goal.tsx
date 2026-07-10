@@ -93,10 +93,15 @@ export default function GoalDetailModal() {
           </Section>
         )}
         <LinksSection links={g.links} />
-        {/* Low-emphasis metadata — created date (goals store no completion date). */}
+        {/* Low-emphasis metadata — created + (one-shot only) completed date. */}
         {!!fmtShort(g.created) && (
           <Text style={{ fontSize: 11, color: colors.text3, marginTop: 12 }}>
             Created {fmtShort(g.created)}
+          </Text>
+        )}
+        {!recurring && !!g.completedAt && !!fmtShort(g.completedAt) && (
+          <Text style={{ fontSize: 11, color: colors.text3, marginTop: 3 }}>
+            Completed {fmtShort(g.completedAt)}
           </Text>
         )}
         <View style={{ height: 4 }} />

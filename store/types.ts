@@ -79,6 +79,10 @@ export interface Goal {
   periodKind?: GoalPeriodKind | null;
   periodTarget?: number | null;   // target hits per period
   manualPeriods?: ManualPeriod[]; // MANUAL recurring only; derived streak source
+  /** ISO timestamp stamped ONCE, the first time a NON-recurring goal reaches
+   *  done. A completion is a historical fact: never cleared or re-stamped if the
+   *  goal later drops below target. Recurring goals never set this. */
+  completedAt?: string | null;
 }
 
 export type DatePrecision = 'none' | 'year' | 'month' | 'full';

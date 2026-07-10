@@ -10,6 +10,7 @@ import {
 } from '../lib/db';
 import { fetchUniverses, setUniverseOverlay, UniverseRow } from '../lib/universes';
 import { currentPeriodKey } from '../utils/recurring';
+import { goalDone } from '../utils/goals';
 
 const today = () => format(new Date(), 'yyyy-MM-dd');
 
@@ -57,6 +58,7 @@ interface TempoStore {
   deleteGoal: (id: string) => void;
   nudgeGoal: (id: string, dir: 1 | -1) => void;
   incrementGoalPeriod: (id: string, dir: 1 | -1) => void;
+  reconcileGoalCompletions: () => void;
   setGoalProgress: (id: string, value: number) => void;
   toggleGoalFav: (id: string) => void;
   addMemory: (m: Omit<Memory, 'id'>) => string;
@@ -335,6 +337,20 @@ export const useStore = create<TempoStore>()(
             return { ...g, manualPeriods: list };
           }) }));
           enqueue({ kind: 'upsert', table: 'goals', id });
+        },
+        // Stamp completedAt ONCE for any NON-recurring goal that is now done and
+        // not already stamped. Loop-safe: computes the work first and returns
+        // WITHOUT calling set() when there's nothing to stamp, so re-running it
+        // (e.g. from an effect keyed on goals/memories) never churns state. A
+        // completion is permanent — never cleared/re-stamped if it later drops.
+        reconcileGoalCompletions: () => {
+          const s = get();
+          const toStamp = s.goals.filter(g => !g.repeats && !g.completedAt && goalDone(g, s.memories));
+          if (!toStamp.length) return;
+          const ids = new Set(toStamp.map(g => g.id));
+          const ts = new Date().toISOString();
+          set(st => ({ goals: st.goals.map(g => ids.has(g.id) ? { ...g, completedAt: ts } : g) }));
+          toStamp.forEach(g => enqueue({ kind: 'upsert', table: 'goals', id: g.id }));
         },
         setGoalProgress: (id, value) => {
           set(s => ({ goals: s.goals.map(g => g.id === id ? { ...g, current: Math.min(g.target, Math.max(0, value)) } : g) }));
