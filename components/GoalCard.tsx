@@ -103,10 +103,18 @@ export function GoalCard({ goal: g }: { goal: Goal }) {
         </View>
         <View style={{ alignItems: 'center' }}>
           {!recurring && showDeadline && (
-            <View style={{ alignItems: 'flex-end' }}>
-              <Text style={{ fontSize: 18, fontWeight: '800', color: dayCountColor(colors, d) }}>{d}</Text>
-              <Text style={{ fontSize: 9, color: colors.text3, textTransform: 'uppercase' }}>days</Text>
-            </View>
+            done ? (
+              // A done goal shouldn't count down — show the ✓ complete state.
+              <View style={{ alignItems: 'flex-end' }}>
+                <Text style={{ fontSize: 20, fontWeight: '800', color: colors.teal }}>✓</Text>
+                <Text style={{ fontSize: 9, color: colors.teal, textTransform: 'uppercase', fontWeight: '700' }}>done</Text>
+              </View>
+            ) : (
+              <View style={{ alignItems: 'flex-end' }}>
+                <Text style={{ fontSize: 18, fontWeight: '800', color: dayCountColor(colors, d) }}>{d}</Text>
+                <Text style={{ fontSize: 9, color: colors.text3, textTransform: 'uppercase' }}>days</Text>
+              </View>
+            )
           )}
           <FavStar active={g.fav} onToggle={() => toggleFav(g.id)} />
         </View>

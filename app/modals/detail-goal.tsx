@@ -45,8 +45,10 @@ export default function GoalDetailModal() {
           <StatRow label="Current streak" context={`best ${streak!.best} · ${streak!.total} total`}
             value={streak!.current} valueColor={teal} valueCaption={`${periodNoun(kind)} streak`} />
         ) : showDeadline ? (
-          <StatRow label="Deadline" context={deadline} value={days} valueColor={dayCountColor(colors, days)}
-            valueCaption={days === 1 ? 'day left' : 'days left'} />
+          <StatRow label="Target date" context={deadline}
+            value={done ? '✓' : days}
+            valueColor={done ? teal : dayCountColor(colors, days)}
+            valueCaption={done ? 'complete' : (days === 1 ? 'day left' : 'days left')} />
         ) : null}
 
         <Section label={recurring ? `Progress ${periodLabel(kind)}` : 'Progress'}>
@@ -72,17 +74,13 @@ export default function GoalDetailModal() {
           )}
         </Section>
 
-        {recurring ? (
+        {recurring && (
           <Section label="Streak">
             <Field label="Current" value={`${streak!.current} ${periodNoun(kind)}${streak!.current === 1 ? '' : 's'} in a row`} />
             <Field label="Best" value={`${streak!.best} ${periodNoun(kind)}${streak!.best === 1 ? '' : 's'}`} />
             <Field label={`Total ${periodNoun(kind)}s met`} value={`${streak!.total}`} />
           </Section>
-        ) : showDeadline ? (
-          <Section label="Deadline">
-            <Field label="Target date" value={deadline || '—'} />
-          </Section>
-        ) : null}
+        )}
 
         <Section label="Reminders">
           <Field label="Alerts" value={remindersText(g.alerts)} />
@@ -93,16 +91,14 @@ export default function GoalDetailModal() {
           </Section>
         )}
         <LinksSection links={g.links} />
-        {/* Low-emphasis metadata — created + (one-shot only) completed date. */}
+        {/* Subtle metadata footer — created always, completed when applicable. */}
         {!!fmtShort(g.created) && (
-          <Text style={{ fontSize: 11, color: colors.text3, marginTop: 12 }}>
-            Created {fmtShort(g.created)}
-          </Text>
-        )}
-        {!recurring && !!g.completedAt && !!fmtShort(g.completedAt) && (
-          <Text style={{ fontSize: 11, color: colors.text3, marginTop: 3 }}>
-            Completed {fmtShort(g.completedAt)}
-          </Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: 16 }}>
+            <Text style={{ fontSize: 12, color: colors.text3 }}>Created {fmtShort(g.created)}</Text>
+            {!recurring && !!g.completedAt && !!fmtShort(g.completedAt) && (
+              <Text style={{ fontSize: 12, color: colors.text3 }}>{'   ·   '}Completed {fmtShort(g.completedAt)}</Text>
+            )}
+          </View>
         )}
         <View style={{ height: 4 }} />
       </DetailCard>
