@@ -19,12 +19,17 @@ export function isRecurringGoal(g: Goal): boolean {
 }
 
 // Whether the goal has a meaningful single DEADLINE (target date). It does NOT
-// when it recurs (period-based, no end), nor when it's a LINKED all-time goal
-// (all-time = no time bound — the leftover target date must not surface as a
-// countdown). One-shot goals (incl. unlinked) keep their deadline as before.
+// when it recurs (period-based, no end) or when it's an ALL-TIME goal — all-time
+// means no time bound, so a leftover target date must never surface as a
+// deadline/countdown, whether the goal is LINKED or UNLINKED. Goals on a 'year'
+// or 'by_date' window keep their deadline. A linked goal with no explicit window
+// derives all-time (goalDerivedProgress defaults null → 'all_time'), so it also
+// has no deadline. Legacy UNLINKED one-shot goals (null window, a real target
+// date) keep their deadline — null is only treated as all-time when linked.
 export function hasDeadline(g: Goal): boolean {
   if (g.repeats) return false;
-  if (isLinkedGoal(g) && (g.windowKind ?? 'all_time') === 'all_time') return false;
+  if (g.windowKind === 'all_time') return false;
+  if (isLinkedGoal(g) && !g.windowKind) return false;
   return true;
 }
 
