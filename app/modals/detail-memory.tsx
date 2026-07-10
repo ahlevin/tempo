@@ -17,7 +17,10 @@ export default function MemoryDetailModal() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const memories = useStore(s => s.memories);
   const m = memories.find(x => x.id === id);
-  if (!m) { router.back(); return null; }
+  // If the memory is gone (e.g. deleted from the edit screen pushed on top),
+  // leave deterministically to Countdowns — where birthdays/anniversaries/
+  // memorials live — rather than a plain back() that races the dismiss.
+  if (!m) { router.dismissTo('/tabs'); return null; }
   // Life logs have their own richer detail view (entries list + add).
   if (m.type === 'lifelog') { router.replace({ pathname: '/modals/lifelog-detail', params: { id: m.id } }); return null; }
 

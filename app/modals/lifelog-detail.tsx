@@ -20,7 +20,11 @@ export default function LifelogDetailModal() {
   const confirm        = useConfirm();
   const m = memories.find(x => x.id === id);
 
-  if (!m || m.type !== 'lifelog') { router.back(); return null; }
+  // If the log is gone (e.g. deleted from the edit screen pushed on top, which
+  // re-renders this screen underneath), leave deterministically to the Life Log
+  // tab — a plain back() here races the edit screen's dismiss and bounces to
+  // Countdowns.
+  if (!m || m.type !== 'lifelog') { router.dismissTo('/tabs/lifelog'); return null; }
 
   const teal = colors.teal;
   const collection = isCollectionLog(m);
