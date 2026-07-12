@@ -50,7 +50,8 @@ export default function AddEventModal() {
       if (!targets) return; // the picker surfaced the reason
       const date = startIso.slice(0, 10);
       targets.forEach(t => addLogEntry(t.targetId,
-        { date, note: note.trim(), item: t.item, datePrecision: 'full', links, alerts }));
+        { date, note: note.trim(), item: t.item, datePrecision: 'full', links, alerts,
+          city: t.city, state: t.state, address: t.address }));
       router.back();
       return;
     }

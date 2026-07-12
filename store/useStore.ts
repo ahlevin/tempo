@@ -65,7 +65,7 @@ interface TempoStore {
   updateMemory: (id: string, patch: Partial<Memory>) => void;
   deleteMemory: (id: string) => void;
   toggleMemoryFav: (id: string) => void;
-  addLogEntry: (memId: string, entry: { date: string; note: string; item?: string; datePrecision?: import('./types').DatePrecision; links?: import('./types').Link[]; alerts?: import('./types').Alert[] }) => void;
+  addLogEntry: (memId: string, entry: { date: string; note: string; item?: string; datePrecision?: import('./types').DatePrecision; links?: import('./types').Link[]; alerts?: import('./types').Alert[]; city?: string; state?: string; address?: string }) => void;
   updateLogEntry: (memId: string, index: number, patch: Partial<import('./types').LogEntry>) => void;
   toggleLogEntryFav: (memId: string, index: number) => void;
   deleteLogEntry: (memId: string, index: number) => void;

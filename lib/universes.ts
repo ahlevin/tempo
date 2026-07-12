@@ -30,6 +30,15 @@ export function itemFullAddress(it: UniverseItem): string {
 export function itemMapQuery(it: UniverseItem): string {
   return itemFullAddress(it) || itemName(it);
 }
+// The location for a universe item matching `name` (name-only match), or
+// undefined. Used to SNAPSHOT an item's current location onto a new entry at
+// log time — the entry then keeps that snapshot forever (never re-looked-up).
+export function locationForName(universe: UniverseItem[] | undefined, name: string): ItemLocation | undefined {
+  if (!universe) return undefined;
+  const hit = universe.find(u => itemName(u).toLowerCase() === name.toLowerCase());
+  return hit ? itemLocation(hit) : undefined;
+}
+
 // Normalize a raw jsonb item (string or {name,...}) → a clean UniverseItem, or
 // null when malformed. Collapses a location-less object back to a plain string.
 export function normalizeItem(x: unknown): UniverseItem | null {

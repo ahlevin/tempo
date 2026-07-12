@@ -7,7 +7,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { CloseButton } from '../../components/CloseButton';
 import { useStore } from '../../store/useStore';
 import { useToast } from '../../components/Toast';
-import { logUniverse, isCollectionLog, itemName, itemCityState, itemFullAddress, itemMapQuery } from '../../utils/lifelog';
+import { logUniverse, isCollectionLog, itemName, itemCityState, itemFullAddress, itemMapQuery, locationForName } from '../../utils/lifelog';
 import { openUrl } from '../../utils/links';
 
 // A fuller "browse with addresses" view over a collection log's universe: each
@@ -51,8 +51,13 @@ export default function BrowseUniverseModal() {
   function addSelected() {
     if (selected.size === 0) return;
     const today = format(new Date(), 'yyyy-MM-dd');
-    // One independent entry per selected item — default date today, editable after.
-    selected.forEach(name => addLogEntry(id, { date: today, note: '', datePrecision: 'full', item: name }));
+    // One independent entry per selected item — default date today, editable
+    // after. Snapshot the item's current location onto the entry (historical).
+    selected.forEach(name => {
+      const loc = locationForName(universe, name);
+      addLogEntry(id, { date: today, note: '', datePrecision: 'full', item: name,
+        city: loc?.city, state: loc?.state, address: loc?.address });
+    });
     showToast('✅', 'Added', `${selected.size} logged to ${m!.name}`);
     router.back();
   }

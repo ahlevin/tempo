@@ -4,8 +4,22 @@ import { itemName, UniverseItem } from '../lib/universes';
 import { daysUntil } from './dates';
 
 // Re-export item helpers so UI imports them alongside the other lifelog helpers.
-export { itemName, itemLocation, itemCityState, itemFullAddress, itemMapQuery } from '../lib/universes';
+export { itemName, itemLocation, itemCityState, itemFullAddress, itemMapQuery, locationForName } from '../lib/universes';
 export type { UniverseItem, ItemLocation } from '../lib/universes';
+
+// ── Entry location snapshot (reads the ENTRY's OWN stored fields, never the
+// live universe — so historical locations survive venue moves) ──────────────
+export function entryCityState(e: LogEntry): string {
+  return [e.city, e.state].filter(Boolean).join(', ');
+}
+// The stored `address` is the FULL address string ("street, city, ST zip"); fall
+// back to just city/state when there's no address.
+export function entryFullAddress(e: LogEntry): string {
+  return e.address?.trim() || entryCityState(e);
+}
+export function entryMapQuery(e: LogEntry): string {
+  return entryFullAddress(e) || (e.item ?? '');
+}
 
 // Shared life-log helpers (a life log is a container; dates live on entries).
 

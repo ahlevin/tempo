@@ -5,7 +5,7 @@ import { useToast } from './Toast';
 import { useStore } from '../store/useStore';
 import { getPreset, presetUniverse } from '../constants/lifelogs';
 import { canonItem } from '../utils/lifelog';
-import { itemName, itemCityState, UniverseItem } from '../lib/universes';
+import { itemName, itemCityState, locationForName, UniverseItem } from '../lib/universes';
 import { PresetBrowser } from './PresetBrowser';
 
 // Shared "Also log this in a Life Log" picker used by BOTH add-event and
@@ -27,7 +27,7 @@ import { PresetBrowser } from './PresetBrowser';
 // The parent then builds each entry (shared date/note/links/alerts + per-log
 // item) and attaches it.
 
-export interface AttachTarget { targetId: string; item: string; }
+export interface AttachTarget { targetId: string; item: string; city?: string; state?: string; address?: string; }
 export interface AttachHandle {
   count: () => number;
   describe: () => { names: string[]; createCount: number } | null;
@@ -160,7 +160,9 @@ export const LifelogAttachSection = forwardRef<AttachHandle, { emoji: string; ev
       return selected.map(s => {
         const targetId = s.targetId ?? addMemory(s.createSpec);
         const item = s.universe ? canonItem(s.universe, s.item) : freeValue(s);
-        return { targetId, item };
+        // Snapshot the universe item's current location onto the entry.
+        const loc = s.universe ? locationForName(s.universe, item) : undefined;
+        return { targetId, item, city: loc?.city, state: loc?.state, address: loc?.address };
       });
     },
   }), [selected, eventName, lifelogs]);

@@ -7,7 +7,7 @@ import { useStore } from '../../store/useStore';
 import type { LogEntry } from '../../store/types';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { fmtLogDate, daysSince, daysBetween } from '../../utils/dates';
-import { isCollectionLog, logUniverse, logCount, logVisits, upcomingCount, isUpcomingEntry, sortedEntries, logNoun } from '../../utils/lifelog';
+import { isCollectionLog, logUniverse, logCount, logVisits, upcomingCount, isUpcomingEntry, sortedEntries, logNoun, entryCityState } from '../../utils/lifelog';
 import { openLogEntryDetail } from '../../utils/nav';
 import { LinkBadge } from '../../components/LinkBadge';
 
@@ -140,6 +140,8 @@ export default function LifelogDetailModal() {
               const up = isUpcomingEntry(entry);
               const primary = entry.item || fmtLogDate(entry.date, entry.datePrecision);
               const secondary = entry.item ? fmtLogDate(entry.date, entry.datePrecision) : '';
+              // Historical location snapshot stored ON the entry (never re-derived).
+              const cs = entryCityState(entry);
               return (
                 <View key={index} style={{ flexDirection:'row', alignItems:'center', gap:10,
                   backgroundColor:colors.surf, borderRadius:14, borderWidth:1, borderColor:colors.border,
@@ -154,7 +156,9 @@ export default function LifelogDetailModal() {
                     </View>
                     <View style={{ flex:1 }}>
                       <View style={{ flexDirection:'row', alignItems:'center', gap:6, flexWrap:'wrap' }}>
-                        <Text style={{ fontSize:14, fontWeight:'600', color:colors.text1, maxWidth:'78%' }} numberOfLines={1}>{primary}</Text>
+                        <Text style={{ fontSize:14, fontWeight:'600', color:colors.text1, maxWidth:'78%' }} numberOfLines={1}>
+                          {primary}{!!cs && <Text style={{ color:colors.text3, fontWeight:'500' }}>{`  ·  ${cs}`}</Text>}
+                        </Text>
                         {up && (
                           <View style={{ backgroundColor: colors.isDark ? 'rgba(62,207,178,0.16)' : colors.tint, borderRadius:8, paddingVertical:2, paddingHorizontal:7 }}>
                             <Text style={{ fontSize:9, fontWeight:'800', color:teal, textTransform:'uppercase', letterSpacing:0.3 }}>Upcoming</Text>

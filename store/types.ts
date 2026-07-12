@@ -104,6 +104,14 @@ export interface LogEntry {
   alerts?: Alert[];
   /** Favorited (pinned to Favorites / hero). Absent on older entries → false. */
   fav?: boolean;
+  /** HISTORICAL location snapshot — where the user was AT THE TIME OF THE VISIT,
+   *  copied from the universe item's location when the entry was created. NEVER
+   *  re-derived from the universe on display, so it survives a venue move (the
+   *  universe holds the CURRENT location; the entry holds it as of the visit).
+   *  Absent on entries created before this / for items with no location. */
+  city?: string;
+  state?: string;
+  address?: string;
 }
 
 export interface Memory {

@@ -1,10 +1,11 @@
-import { View } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useStore } from '../../store/useStore';
 import { useTheme } from '../../contexts/ThemeContext';
 import { dayCountColor } from '../../constants/colors';
 import { daysUntil, fmtDateTimeFull, fmtLogDate } from '../../utils/dates';
-import { isUpcomingEntry } from '../../utils/lifelog';
+import { isUpcomingEntry, entryCityState, entryMapQuery } from '../../utils/lifelog';
+import { openUrl } from '../../utils/links';
 import { DetailScreen, DetailCard, DetailHeader, StatRow, Section, Field, LinksSection, remindersText } from '../../components/DetailView';
 
 // Read-only detail for a life-log entry — reached from Countdowns (attached
@@ -48,6 +49,19 @@ export default function LogEntryDetailModal() {
         <Section label="When">
           <Field label="Date" value={dateText} />
         </Section>
+        {/* Historical location snapshot — read from the ENTRY's OWN stored fields
+            (where the user was at the time), never re-derived from the universe. */}
+        {(!!entryCityState(entry) || !!entry.address) && (
+          <Section label="Location">
+            {!!entryCityState(entry) && <Field label="City / State" value={entryCityState(entry)} />}
+            {!!entry.address && <Field label="Address" value={entry.address} />}
+            <TouchableOpacity onPress={() => openUrl('https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(entryMapQuery(entry)))}
+              style={{ alignSelf: 'flex-start', paddingVertical: 8, paddingHorizontal: 14, borderRadius: 10,
+                borderWidth: 1, borderColor: colors.border, backgroundColor: colors.glass }}>
+              <Text style={{ fontSize: 13, fontWeight: '700', color: teal }}>📍 Map</Text>
+            </TouchableOpacity>
+          </Section>
+        )}
         {upcoming && (
           <Section label="Reminders">
             <Field label="Alerts" value={remindersText(entry.alerts)} />

@@ -85,7 +85,8 @@ export default function EditEventModal() {
     // Remove the standalone event once, then add each independent entry.
     deleteEvent(id);
     targets.forEach(t => addLogEntry(t.targetId,
-      { date, note: note.trim(), item: t.item, datePrecision: 'full', links, alerts }));
+      { date, note: note.trim(), item: t.item, datePrecision: 'full', links, alerts,
+        city: t.city, state: t.state, address: t.address }));
     router.back();
   }
 

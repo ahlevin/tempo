@@ -12,7 +12,7 @@ import { LinksEditor } from '../../components/LinksEditor';
 import { AlertsEditor } from '../../components/AlertsEditor';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { useToast } from '../../components/Toast';
-import { logUniverse, isCollectionLog, isUpcomingEntry, itemName, itemCityState, UniverseItem } from '../../utils/lifelog';
+import { logUniverse, isCollectionLog, isUpcomingEntry, itemName, itemCityState, locationForName, UniverseItem } from '../../utils/lifelog';
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const PRECISIONS: { id: DatePrecision; label: string }[] = [
@@ -97,8 +97,17 @@ export default function LogEntryModal() {
 
   function entryPayload() {
     const chosenItem = isPicker ? item : label.trim();
+    // Location snapshot: for a NEW entry (or an edit that switched to a different
+    // item), copy the universe item's CURRENT location. For an edit that kept the
+    // same item, PRESERVE the entry's existing historical snapshot — never
+    // re-derive from the universe (that would erase a pre-move location).
+    const keepExisting = isEdit && !!editing && chosenItem === (editing.item ?? '');
+    const loc = keepExisting
+      ? { city: editing!.city, state: editing!.state, address: editing!.address }
+      : (isPicker ? locationForName(universe, chosenItem) : undefined);
     return { date: buildDate(), note: note.trim(), datePrecision: precision,
-      item: chosenItem || undefined, links, alerts };
+      item: chosenItem || undefined, links, alerts,
+      city: loc?.city, state: loc?.state, address: loc?.address };
   }
 
   // Add (count / custom collection): create then close.
