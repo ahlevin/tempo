@@ -12,7 +12,7 @@ import { LinksEditor } from '../../components/LinksEditor';
 import { AlertsEditor } from '../../components/AlertsEditor';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { useToast } from '../../components/Toast';
-import { logUniverse, isCollectionLog, isUpcomingEntry } from '../../utils/lifelog';
+import { logUniverse, isCollectionLog, isUpcomingEntry, itemName, itemCityState, UniverseItem } from '../../utils/lifelog';
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const PRECISIONS: { id: DatePrecision; label: string }[] = [
@@ -61,12 +61,20 @@ export default function LogEntryModal() {
   // The FULL universe is always shown (repeat visits allowed). Each item carries
   // its current entry count so it can render a "· N×" badge; selecting it logs
   // ANOTHER visit. Search filters over all items.
+  // Each row keeps the full item (for its location) plus the normalized name and
+  // logged count. Search matches NAME, city, and state (typing "Chicago" or "CA"
+  // surfaces matches); coverage/counts still key off the name string only.
   const pickItems = useMemo(() => {
-    if (!isPicker || !universe || !m) return [] as { name: string; count: number }[];
+    if (!isPicker || !universe || !m) return [] as { it: UniverseItem; name: string; cityState: string; count: number }[];
     const counts = new Map<string, number>();
     m.entries.forEach(e => { if (e.item) counts.set(e.item, (counts.get(e.item) ?? 0) + 1); });
     const q = query.trim().toLowerCase();
-    return universe.filter(x => !q || x.toLowerCase().includes(q)).map(x => ({ name: x, count: counts.get(x) ?? 0 }));
+    return universe
+      .filter(x => {
+        if (!q) return true;
+        return itemName(x).toLowerCase().includes(q) || itemCityState(x).toLowerCase().includes(q);
+      })
+      .map(x => ({ it: x, name: itemName(x), cityState: itemCityState(x), count: counts.get(itemName(x)) ?? 0 }));
   }, [isPicker, universe, m, query]);
 
   const fi = { backgroundColor:colors.glass, borderWidth:1,
@@ -184,6 +192,9 @@ export default function LogEntryModal() {
                         <Text style={{ fontSize:14, fontWeight: sel ? '700' : '500',
                           color: sel ? colors.teal : colors.text1 }}>
                           {sel ? '✓ ' : ''}{x.name}
+                          {!!x.cityState && (
+                            <Text style={{ color: sel ? colors.teal : colors.text3, fontWeight:'500' }}>{`  ·  ${x.cityState}`}</Text>
+                          )}
                           {x.count > 0 && (
                             <Text style={{ color: sel ? colors.teal : colors.text3, fontWeight:'600' }}>{`  · ${x.count}×`}</Text>
                           )}
@@ -193,6 +204,14 @@ export default function LogEntryModal() {
                   })}
                 </ScrollView>
               </View>
+              {/* Alternate view: browse the full universe WITH addresses + map
+                  links + multi-select add. Same universe, same add logic. */}
+              <TouchableOpacity onPress={() => router.push({ pathname: '/modals/browse-universe', params: { id } })}
+                style={{ flexDirection:'row', alignItems:'center', justifyContent:'center', gap:6,
+                  paddingVertical:11, borderRadius:12, borderWidth:1, borderColor:colors.border,
+                  backgroundColor:colors.glass, marginBottom:14 }}>
+                <Text style={{ fontSize:13, fontWeight:'700', color:colors.teal }}>📍 Browse with addresses</Text>
+              </TouchableOpacity>
             </>
           )}
 

@@ -5,6 +5,7 @@ import { useToast } from './Toast';
 import { useStore } from '../store/useStore';
 import { getPreset, presetUniverse } from '../constants/lifelogs';
 import { canonItem } from '../utils/lifelog';
+import { itemName, itemCityState, UniverseItem } from '../lib/universes';
 import { PresetBrowser } from './PresetBrowser';
 
 // Shared "Also log this in a Life Log" picker used by BOTH add-event and
@@ -42,15 +43,16 @@ interface Sel {
   createSpec?: any;          // spec passed to addMemory() at resolve time
   name: string;
   emoji: string;
-  universe?: string[];       // bounded set → show the universe item picker
+  universe?: UniverseItem[]; // bounded set → show the universe item picker
   item: string;              // chosen/typed item
   itemTouched: boolean;      // free-text logs follow the event name until edited
 }
 
 // Canonical universe match for a label, or '' when none (forces an explicit pick).
-const canonMatch = (universe: string[] | undefined, label: string): string => {
+const canonMatch = (universe: UniverseItem[] | undefined, label: string): string => {
   if (!universe) return '';
-  return universe.find(u => u.toLowerCase() === label.trim().toLowerCase()) ?? '';
+  const hit = universe.find(u => itemName(u).toLowerCase() === label.trim().toLowerCase());
+  return hit ? itemName(hit) : '';
 };
 
 export const LifelogAttachSection = forwardRef<AttachHandle, { emoji: string; eventName: string }>(
@@ -211,15 +213,24 @@ export const LifelogAttachSection = forwardRef<AttachHandle, { emoji: string; ev
                         style={{ ...fi, marginBottom:8 }} />
                       <ScrollView style={{ maxHeight:200 }} nestedScrollEnabled keyboardShouldPersistTaps="handled">
                         {s.universe
-                          .filter(u => !itemQuery.trim() || u.toLowerCase().includes(itemQuery.trim().toLowerCase()))
+                          .filter(u => {
+                            const q = itemQuery.trim().toLowerCase();
+                            if (!q) return true;
+                            const cs = itemCityState(u).toLowerCase();
+                            return itemName(u).toLowerCase().includes(q) || cs.includes(q);
+                          })
                           .map(u => {
-                            const sel = s.item === u;
+                            const nm = itemName(u);
+                            const cs = itemCityState(u);
+                            const sel = s.item === nm;
                             return (
-                              <TouchableOpacity key={u} onPress={() => { setItem(s.key, u); setExpandedKey(''); }}
+                              <TouchableOpacity key={nm} onPress={() => { setItem(s.key, nm); setExpandedKey(''); }}
                                 style={{ flexDirection:'row', alignItems:'center', justifyContent:'space-between',
                                   paddingVertical:9, paddingHorizontal:10, borderRadius:8,
                                   backgroundColor: sel ? (colors.isDark ? 'rgba(62,207,178,0.12)' : colors.tint) : 'transparent' }}>
-                                <Text style={{ fontSize:13, color: sel ? colors.teal : colors.text1 }}>{u}</Text>
+                                <Text style={{ fontSize:13, color: sel ? colors.teal : colors.text1 }}>
+                                  {nm}{cs ? <Text style={{ color: colors.text3 }}>{`  ·  ${cs}`}</Text> : null}
+                                </Text>
                                 {sel && <Text style={{ fontSize:14, color:colors.teal }}>✓</Text>}
                               </TouchableOpacity>
                             );

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity } from 'react-native';
 import { useTheme } from '../contexts/ThemeContext';
 import { popularPresets, expandedGroups, allPresetsForSearch, LifelogPreset } from '../constants/lifelogs';
+import { itemName } from '../lib/universes';
 
 export type OccasionType = 'birthday' | 'anniversary' | 'memorial';
 const OCCASIONS: { type: OccasionType; emoji: string; label: string }[] = [
@@ -41,8 +42,8 @@ export function PresetBrowser({
     const presets: { p: LifelogPreset; hitItem?: string }[] = [];
     for (const p of allPresetsForSearch()) {
       if (p.name.toLowerCase().includes(q) || (p.group ?? '').toLowerCase().includes(q)) { presets.push({ p }); continue; }
-      const hit = p.universe?.find(i => i.toLowerCase().includes(q));
-      if (hit) presets.push({ p, hitItem: hit });
+      const hit = p.universe?.find(i => itemName(i).toLowerCase().includes(q));
+      if (hit) presets.push({ p, hitItem: itemName(hit) });
     }
     const occ = onSelectOccasion
       ? OCCASIONS.filter(o => o.label.toLowerCase().includes(q) || 'family occasions'.includes(q))

@@ -7,7 +7,7 @@ import { useStore } from '../../store/useStore';
 import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { CloseButton } from '../../components/CloseButton';
-import { UniverseRow, upsertUniverse, upsertUniverses, deleteUniverse } from '../../lib/universes';
+import { UniverseRow, UniverseItem, upsertUniverse, upsertUniverses, deleteUniverse, itemName, itemCityState, normalizeItem } from '../../lib/universes';
 import { universesToCSV, csvToUniverses, diffUniverse, slugifyId, UniverseDiff } from '../../utils/universeCsv';
 
 type Mode = 'list' | 'edit' | 'export' | 'import';
@@ -84,7 +84,10 @@ export default function AdminUniversesModal() {
     if (!editing) return;
     const name = editing.name.trim();
     if (!name) { showToast('⚠️', 'Missing name', 'Give the list a name.'); return; }
-    const items = editing.items.map(i => i.trim()).filter(Boolean);
+    // Trim names, preserve any location on structured items, drop blanks.
+    const items = editing.items
+      .map(it => normalizeItem(typeof it === 'string' ? it.trim() : { ...it, name: it.name.trim() }))
+      .filter((it): it is UniverseItem => it != null && itemName(it).length > 0);
     const id = isNew ? slugifyId(name, existingIds) : editing.id;
     const row: UniverseRow = { id, name, emoji: editing.emoji.trim() || '📋', grp: editing.grp.trim(), items };
     setBusy(true);
@@ -198,19 +201,28 @@ export default function AdminUniversesModal() {
             {isNew && <Text style={{ fontSize: 11, color: colors.text3, marginTop: -4, marginBottom: 10 }}>id: {editing.name.trim() ? slugifyId(editing.name, existingIds) : '(from name)'}</Text>}
 
             <FL label={`Items · ${editing.items.length}`} colors={colors} />
-            {editing.items.map((item, i) => (
-              <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 7 }}>
-                <TextInput value={item} onChangeText={v => setEditing({ ...editing, items: editing.items.map((x, j) => j === i ? v : x) })}
-                  style={{ ...fi, flex: 1, marginBottom: 0 }} placeholderTextColor={colors.text3} />
-                <TouchableOpacity onPress={async () => {
-                  const ok = await confirm({ title: 'Remove item?', message: `Remove “${item}”?`, confirmLabel: 'Remove', destructive: true });
-                  if (ok) setEditing({ ...editing, items: editing.items.filter((_, j) => j !== i) });
-                }} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                  style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: colors.isDark ? 'rgba(232,80,122,0.12)' : 'rgba(197,0,26,0.10)', alignItems: 'center', justifyContent: 'center' }}>
-                  <Text style={{ color: colors.rose, fontSize: 13 }}>✕</Text>
-                </TouchableOpacity>
-              </View>
-            ))}
+            {editing.items.map((item, i) => {
+              const cs = itemCityState(item);
+              return (
+                <View key={i} style={{ marginBottom: 7 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    {/* Name edits in place; any address/city/state on a structured
+                        item is preserved. Location itself is edited via CSV. */}
+                    <TextInput value={itemName(item)}
+                      onChangeText={v => setEditing({ ...editing, items: editing.items.map((x, j) => j === i ? (typeof x === 'string' ? v : { ...x, name: v }) : x) })}
+                      style={{ ...fi, flex: 1, marginBottom: 0 }} placeholderTextColor={colors.text3} />
+                    <TouchableOpacity onPress={async () => {
+                      const ok = await confirm({ title: 'Remove item?', message: `Remove “${itemName(item)}”?`, confirmLabel: 'Remove', destructive: true });
+                      if (ok) setEditing({ ...editing, items: editing.items.filter((_, j) => j !== i) });
+                    }} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                      style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: colors.isDark ? 'rgba(232,80,122,0.12)' : 'rgba(197,0,26,0.10)', alignItems: 'center', justifyContent: 'center' }}>
+                      <Text style={{ color: colors.rose, fontSize: 13 }}>✕</Text>
+                    </TouchableOpacity>
+                  </View>
+                  {!!cs && <Text style={{ fontSize: 11, color: colors.text3, marginTop: 3, marginLeft: 2 }}>📍 {cs} · edit address via CSV</Text>}
+                </View>
+              );
+            })}
             <TouchableOpacity onPress={() => setEditing({ ...editing, items: [...editing.items, ''] })}
               style={{ padding: 9, borderRadius: 9, borderWidth: 1.5, borderStyle: 'dashed', borderColor: colors.accent, alignItems: 'center', marginBottom: 16 }}>
               <Text style={{ fontSize: 12, fontWeight: '600', color: colors.accent }}>+ Add item</Text>

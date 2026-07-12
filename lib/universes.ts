@@ -1,11 +1,57 @@
+// A universe ITEM is EITHER a plain string (as always) OR a structured object
+// with an optional address/city/state. Backward compatible: existing string
+// universes are unchanged, and ALL name-based logic (matching, coverage, logged
+// entries) keys off itemName() — a logged entry still stores just the name.
+export interface UniverseItemObj { name: string; address?: string; city?: string; state?: string; }
+export type UniverseItem = string | UniverseItemObj;
+export interface ItemLocation { address?: string; city?: string; state?: string; }
+
+// The canonical NAME of an item (the only thing entries store / coverage counts).
+export function itemName(it: UniverseItem): string {
+  return typeof it === 'string' ? it : it.name;
+}
+// The structured location, or undefined for a plain string / a name-only object.
+export function itemLocation(it: UniverseItem): ItemLocation | undefined {
+  if (typeof it === 'string') return undefined;
+  const address = it.address?.trim() || undefined;
+  const city = it.city?.trim() || undefined;
+  const state = it.state?.trim() || undefined;
+  return (address || city || state) ? { address, city, state } : undefined;
+}
+export function itemCityState(it: UniverseItem): string {
+  const l = itemLocation(it);
+  return l ? [l.city, l.state].filter(Boolean).join(', ') : '';
+}
+export function itemFullAddress(it: UniverseItem): string {
+  const l = itemLocation(it);
+  return l ? [l.address, l.city, l.state].filter(Boolean).join(', ') : '';
+}
+// The Google-Maps query: the full address when present, else the name.
+export function itemMapQuery(it: UniverseItem): string {
+  return itemFullAddress(it) || itemName(it);
+}
+// Normalize a raw jsonb item (string or {name,...}) → a clean UniverseItem, or
+// null when malformed. Collapses a location-less object back to a plain string.
+export function normalizeItem(x: unknown): UniverseItem | null {
+  if (typeof x === 'string') return x;
+  if (x && typeof x === 'object' && typeof (x as any).name === 'string') {
+    const o = x as any;
+    const address = typeof o.address === 'string' && o.address.trim() ? o.address.trim() : undefined;
+    const city = typeof o.city === 'string' && o.city.trim() ? o.city.trim() : undefined;
+    const state = typeof o.state === 'string' && o.state.trim() ? o.state.trim() : undefined;
+    return (address || city || state) ? { name: o.name, address, city, state } : o.name;
+  }
+  return null;
+}
+
 // A universe definition from the `universes` table — the REMOTE OVERLAY over the
-// bundled constants. Read-only in the app (writes are a later stage).
+// bundled constants. Items may be plain strings or structured (with location).
 export interface UniverseRow {
   id: string;
   name: string;
   emoji: string;
   grp: string;
-  items: string[];
+  items: UniverseItem[];
 }
 
 // Module-level overlay keyed by id. Empty until loaded from cloud or rehydrated
@@ -26,7 +72,7 @@ export function setUniverseOverlay(rows: unknown): void {
         name: r.name,
         emoji: typeof r.emoji === 'string' ? r.emoji : '',
         grp: typeof r.grp === 'string' ? r.grp : '',
-        items: r.items.filter((x: unknown) => typeof x === 'string') as string[],
+        items: (r.items as unknown[]).map(normalizeItem).filter((x): x is UniverseItem => x != null),
       };
     }
   }

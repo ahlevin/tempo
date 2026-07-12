@@ -6,14 +6,14 @@
 // ---------------------------------------------------------------------------
 
 import { EXPANDED_UNIVERSES } from './lifelogUniverses.generated';
-import { remoteUniverse, UniverseRow } from '../lib/universes';
+import { remoteUniverse, UniverseRow, UniverseItem } from '../lib/universes';
 
 export interface LifelogPreset {
   id: string;
   name: string;
   emoji: string;
   kind: 'count' | 'collection';
-  universe?: string[]; // full named set (collection presets only)
+  universe?: UniverseItem[]; // full named set (collection presets only); items may carry location
   target?: number;     // the "Y" (defaults to universe.length for collections)
   group?: string;      // browser grouping for expanded presets (originals: undefined → "Popular")
 }
@@ -174,7 +174,7 @@ export function getPreset(id: string | undefined): LifelogPreset | undefined {
 }
 
 /** The named universe for a preset id — overlay-first, bundled fallback. */
-export function presetUniverse(logPreset: string | undefined): string[] | undefined {
+export function presetUniverse(logPreset: string | undefined): UniverseItem[] | undefined {
   return getPreset(logPreset)?.universe;
 }
 

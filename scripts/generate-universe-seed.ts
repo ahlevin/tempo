@@ -10,8 +10,9 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { COLLECTION_PRESETS, EXPANDED_PRESETS } from '../constants/lifelogs';
+import type { UniverseItem } from '../lib/universes';
 
-type Row = { id: string; name: string; emoji: string; grp: string; items: string[] };
+type Row = { id: string; name: string; emoji: string; grp: string; items: UniverseItem[] };
 
 const rows: Row[] = [];
 // Originals with a universe → grp 'Popular' (exact ids/names/emojis/items).
@@ -35,7 +36,7 @@ const countOf = (id: string) => rows.find(r => r.id === id)?.items.length;
 // SQL string literal: double single quotes. items go in as a JSON string cast to
 // jsonb — JSON.stringify escapes " and \, then we double ' for the '...' literal.
 const sqlStr = (s: string) => `'${s.replace(/'/g, "''")}'`;
-const jsonbLit = (arr: string[]) => `${sqlStr(JSON.stringify(arr))}::jsonb`;
+const jsonbLit = (arr: UniverseItem[]) => `${sqlStr(JSON.stringify(arr))}::jsonb`;
 
 const lines: string[] = [
   '-- Seed data for the `universes` table (id, name, emoji, grp, items, updated_at).',

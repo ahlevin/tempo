@@ -1,6 +1,11 @@
 import { Memory, LogEntry } from '../store/types';
 import { presetUniverse, getPreset } from '../constants/lifelogs';
+import { itemName, UniverseItem } from '../lib/universes';
 import { daysUntil } from './dates';
+
+// Re-export item helpers so UI imports them alongside the other lifelog helpers.
+export { itemName, itemLocation, itemCityState, itemFullAddress, itemMapQuery } from '../lib/universes';
+export type { UniverseItem, ItemLocation } from '../lib/universes';
 
 // Shared life-log helpers (a life log is a container; dates live on entries).
 
@@ -14,15 +19,17 @@ export function isCollectionLog(m: Memory): boolean {
   return (m.logKind ?? 'count') === 'collection';
 }
 
-export function logUniverse(m: Memory): string[] | undefined {
+export function logUniverse(m: Memory): UniverseItem[] | undefined {
   return presetUniverse(m.logPreset);
 }
 
-// For a collection, snap a free-typed label to the universe's canonical spelling
-// ("france" → "France") when it matches; otherwise keep it as a label.
-export function canonItem(universe: string[] | undefined, label: string): string {
+// For a collection, snap a free-typed label to the universe's canonical NAME
+// ("france" → "France") when it matches; otherwise keep it as a label. Matching
+// is name-only (structured items match on their .name).
+export function canonItem(universe: UniverseItem[] | undefined, label: string): string {
   if (!universe) return label;
-  return universe.find(u => u.toLowerCase() === label.toLowerCase()) ?? label;
+  const hit = universe.find(u => itemName(u).toLowerCase() === label.toLowerCase());
+  return hit ? itemName(hit) : label;
 }
 
 /** An entry is UPCOMING when it has a full future date (hasn't happened yet).

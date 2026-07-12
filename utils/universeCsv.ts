@@ -1,7 +1,9 @@
-import type { UniverseRow } from '../lib/universes';
+import type { UniverseRow, UniverseItem } from '../lib/universes';
+import { itemName, itemLocation, normalizeItem } from '../lib/universes';
 
 // ── CSV (RFC4180-ish) ────────────────────────────────────────────────────────
-// Columns: universe_id, universe_name, emoji, grp, item — one row per item.
+// Columns: universe_id, universe_name, emoji, grp, item, address, city, state —
+// one row per item. address/city/state are optional (blank → plain-string item).
 
 function escapeField(v: string): string {
   const s = v ?? '';
@@ -9,12 +11,15 @@ function escapeField(v: string): string {
 }
 
 export function universesToCSV(rows: UniverseRow[]): string {
-  const lines = ['universe_id,universe_name,emoji,grp,item'];
+  const lines = ['universe_id,universe_name,emoji,grp,item,address,city,state'];
   const sorted = [...rows].sort((a, b) => (a.grp || '').localeCompare(b.grp || '') || a.name.localeCompare(b.name));
   for (const u of sorted) {
     const meta = [u.id, u.name, u.emoji, u.grp];
-    if (u.items.length === 0) lines.push([...meta, ''].map(escapeField).join(','));
-    else for (const item of u.items) lines.push([...meta, item].map(escapeField).join(','));
+    if (u.items.length === 0) lines.push([...meta, '', '', '', ''].map(escapeField).join(','));
+    else for (const it of u.items) {
+      const loc = itemLocation(it);
+      lines.push([...meta, itemName(it), loc?.address ?? '', loc?.city ?? '', loc?.state ?? ''].map(escapeField).join(','));
+    }
   }
   return lines.join('\n');
 }
@@ -45,8 +50,9 @@ export function csvToUniverses(text: string): { universes: UniverseRow[]; error?
   const { header, records } = parseCSV(text);
   const col = (n: string) => header.indexOf(n);
   const iId = col('universe_id'), iName = col('universe_name'), iEmoji = col('emoji'), iGrp = col('grp'), iItem = col('item');
+  const iAddr = col('address'), iCity = col('city'), iState = col('state');
   if (iId < 0 || iName < 0 || iItem < 0) {
-    return { universes: [], error: 'Header must include: universe_id, universe_name, emoji, grp, item' };
+    return { universes: [], error: 'Header must include: universe_id, universe_name, emoji, grp, item (optional: address, city, state)' };
   }
   const map = new Map<string, UniverseRow>();
   for (const r of records) {
@@ -55,10 +61,23 @@ export function csvToUniverses(text: string): { universes: UniverseRow[]; error?
     if (!map.has(id)) {
       map.set(id, { id, name: (r[iName] ?? '').trim(), emoji: iEmoji >= 0 ? (r[iEmoji] ?? '').trim() : '', grp: iGrp >= 0 ? (r[iGrp] ?? '').trim() : '', items: [] });
     }
-    const item = (r[iItem] ?? '').trim();
-    if (item) map.get(id)!.items.push(item);
+    const name = (r[iItem] ?? '').trim();
+    if (!name) continue;
+    // A structured item when any location column is present; else a plain string.
+    // normalizeItem collapses an all-blank-location object back to a string.
+    const it = normalizeItem({
+      name,
+      address: iAddr >= 0 ? (r[iAddr] ?? '').trim() : '',
+      city: iCity >= 0 ? (r[iCity] ?? '').trim() : '',
+      state: iState >= 0 ? (r[iState] ?? '').trim() : '',
+    });
+    if (it) map.get(id)!.items.push(it);
   }
-  for (const u of map.values()) u.items = [...new Set(u.items)];
+  // De-dupe by NAME (first occurrence wins), preserving order.
+  for (const u of map.values()) {
+    const seen = new Set<string>();
+    u.items = u.items.filter(it => { const n = itemName(it); if (seen.has(n)) return false; seen.add(n); return true; });
+  }
   return { universes: [...map.values()] };
 }
 
@@ -122,16 +141,19 @@ export interface UniverseDiff {
 
 export function diffUniverse(incoming: UniverseRow, current: UniverseRow | undefined): UniverseDiff {
   if (!current) {
-    return { id: incoming.id, incoming, isNew: true, metaChanges: [], added: incoming.items, removed: [], renames: [] };
+    return { id: incoming.id, incoming, isNew: true, metaChanges: [], added: incoming.items.map(itemName), removed: [], renames: [] };
   }
   const metaChanges: UniverseDiff['metaChanges'] = [];
   if (incoming.name !== current.name) metaChanges.push({ field: 'name', from: current.name, to: incoming.name });
   if (incoming.emoji !== current.emoji) metaChanges.push({ field: 'emoji', from: current.emoji, to: incoming.emoji });
   if (incoming.grp !== current.grp) metaChanges.push({ field: 'grp', from: current.grp, to: incoming.grp });
 
-  const curSet = new Set(current.items), incSet = new Set(incoming.items);
-  const addedRaw = incoming.items.filter(i => !curSet.has(i));
-  const removedRaw = current.items.filter(i => !incSet.has(i));
+  // Diffs key off NAMES only (entries store names; rename-safety operates on
+  // name→name), so a location-only edit is not a rename/add/remove.
+  const curNames = current.items.map(itemName), incNames = incoming.items.map(itemName);
+  const curSet = new Set(curNames), incSet = new Set(incNames);
+  const addedRaw = incNames.filter(i => !curSet.has(i));
+  const removedRaw = curNames.filter(i => !incSet.has(i));
   const { renames, added, removed } = detectRenames(removedRaw, addedRaw);
   return { id: incoming.id, incoming, isNew: false, metaChanges, added, removed, renames };
 }
