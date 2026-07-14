@@ -30,9 +30,20 @@ const UNIT_MS: Record<Alert['unit'], number> = {
 };
 const offsetMs = (a: Alert) => (a.value || 0) * (UNIT_MS[a.unit] || 0);
 const unitLabel = (a: Alert) => (a.value === 1 ? a.unit.replace(/s$/, '') : a.unit);
-// Date-only items (birthdays, all-day events, goal deadlines) fire the reminder
-// at 9am local rather than midnight.
+// Date-only items (all-day events, goal deadlines, birthdays, life-log entries)
+// use 9:00 AM LOCAL on the item's date as the BASE instant, and the alert offset
+// is subtracted from THAT with full precision — so "1 day before" → 9am the
+// previous day, "2 hours before" → 7am the same day. (Previously at9am was
+// applied AFTER subtracting the offset, which discarded the sub-day precision
+// and collapsed most offsets to "9am the previous day" — often already in the
+// past and silently skipped.)
 const at9am = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate(), 9, 0, 0);
+
+// Diagnostic logging (native path only — rescheduleAll no-ops on web). Plain
+// console.log so it shows in the TestFlight device console; lets us verify what
+// actually gets scheduled vs skipped as past.
+const logFire = (kind: string, name: string, fire: Date, scheduling: boolean) =>
+  console.log(`[notif] ${kind} "${name}" fire=${fire.toString()} now=${new Date().toString()} → ${scheduling ? 'SCHEDULING' : 'SKIPPED(past)'}`);
 
 /** Request notification permission on native; silently returns false on web. */
 export async function requestNotificationPermission(): Promise<boolean> {
@@ -70,10 +81,13 @@ export async function rescheduleAll(data: Snapshot): Promise<void> {
       if (!e.alerts?.length) continue;
       const start = toDate(nextOccurrence(e));
       if (!isValidDate(start)) continue;
+      // All-day → base is 9:00 AM local on the event date; timed → the exact start.
+      const base = e.allDay ? at9am(start) : start;
       for (const a of e.alerts) {
-        let fire = new Date(start.getTime() - offsetMs(a));
-        if (e.allDay) fire = at9am(fire);
-        if (fire.getTime() <= now) continue;
+        const fire = new Date(base.getTime() - offsetMs(a)); // full offset precision
+        const ok = fire.getTime() > now;
+        logFire('event', e.name, fire, ok);
+        if (!ok) continue;
         await schedule(
           { type: Notifications.SchedulableTriggerInputTypes.DATE, date: fire },
           `${e.emoji} ${e.name}`, `Starts in ${a.value} ${unitLabel(a)}`,
@@ -86,15 +100,18 @@ export async function rescheduleAll(data: Snapshot): Promise<void> {
     for (const m of data.memories) {
       if (m.type !== 'birthday' && m.type !== 'anniversary' && m.type !== 'memorial') continue;
       if (!m.alerts?.length) continue;
-      const base = toDate(nextAnnual(m.originDate));
-      if (!isValidDate(base)) continue;
+      const occ = toDate(nextAnnual(m.originDate));
+      if (!isValidDate(occ)) continue;
+      const base = at9am(occ); // 9:00 AM local on the occurrence date
       const kind = m.type === 'birthday' ? 'Birthday' : m.type === 'memorial' ? 'Memorial' : 'Anniversary';
       for (const a of m.alerts) {
-        const fire = at9am(new Date(base.getTime() - offsetMs(a)));
+        const fire = new Date(base.getTime() - offsetMs(a)); // precise; keeps hours/minutes
+        // YEARLY recurs by month/day/time, so no past-skip; use the precise fire.
+        logFire('memory', m.name, fire, true);
         await schedule(
           {
             type: Notifications.SchedulableTriggerInputTypes.YEARLY,
-            day: fire.getDate(), month: fire.getMonth(), hour: 9, minute: 0,
+            day: fire.getDate(), month: fire.getMonth(), hour: fire.getHours(), minute: fire.getMinutes(),
           },
           `${m.emoji} ${m.name}`, `${kind} in ${a.value} ${unitLabel(a)}`,
         );
@@ -104,11 +121,14 @@ export async function rescheduleAll(data: Snapshot): Promise<void> {
     // Goals — one-shot DATE trigger at deadline minus the offset (9am).
     for (const g of data.goals) {
       if (!g.alerts?.length) continue;
-      const base = toDate(g.date);
-      if (!isValidDate(base)) continue;
+      const gdate = toDate(g.date);
+      if (!isValidDate(gdate)) continue;
+      const base = at9am(gdate); // goals are date-only → 9:00 AM on the deadline date
       for (const a of g.alerts) {
-        const fire = at9am(new Date(base.getTime() - offsetMs(a)));
-        if (fire.getTime() <= now) continue;
+        const fire = new Date(base.getTime() - offsetMs(a));
+        const ok = fire.getTime() > now;
+        logFire('goal', g.name, fire, ok);
+        if (!ok) continue;
         await schedule(
           { type: Notifications.SchedulableTriggerInputTypes.DATE, date: fire },
           `${g.emoji} ${g.name}`, `Deadline in ${a.value} ${unitLabel(a)}`,
@@ -123,12 +143,15 @@ export async function rescheduleAll(data: Snapshot): Promise<void> {
     for (const m of data.memories) {
       for (const e of m.entries) {
         if (!e.alerts?.length || !e.date) continue;
-        const base = toDate(`${e.date}T00:00:00`);
-        if (!isValidDate(base)) continue;
+        const day = toDate(`${e.date}T00:00:00`);
+        if (!isValidDate(day)) continue;
+        const base = at9am(day); // entries are date-only → 9:00 AM on the entry date
         const label = e.item || m.name;
         for (const a of e.alerts) {
-          const fire = at9am(new Date(base.getTime() - offsetMs(a)));
-          if (fire.getTime() <= now) continue;
+          const fire = new Date(base.getTime() - offsetMs(a));
+          const ok = fire.getTime() > now;
+          logFire('logentry', label, fire, ok);
+          if (!ok) continue;
           await schedule(
             { type: Notifications.SchedulableTriggerInputTypes.DATE, date: fire },
             `${m.emoji} ${label}`, `In ${a.value} ${unitLabel(a)}`,
@@ -136,6 +159,10 @@ export async function rescheduleAll(data: Snapshot): Promise<void> {
         }
       }
     }
+
+    // Confirm what iOS actually holds now (diagnostic — device console).
+    const pending = await Notifications.getAllScheduledNotificationsAsync();
+    console.log(`[notif] pending=${pending.length}`, pending.slice(0, 5).map(p => JSON.stringify(p.trigger)));
   } catch (e) {
     console.warn('[notifications] rescheduleAll failed', e);
   }
