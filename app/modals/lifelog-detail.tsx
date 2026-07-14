@@ -70,14 +70,14 @@ export default function LifelogDetailModal() {
         borderRadius:2, alignSelf:'center', marginTop:10, marginBottom:4 }} />
       <View style={{ flexDirection:'row', justifyContent:'space-between', alignItems:'center',
         paddingHorizontal:20, paddingVertical:12 }}>
-        <View style={{ flexDirection:'row', alignItems:'center', gap:10, flex:1 }}>
+        <View style={{ flexDirection:'row', alignItems:'center', gap:10, flex:1, minWidth:0 }}>
           <Text style={{ fontSize:24 }}>{m.emoji}</Text>
-          <Text style={{ fontSize:18, fontWeight:'700', color:colors.text1 }} numberOfLines={1}>{m.name}</Text>
+          <Text style={{ fontSize:18, fontWeight:'700', color:colors.text1, flex:1, minWidth:0 }} numberOfLines={1}>{m.name}</Text>
         </View>
-        <TouchableOpacity onPress={editLog} style={{ marginRight:14 }}>
+        <TouchableOpacity onPress={editLog} style={{ marginLeft:12, marginRight:14, flexShrink:0 }}>
           <Text style={{ fontSize:14, fontWeight:'600', color:teal }}>Edit</Text>
         </TouchableOpacity>
-        <CloseButton />
+        <View style={{ flexShrink:0 }}><CloseButton /></View>
       </View>
 
       <ScrollView contentContainerStyle={{ paddingHorizontal:16, paddingBottom:60 }}

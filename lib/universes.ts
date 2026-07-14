@@ -22,9 +22,13 @@ export function itemCityState(it: UniverseItem): string {
   const l = itemLocation(it);
   return l ? [l.city, l.state].filter(Boolean).join(', ') : '';
 }
+// The stored `address` is ALREADY the full "street, city, ST zip" string, so
+// return it as-is when present; only fall back to joining city/state when there's
+// no address (mirrors utils/lifelog entryFullAddress — avoids "…, Lynn, MA, Lynn, MA").
 export function itemFullAddress(it: UniverseItem): string {
   const l = itemLocation(it);
-  return l ? [l.address, l.city, l.state].filter(Boolean).join(', ') : '';
+  if (!l) return '';
+  return l.address?.trim() || [l.city, l.state].filter(Boolean).join(', ');
 }
 // The Google-Maps query: the full address when present, else the name.
 export function itemMapQuery(it: UniverseItem): string {

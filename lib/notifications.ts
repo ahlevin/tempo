@@ -29,7 +29,36 @@ const UNIT_MS: Record<Alert['unit'], number> = {
   months: 2_592_000_000, // ~30 days (approximate)
 };
 const offsetMs = (a: Alert) => (a.value || 0) * (UNIT_MS[a.unit] || 0);
-const unitLabel = (a: Alert) => (a.value === 1 ? a.unit.replace(/s$/, '') : a.unit);
+
+// Whole calendar days from `from` to `to` (local): today→tomorrow = 1.
+const calDaysBetween = (from: Date, to: Date) => {
+  const a = new Date(from.getFullYear(), from.getMonth(), from.getDate());
+  const b = new Date(to.getFullYear(), to.getMonth(), to.getDate());
+  return Math.round((b.getTime() - a.getTime()) / 86_400_000);
+};
+// Natural-language lead time from when the notification FIRES to the event.
+// All-day items use calendar-day phrasing (today / tomorrow / in N days) — an
+// hour count is meaningless when the event has no real time. Timed items use
+// minutes / hours (dropping 0 minutes), falling back to calendar days.
+function humanizeLead(fire: Date, event: Date, allDay: boolean): string {
+  if (allDay) {
+    const d = calDaysBetween(fire, event);
+    if (d <= 0) return 'today';
+    if (d === 1) return 'tomorrow';
+    return `in ${d} days`;
+  }
+  const ms = Math.max(0, event.getTime() - fire.getTime());
+  const min = Math.round(ms / 60_000);
+  if (min < 60) return `in ${min} minute${min === 1 ? '' : 's'}`;
+  if (min < 1440) {
+    const h = Math.floor(min / 60), m = min % 60;
+    return m === 0 ? `in ${h} hour${h === 1 ? '' : 's'}` : `in ${h}h ${m}m`;
+  }
+  const d = calDaysBetween(fire, event);
+  return d === 1 ? 'tomorrow' : `in ${d} days`;
+}
+// Capitalize the first letter (for a standalone-sentence body).
+const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 // Date-only items (all-day events, goal deadlines, birthdays, life-log entries)
 // use 9:00 AM LOCAL on the item's date as the BASE instant, and the alert offset
 // is subtracted from THAT with full precision — so "1 day before" → 9am the
@@ -100,7 +129,7 @@ export async function rescheduleAll(data: Snapshot): Promise<void> {
         if (!ok) continue;
         await schedule(
           { type: Notifications.SchedulableTriggerInputTypes.DATE, date: fire },
-          `${e.emoji} ${e.name}`, `Starts in ${a.value} ${unitLabel(a)}`,
+          `${e.emoji} ${e.name}`, `Starts ${humanizeLead(fire, base, e.allDay)}`,
         );
       }
     }
@@ -124,7 +153,7 @@ export async function rescheduleAll(data: Snapshot): Promise<void> {
             type: Notifications.SchedulableTriggerInputTypes.YEARLY,
             day: fire.getDate(), month: fire.getMonth(), hour: fire.getHours(), minute: fire.getMinutes(),
           },
-          `${m.emoji} ${m.name}`, `${kind} in ${a.value} ${unitLabel(a)}`,
+          `${m.emoji} ${m.name}`, `${kind} ${humanizeLead(fire, base, true)}`,
         );
       }
     }
@@ -143,7 +172,7 @@ export async function rescheduleAll(data: Snapshot): Promise<void> {
         if (!ok) continue;
         await schedule(
           { type: Notifications.SchedulableTriggerInputTypes.DATE, date: fire },
-          `${g.emoji} ${g.name}`, `Deadline in ${a.value} ${unitLabel(a)}`,
+          `${g.emoji} ${g.name}`, `Deadline ${humanizeLead(fire, base, true)}`,
         );
       }
     }
@@ -167,7 +196,7 @@ export async function rescheduleAll(data: Snapshot): Promise<void> {
           if (!ok) continue;
           await schedule(
             { type: Notifications.SchedulableTriggerInputTypes.DATE, date: fire },
-            `${m.emoji} ${label}`, `In ${a.value} ${unitLabel(a)}`,
+            `${m.emoji} ${label}`, cap(humanizeLead(fire, base, true)),
           );
         }
       }

@@ -161,10 +161,10 @@ export default function LogEntryModal() {
           borderRadius:2, alignSelf:'center', marginTop:10, marginBottom:4 }} />
         <View style={{ flexDirection:'row', justifyContent:'space-between',
           alignItems:'center', paddingHorizontal:20, paddingVertical:12 }}>
-          <Text style={{ fontSize:18, fontWeight:'700', color:colors.text1 }} numberOfLines={1}>
+          <Text style={{ fontSize:18, fontWeight:'700', color:colors.text1, flex:1, minWidth:0, marginRight:12 }} numberOfLines={1}>
             {headerTitle}
           </Text>
-          <CloseButton />
+          <View style={{ flexShrink:0 }}><CloseButton /></View>
         </View>
 
         <ScrollView contentContainerStyle={{ padding:20 }} keyboardShouldPersistTaps="handled"
