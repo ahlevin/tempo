@@ -1,3 +1,4 @@
+/// <reference types="node" />
 /**
  * Generates supabase/seed_universes.sql from the app's REAL preset definitions
  * (constants/lifelogs.ts + constants/lifelogUniverses.generated.ts) — every

@@ -9,8 +9,12 @@ const isNative = Platform.OS !== 'web';
 // Show notifications while the app is foregrounded (native only).
 if (isNative) {
   Notifications.setNotificationHandler({
+    // expo-notifications (SDK 56) replaced the deprecated `shouldShowAlert` with
+    // `shouldShowBanner` + `shouldShowList`. Show the banner and list while
+    // foregrounded, play a sound, don't touch the badge.
     handleNotification: async () => ({
-      shouldShowAlert: true,
+      shouldShowBanner: true,
+      shouldShowList: true,
       shouldPlaySound: true,
       shouldSetBadge: false,
     }),
