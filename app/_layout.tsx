@@ -11,7 +11,7 @@ import { ErrorBoundary } from '../components/ErrorBoundary';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import { ThemeProvider, useTheme } from '../contexts/ThemeContext';
 import { TickProvider } from '../contexts/TickContext';
-import { rescheduleAll } from '../lib/notifications';
+import { rescheduleAll, requestNotificationPermission } from '../lib/notifications';
 import { supabase } from '../lib/supabase';
 
 export default function RootLayout() {
@@ -64,10 +64,15 @@ function RootNavigator() {
   }, [user?.id]);
 
   // (Re)schedule native local notifications whenever items/alerts/dates change.
-  // No-op on web and without notification permission.
+  // Request permission FIRST (native-only, no-op on web; prompts once then
+  // cached), so a fresh install with cloud-synced alerts actually schedules —
+  // rescheduleAll returns early without granted permission. Non-blocking.
   useEffect(() => {
     if (!session) return;
-    rescheduleAll({ events, goals, memories });
+    (async () => {
+      await requestNotificationPermission();
+      await rescheduleAll({ events, goals, memories });
+    })();
   }, [session, events, goals, memories]);
 
   // Re-push queued writes when the app/tab wakes or reconnects, and pause Supabase's
