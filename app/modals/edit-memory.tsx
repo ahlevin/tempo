@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { ScrollView, View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
 import { useToast } from '../../components/Toast';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -54,7 +54,12 @@ export default function EditMemoryModal() {
     router.back();
   }
 
+  // Guard against double-invocation while a confirm is already in flight.
+  const deleting = useRef(false);
   async function del() {
+    if (deleting.current) return;
+    deleting.current = true;
+    try {
     const ok = await confirm({ title:`Delete "${m!.name}"?`, message:'All entries will be lost.', confirmLabel:'Delete', destructive:true });
     if (ok) {
       const wasLifelog = m!.type === 'lifelog';
@@ -64,6 +69,7 @@ export default function EditMemoryModal() {
       // modal stack deterministically (the plain back() landed on Countdowns).
       router.dismissTo(wasLifelog ? '/tabs/lifelog' : '/tabs');
     }
+    } finally { deleting.current = false; }
   }
 
   // Convert to an Event, or to another memory type. Options exclude the current type.

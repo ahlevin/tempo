@@ -1,5 +1,6 @@
 import { createContext, useContext, useCallback, useEffect, useRef, useState } from 'react';
-import { Animated, Text, TouchableOpacity, View } from 'react-native';
+import { Animated, Platform, Text, TouchableOpacity, View } from 'react-native';
+import { FullWindowOverlay } from 'react-native-screens';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../contexts/ThemeContext';
 
@@ -54,46 +55,56 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     return () => { if (timer.current) clearTimeout(timer.current); };
   }, [toast, hide, translateY, opacity]);
 
+  // Same root-layer problem as the confirm dialog: this absolutely-positioned
+  // view paints BEHIND expo-router native modal screens on iOS, so validation
+  // toasts fired from inside a modal (add/edit screens) were invisible. On iOS,
+  // render through <FullWindowOverlay> — a top-level passthrough overlay above
+  // every view controller. `pointerEvents="box-none"` keeps it non-blocking (only
+  // the toast card is tappable). Android + web render inline as before.
+  const toastNode = toast && (
+    <Animated.View
+      pointerEvents="box-none"
+      style={{
+        position: 'absolute', left: 0, right: 0, top: insets.top + 8,
+        paddingHorizontal: 16, zIndex: 9999, elevation: 9999,
+        transform: [{ translateY }], opacity,
+      }}
+    >
+      <TouchableOpacity activeOpacity={0.9} onPress={hide}
+        style={{
+          flexDirection: 'row', alignItems: 'center', gap: 12,
+          backgroundColor: colors.surf2, borderRadius: 16, borderWidth: 1,
+          borderColor: colors.border, paddingVertical: 12, paddingHorizontal: 14,
+          shadowColor: '#000', shadowOffset: { width: 0, height: 8 },
+          shadowOpacity: 0.4, shadowRadius: 16, elevation: 8,
+        }}>
+        <View style={{
+          width: 38, height: 38, borderRadius: 11,
+          backgroundColor: colors.isDark ? 'rgba(124,106,245,0.16)' : colors.tint,
+          alignItems: 'center', justifyContent: 'center',
+        }}>
+          <Text style={{ fontSize: 20 }}>{toast.icon}</Text>
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 14, fontWeight: '700', color: colors.text1 }} numberOfLines={1}>
+            {toast.title}
+          </Text>
+          {!!toast.sub && (
+            <Text style={{ fontSize: 12, color: colors.text2, marginTop: 1 }} numberOfLines={2}>
+              {toast.sub}
+            </Text>
+          )}
+        </View>
+      </TouchableOpacity>
+    </Animated.View>
+  );
+
   return (
     <ToastContext.Provider value={{ showToast }}>
       {children}
-      {toast && (
-        <Animated.View
-          pointerEvents="box-none"
-          style={{
-            position: 'absolute', left: 0, right: 0, top: insets.top + 8,
-            paddingHorizontal: 16, zIndex: 9999, elevation: 9999,
-            transform: [{ translateY }], opacity,
-          }}
-        >
-          <TouchableOpacity activeOpacity={0.9} onPress={hide}
-            style={{
-              flexDirection: 'row', alignItems: 'center', gap: 12,
-              backgroundColor: colors.surf2, borderRadius: 16, borderWidth: 1,
-              borderColor: colors.border, paddingVertical: 12, paddingHorizontal: 14,
-              shadowColor: '#000', shadowOffset: { width: 0, height: 8 },
-              shadowOpacity: 0.4, shadowRadius: 16, elevation: 8,
-            }}>
-            <View style={{
-              width: 38, height: 38, borderRadius: 11,
-              backgroundColor: colors.isDark ? 'rgba(124,106,245,0.16)' : colors.tint,
-              alignItems: 'center', justifyContent: 'center',
-            }}>
-              <Text style={{ fontSize: 20 }}>{toast.icon}</Text>
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 14, fontWeight: '700', color: colors.text1 }} numberOfLines={1}>
-                {toast.title}
-              </Text>
-              {!!toast.sub && (
-                <Text style={{ fontSize: 12, color: colors.text2, marginTop: 1 }} numberOfLines={2}>
-                  {toast.sub}
-                </Text>
-              )}
-            </View>
-          </TouchableOpacity>
-        </Animated.View>
-      )}
+      {Platform.OS === 'ios'
+        ? (!!toast && <FullWindowOverlay>{toastNode}</FullWindowOverlay>)
+        : toastNode}
     </ToastContext.Provider>
   );
 }

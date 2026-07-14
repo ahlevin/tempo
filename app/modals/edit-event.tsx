@@ -60,9 +60,15 @@ export default function EditEventModal() {
     router.back();
   }
 
+  // Guard against double-invocation while a confirm is already in flight.
+  const deleting = useRef(false);
   async function del() {
-    const ok = await confirm({ title:`Delete "${event!.name}"?`, message:'This cannot be undone.', confirmLabel:'Delete', destructive:true });
-    if (ok) { deleteEvent(id); router.back(); }
+    if (deleting.current) return;
+    deleting.current = true;
+    try {
+      const ok = await confirm({ title:`Delete "${event!.name}"?`, message:'This cannot be undone.', confirmLabel:'Delete', destructive:true });
+      if (ok) { deleteEvent(id); router.back(); }
+    } finally { deleting.current = false; }
   }
 
   // Move this standalone event INTO one or more life logs — the event row is

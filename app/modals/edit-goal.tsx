@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { ScrollView, View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
 import { useToast } from '../../components/Toast';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -71,14 +71,20 @@ export default function EditGoalModal() {
     router.back();
   }
 
+  // Guard against double-invocation while a confirm is already in flight.
+  const deleting = useRef(false);
   async function del() {
-    const ok = await confirm({ title:`Delete "${g!.name}"?`, message:'This cannot be undone.', confirmLabel:'Delete', destructive:true });
-    if (ok) {
-      deleteGoal(id);
-      // Return to the Goals tab (plain back() landed on Countdowns). dismissTo
-      // pops the whole modal stack deterministically.
-      router.dismissTo('/tabs/goals');
-    }
+    if (deleting.current) return;
+    deleting.current = true;
+    try {
+      const ok = await confirm({ title:`Delete "${g!.name}"?`, message:'This cannot be undone.', confirmLabel:'Delete', destructive:true });
+      if (ok) {
+        deleteGoal(id);
+        // Return to the Goals tab (plain back() landed on Countdowns). dismissTo
+        // pops the whole modal stack deterministically.
+        router.dismissTo('/tabs/goals');
+      }
+    } finally { deleting.current = false; }
   }
 
   return (
