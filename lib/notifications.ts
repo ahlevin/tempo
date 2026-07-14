@@ -45,6 +45,12 @@ const at9am = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate(), 
 const logFire = (kind: string, name: string, fire: Date, scheduling: boolean) =>
   console.log(`[notif] ${kind} "${name}" fire=${fire.toString()} now=${new Date().toString()} → ${scheduling ? 'SCHEDULING' : 'SKIPPED(past)'}`);
 
+// Diagnostic run stats for the on-device debug panel — updated on every
+// rescheduleAll: when it last ran, and how many alerts it scheduled vs skipped
+// (as past) in that run. `lastRun === null` → rescheduleAll never ran this session.
+export interface NotifRunStats { lastRun: Date | null; scheduled: number; skipped: number; }
+export const notifRunStats: NotifRunStats = { lastRun: null, scheduled: 0, skipped: 0 };
+
 /** Request notification permission on native; silently returns false on web. */
 export async function requestNotificationPermission(): Promise<boolean> {
   if (!isNative) return false;
@@ -68,6 +74,9 @@ interface Snapshot { events: Event[]; goals: Goal[]; memories: Memory[]; }
  */
 export async function rescheduleAll(data: Snapshot): Promise<void> {
   if (!isNative) return;
+  notifRunStats.lastRun = new Date();
+  notifRunStats.scheduled = 0;
+  notifRunStats.skipped = 0;
   try {
     const perm = await Notifications.getPermissionsAsync();
     if (!(perm.granted || perm.status === 'granted')) return; // don't schedule without permission
@@ -87,6 +96,7 @@ export async function rescheduleAll(data: Snapshot): Promise<void> {
         const fire = new Date(base.getTime() - offsetMs(a)); // full offset precision
         const ok = fire.getTime() > now;
         logFire('event', e.name, fire, ok);
+        if (ok) notifRunStats.scheduled++; else notifRunStats.skipped++;
         if (!ok) continue;
         await schedule(
           { type: Notifications.SchedulableTriggerInputTypes.DATE, date: fire },
@@ -108,6 +118,7 @@ export async function rescheduleAll(data: Snapshot): Promise<void> {
         const fire = new Date(base.getTime() - offsetMs(a)); // precise; keeps hours/minutes
         // YEARLY recurs by month/day/time, so no past-skip; use the precise fire.
         logFire('memory', m.name, fire, true);
+        notifRunStats.scheduled++;
         await schedule(
           {
             type: Notifications.SchedulableTriggerInputTypes.YEARLY,
@@ -128,6 +139,7 @@ export async function rescheduleAll(data: Snapshot): Promise<void> {
         const fire = new Date(base.getTime() - offsetMs(a));
         const ok = fire.getTime() > now;
         logFire('goal', g.name, fire, ok);
+        if (ok) notifRunStats.scheduled++; else notifRunStats.skipped++;
         if (!ok) continue;
         await schedule(
           { type: Notifications.SchedulableTriggerInputTypes.DATE, date: fire },
@@ -151,6 +163,7 @@ export async function rescheduleAll(data: Snapshot): Promise<void> {
           const fire = new Date(base.getTime() - offsetMs(a));
           const ok = fire.getTime() > now;
           logFire('logentry', label, fire, ok);
+          if (ok) notifRunStats.scheduled++; else notifRunStats.skipped++;
           if (!ok) continue;
           await schedule(
             { type: Notifications.SchedulableTriggerInputTypes.DATE, date: fire },

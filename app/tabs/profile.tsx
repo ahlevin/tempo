@@ -1,4 +1,4 @@
-import { ScrollView, View, Text, TouchableOpacity, TextInput } from 'react-native';
+import { ScrollView, View, Text, TouchableOpacity, TextInput, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState } from 'react';
 import { router } from 'expo-router';
@@ -224,6 +224,27 @@ export default function ProfileScreen() {
               <View style={{ flex:1 }}>
                 <Text style={{ fontSize:15, fontWeight:'600', color:colors.text1 }}>Manage Lists</Text>
                 <Text style={{ fontSize:12, color:colors.text2, marginTop:2 }}>Edit the shared collection universes (all users)</Text>
+              </View>
+              <Text style={{ fontSize:16, color:colors.text3 }}>›</Text>
+            </TouchableOpacity>
+          </>
+        )}
+
+        {/* Native-only on-device notification diagnostics. */}
+        {Platform.OS !== 'web' && (
+          <>
+            <SLabel label="Developer" />
+            <TouchableOpacity onPress={() => router.push('/modals/notif-debug')}
+              style={{ flexDirection:'row', alignItems:'center', gap:14, padding:14,
+                borderRadius:18, borderWidth:1, borderColor:colors.border,
+                backgroundColor:colors.surf, marginBottom:28 }}>
+              <View style={{ width:44, height:44, borderRadius:13,
+                backgroundColor: colors.isDark ? 'rgba(240,160,75,0.16)' : colors.tint, alignItems:'center', justifyContent:'center' }}>
+                <Text style={{ fontSize:20 }}>🔧</Text>
+              </View>
+              <View style={{ flex:1 }}>
+                <Text style={{ fontSize:15, fontWeight:'600', color:colors.text1 }}>Notification Debug</Text>
+                <Text style={{ fontSize:12, color:colors.text3, marginTop:2 }}>On-device diagnostics for reminders</Text>
               </View>
               <Text style={{ fontSize:16, color:colors.text3 }}>›</Text>
             </TouchableOpacity>
