@@ -228,12 +228,15 @@ export function GoalKindPicker({ value, onChange }: { value: GoalKind; onChange:
   );
 }
 
-// The four value sub-types → direction + agg + default format (all overridable).
-export const VALUE_SUBTYPES: { id: string; label: string; direction: GoalDirection; agg: GoalAgg; unit: string }[] = [
-  { id: 'time',       label: 'Beat a time / score (lower is better)', direction: 'lower',  agg: 'best',   unit: 'sec' },
-  { id: 'reach',      label: 'Reach a number (higher is better)',     direction: 'higher', agg: 'best',   unit: '' },
-  { id: 'accumulate', label: 'Accumulate a total',                    direction: 'higher', agg: 'sum',    unit: '' },
-  { id: 'balance',    label: 'Track a balance (latest wins)',         direction: 'higher', agg: 'latest', unit: '$' },
+// The four value sub-types → direction + agg. Every sub-type DEFAULTS to the
+// Number format (time is the exception, opt-in via the Format chips) — so the
+// screens reset unit→'' (Number) and clear the target whenever a sub-type is
+// picked. "Beat a time / score" is a score/weight by default, not a time.
+export const VALUE_SUBTYPES: { id: string; label: string; direction: GoalDirection; agg: GoalAgg }[] = [
+  { id: 'time',       label: 'Beat a time / score (lower is better)', direction: 'lower',  agg: 'best'   },
+  { id: 'reach',      label: 'Reach a number (higher is better)',     direction: 'higher', agg: 'best'   },
+  { id: 'accumulate', label: 'Accumulate a total',                    direction: 'higher', agg: 'sum'    },
+  { id: 'balance',    label: 'Track a balance (latest wins)',         direction: 'higher', agg: 'latest' },
 ];
 
 // Explicit FORMAT chooser — the format DECIDES the input control; it is never
@@ -247,7 +250,7 @@ const VALUE_FORMATS: { id: string; label: string; unit: string }[] = [
 
 export function GoalValueSection({ direction, agg, unit, targetValue, onPick, onFormat, onUnitLabel, onTargetValue }: {
   direction: GoalDirection; agg: GoalAgg; unit: string; targetValue: number | null;
-  onPick: (d: GoalDirection, a: GoalAgg, unit: string) => void;
+  onPick: (d: GoalDirection, a: GoalAgg) => void;
   onFormat: (unit: string) => void;
   onUnitLabel: (u: string) => void;
   onTargetValue: (v: number | null) => void;
@@ -265,7 +268,7 @@ export function GoalValueSection({ direction, agg, unit, targetValue, onPick, on
         {VALUE_SUBTYPES.map(s => {
           const sel = activeSub === s.id;
           return (
-            <TouchableOpacity key={s.id} onPress={() => onPick(s.direction, s.agg, s.unit)}
+            <TouchableOpacity key={s.id} onPress={() => onPick(s.direction, s.agg)}
               style={{ flexDirection: 'row', alignItems: 'center', gap: 10, padding: 11, borderRadius: 11, borderWidth: 1.5,
                 borderColor: sel ? colors.teal : colors.border,
                 backgroundColor: sel ? (colors.isDark ? 'rgba(62,207,178,0.12)' : colors.tint) : colors.glass }}>

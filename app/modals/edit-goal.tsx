@@ -135,7 +135,7 @@ export default function EditGoalModal() {
           {kind === 'value' && (
             <>
               <GoalValueSection direction={direction} agg={agg} unit={unit} targetValue={targetValue}
-                onPick={(d, a, u) => { setDirection(d); setAgg(a); if (u || !unit) setUnit(u); }}
+                onPick={(d, a) => { setDirection(d); setAgg(a); setUnit(''); setTargetValue(null); }}
                 onFormat={setUnit} onUnitLabel={setUnit} onTargetValue={setTargetValue} />
               <DateTimeField mode="date" label="Deadline (optional)" value={date || ''} onChange={setDate} />
             </>

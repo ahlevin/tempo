@@ -2,4 +2,4 @@
 // you need to confirm a fresh deploy actually went live (Cloudflare Pages can lag
 // or cache) — if the footer still shows the old marker after a hard refresh, the
 // new build hasn't deployed yet, so the issue is the deploy, not the code.
-export const BUILD_ID = '2026-07-16 · explicit value format chooser (time/number/money); time not inferred from unit';
+export const BUILD_ID = '2026-07-16 · value format defaults to Number; format tracks sub-type; target matches format live';
