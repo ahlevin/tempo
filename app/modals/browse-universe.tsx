@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -40,7 +40,9 @@ export default function BrowseUniverseModal() {
     return universe.filter(it => !q || itemName(it).toLowerCase().includes(q) || itemCityState(it).toLowerCase().includes(q));
   }, [universe, query]);
 
-  if (!m || !isCollectionLog(m) || !universe) { router.back(); return null; }
+  // Never navigate during render (illegal side effect → ErrorBoundary).
+  useEffect(() => { if (!m || !isCollectionLog(m) || !universe) router.back(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!m || !isCollectionLog(m) || !universe) return null;
 
   const toggle = (name: string) => setSelected(prev => {
     const n = new Set(prev);

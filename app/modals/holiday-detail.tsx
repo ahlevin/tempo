@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { ScrollView, View, Text, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -20,7 +21,9 @@ export default function HolidayDetailModal() {
   const setHolidayReminder = useStore(s => s.setHolidayReminder);
 
   const h = id ? HOLIDAY_BY_ID[id] : undefined;
-  if (!h) { router.back(); return null; }
+  // Never navigate during render (illegal side effect → ErrorBoundary).
+  useEffect(() => { if (!h) router.back(); }, [h]);
+  if (!h) return null;
 
   const color = catColor(colors, 'holidays');
   const bg    = catBg(colors, 'holidays');

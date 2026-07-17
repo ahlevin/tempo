@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity } from 'react-native';
 import { useToast } from '../../components/Toast';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -15,7 +15,8 @@ export default function ExactEditModal() {
   const g = goals.find(x => x.id === id);
   const [value, setValue] = useState(String(g?.current || 0));
 
-  if (!g) { router.back(); return null; }
+  useEffect(() => { if (!g) router.back(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!g) return null;
 
   function submit() {
     const v = parseFloat(value);

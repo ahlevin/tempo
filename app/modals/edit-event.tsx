@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ScrollView, View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
 import { useToast } from '../../components/Toast';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -49,7 +49,11 @@ export default function EditEventModal() {
     borderColor:colors.border, borderRadius:12, padding:12,
     color:colors.text1, fontSize:15, marginBottom:14 };
 
-  if (!event) { router.back(); return null; }
+  // Never navigate during render (illegal side effect → ErrorBoundary). The
+  // delete/save handlers own dismissal for the normal flow; this only covers a
+  // stale id at mount. Guard returns null safely.
+  useEffect(() => { if (!event) router.back(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!event) return null;
 
   function save() {
     if (!name.trim()) { showToast('⚠️', 'Missing info', 'Please enter a name.'); return; }

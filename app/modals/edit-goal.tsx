@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ScrollView, View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
 import { useToast } from '../../components/Toast';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -51,7 +51,10 @@ export default function EditGoalModal() {
   // Linked goals derive progress → Unit/Increment Step are meaningless, so hidden.
   const linked = !!(link.linkedLogId || link.linkedPreset);
 
-  if (!g) { router.back(); return null; }
+  // Never navigate during render (illegal side effect → ErrorBoundary). Delete/
+  // save own dismissal; this only covers a stale id at mount.
+  useEffect(() => { if (!g) router.back(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!g) return null;
 
   function save() {
     if (repeats) {

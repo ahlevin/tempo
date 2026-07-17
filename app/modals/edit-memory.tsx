@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ScrollView, View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
 import { useToast } from '../../components/Toast';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -43,7 +43,10 @@ export default function EditMemoryModal() {
     memorial:'Date to Remember', lifelog:'First Occurrence'
   };
 
-  if (!m) { router.back(); return null; }
+  // Never navigate during render (illegal side effect → ErrorBoundary). Delete/
+  // save own dismissal; this only covers a stale id at mount.
+  useEffect(() => { if (!m) router.back(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!m) return null;
 
   function save() {
     const lifelog = m!.type === 'lifelog';

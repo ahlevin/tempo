@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -81,7 +81,10 @@ export default function LogEntryModal() {
     borderColor:colors.border, borderRadius:12, padding:12,
     color:colors.text1, fontSize:15, marginBottom:14 };
 
-  if (!m) { router.back(); return null; }
+  // Never navigate during render (illegal side effect → ErrorBoundary). The
+  // entry actions own dismissal; this only covers a stale id at mount.
+  useEffect(() => { if (!m) router.back(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!m) return null;
 
   const loggedCount = isPicker ? new Set(m.entries.map(e => e.item).filter(Boolean)).size : m.entries.length;
   const pad2 = (n: number) => String(n).padStart(2, '0');

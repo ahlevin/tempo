@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useStore } from '../../store/useStore';
@@ -17,12 +18,14 @@ export default function MemoryDetailModal() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const memories = useStore(s => s.memories);
   const m = memories.find(x => x.id === id);
-  // If the memory is gone (e.g. deleted from the edit screen pushed on top),
-  // leave deterministically to Countdowns — where birthdays/anniversaries/
-  // memorials live — rather than a plain back() that races the dismiss.
-  if (!m) { router.dismissTo('/tabs'); return null; }
-  // Life logs have their own richer detail view (entries list + add).
-  if (m.type === 'lifelog') { router.replace({ pathname: '/modals/lifelog-detail', params: { id: m.id } }); return null; }
+  // Navigate in an EFFECT, never during render (illegal side effect → throws).
+  //  - Deleted memory → Countdowns (where birthdays/anniversaries/memorials live).
+  //  - Life logs have their own richer detail view → redirect there.
+  useEffect(() => {
+    if (!m) router.dismissTo('/tabs');
+    else if (m.type === 'lifelog') router.replace({ pathname: '/modals/lifelog-detail', params: { id: m.id } });
+  }, [m]);
+  if (!m || m.type === 'lifelog') return null;
 
   const meta = TYPE_META[m.type];
   const accent = m.type === 'memorial' ? catColor(colors, 'memorial')

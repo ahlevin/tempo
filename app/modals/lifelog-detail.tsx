@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { ScrollView, View, Text, TouchableOpacity, DimensionValue } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -20,11 +21,11 @@ export default function LifelogDetailModal() {
   const confirm        = useConfirm();
   const m = memories.find(x => x.id === id);
 
-  // If the log is gone (e.g. deleted from the edit screen pushed on top, which
-  // re-renders this screen underneath), leave deterministically to the Life Log
-  // tab — a plain back() here races the edit screen's dismiss and bounces to
-  // Countdowns.
-  if (!m || m.type !== 'lifelog') { router.dismissTo('/tabs/lifelog'); return null; }
+  // If the log is gone (e.g. deleted from the edit screen pushed on top),
+  // dismiss in an EFFECT — navigating during render is an illegal side effect
+  // that throws into the ErrorBoundary. dismissTo lands on the Life Log tab.
+  useEffect(() => { if (!m || m.type !== 'lifelog') router.dismissTo('/tabs/lifelog'); }, [m]);
+  if (!m || m.type !== 'lifelog') return null;
 
   const teal = colors.teal;
   const collection = isCollectionLog(m);

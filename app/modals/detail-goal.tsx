@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { View, Text, DimensionValue } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useStore } from '../../store/useStore';
@@ -14,11 +15,12 @@ export default function GoalDetailModal() {
   const goals = useStore(s => s.goals);
   const memories = useStore(s => s.memories);
   const g = goals.find(x => x.id === id);
-  // If the goal is gone (e.g. deleted from the edit screen pushed on top, which
-  // re-renders this screen underneath), leave deterministically to the Goals tab
-  // — a plain back() here races the edit screen's dismiss and bounces to
-  // Countdowns.
-  if (!g) { router.dismissTo('/tabs/goals'); return null; }
+  // If the goal is gone (e.g. deleted from the edit screen pushed on top),
+  // dismiss in an EFFECT — navigating during render is an illegal side effect
+  // that throws into the ErrorBoundary. dismissTo lands deterministically on the
+  // Goals tab.
+  useEffect(() => { if (!g) router.dismissTo('/tabs/goals'); }, [g]);
+  if (!g) return null;
 
   const teal = colors.teal;
   const days = daysUntil(g.date);

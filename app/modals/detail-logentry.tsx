@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useStore } from '../../store/useStore';
@@ -20,7 +21,10 @@ export default function LogEntryDetailModal() {
   const m = memories.find(x => x.id === id);
   const index = edit != null && edit !== '' ? parseInt(edit, 10) : -1;
   const entry = m && index >= 0 ? m.entries[index] : undefined;
-  if (!m || !entry) { router.back(); return null; }
+  // Dismiss in an EFFECT when the entry/log is gone (e.g. deleted from the editor
+  // pushed on top) — never navigate during render (illegal side effect → throws).
+  useEffect(() => { if (!m || !entry) router.back(); }, [m, entry]);
+  if (!m || !entry) return null;
 
   const teal     = colors.teal;
   const upcoming = isUpcomingEntry(entry);

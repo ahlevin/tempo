@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useStore } from '../../store/useStore';
@@ -12,7 +13,11 @@ export default function EventDetailModal() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const events = useStore(s => s.events);
   const e = events.find(x => x.id === id);
-  if (!e) { router.back(); return null; }
+  // When the record is deleted (e.g. from the edit screen pushed on top, which
+  // re-renders this screen underneath), dismiss in an EFFECT — never navigate
+  // during render (an illegal side effect that throws into the ErrorBoundary).
+  useEffect(() => { if (!e) router.back(); }, [e]);
+  if (!e) return null;
 
   const accent = catColor(colors, e.cat);
   const nd     = nextOccurrence(e);
