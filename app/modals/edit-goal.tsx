@@ -15,7 +15,6 @@ import { GoalWindowPicker, GoalLogLink, GoalRepeatSection, GoalKindPicker, GoalV
 import { Toggle } from '../../components/FormControls';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { goalKind, questChildren, isGoalComplete } from '../../utils/goals';
-import { parseValue, formatValue } from '../../utils/values';
 import type { GoalPeriodKind } from '../../store/types';
 
 export default function EditGoalModal() {
@@ -51,7 +50,7 @@ export default function EditGoalModal() {
   const [periodTarget, setPeriodTarget] = useState(g?.periodTarget ? String(g.periodTarget) : '');
   const [direction, setDirection] = useState<GoalDirection>(g?.direction ?? 'lower');
   const [agg, setAgg] = useState<GoalAgg>(g?.agg ?? 'best');
-  const [targetValue, setTargetValue] = useState(g?.targetValue != null ? formatValue(g.targetValue, g.unit) : '');
+  const [targetValue, setTargetValue] = useState<number | null>(g?.targetValue ?? null);
   const [childName, setChildName] = useState('');
 
   const fi = { backgroundColor:colors.glass, borderWidth:1,
@@ -87,7 +86,7 @@ export default function EditGoalModal() {
       if (!pt) { showToast('⚠️', 'Missing info', 'Enter a target per period.'); return; }
       updateGoal(id, { ...base, kind, target: pt, unit: '', step: 1, date: '', repeats: true, periodKind, periodTarget: pt, manualPeriods: g!.manualPeriods ?? [], ...link, ...clearValue });
     } else if (kind === 'value') {
-      const tv = parseValue(targetValue, unit);
+      const tv = targetValue;
       if (tv == null) { showToast('⚠️', 'Missing info', 'Enter a target value.'); return; }
       updateGoal(id, { ...base, kind, target: 0, unit: unit.trim(), step: 1, date, ...clearLink, ...clearWindow, ...clearRepeat, direction, agg, targetValue: tv });
     } else { // quest
@@ -137,7 +136,7 @@ export default function EditGoalModal() {
             <>
               <GoalValueSection direction={direction} agg={agg} unit={unit} targetValue={targetValue}
                 onPick={(d, a, u) => { setDirection(d); setAgg(a); if (u || !unit) setUnit(u); }}
-                onUnit={setUnit} onTargetValue={setTargetValue} />
+                onFormat={setUnit} onUnitLabel={setUnit} onTargetValue={setTargetValue} />
               <DateTimeField mode="date" label="Deadline (optional)" value={date || ''} onChange={setDate} />
             </>
           )}

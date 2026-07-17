@@ -14,7 +14,6 @@ import { AlertsEditor } from '../../components/AlertsEditor';
 import { LinksEditor } from '../../components/LinksEditor';
 import { GoalWindowPicker, GoalLogLink, GoalRepeatSection, GoalKindPicker, GoalValueSection, GoalLink } from '../../components/GoalLinkSection';
 import { Toggle } from '../../components/FormControls';
-import { parseValue } from '../../utils/values';
 import type { GoalPeriodKind } from '../../store/types';
 
 export default function AddGoalModal() {
@@ -38,7 +37,7 @@ export default function AddGoalModal() {
   // Value goal fields
   const [direction, setDirection] = useState<GoalDirection>('lower');
   const [agg, setAgg] = useState<GoalAgg>('best');
-  const [targetValue, setTargetValue] = useState('');
+  const [targetValue, setTargetValue] = useState<number | null>(null);
 
   const fi = { backgroundColor:colors.glass, borderWidth:1,
     borderColor:colors.border, borderRadius:12, padding:12,
@@ -62,7 +61,7 @@ export default function AddGoalModal() {
       if (!pt) { showToast('⚠️', 'Missing info', 'Enter a target per period.'); return; }
       addGoal({ ...base, kind, target: pt, unit: '', step: 1, date: '', repeats: true, periodKind, periodTarget: pt, manualPeriods: [], ...link });
     } else if (kind === 'value') {
-      const tv = parseValue(targetValue, unit);
+      const tv = targetValue;
       if (tv == null) { showToast('⚠️', 'Missing info', 'Enter a target value.'); return; }
       addGoal({ ...base, kind, target: 0, unit: unit.trim(), step: 1, date, repeats: false, direction, agg, targetValue: tv });
     } else { // quest
@@ -94,7 +93,7 @@ export default function AddGoalModal() {
             <>
               <GoalValueSection direction={direction} agg={agg} unit={unit} targetValue={targetValue}
                 onPick={(d, a, u) => { setDirection(d); setAgg(a); if (u || !unit) setUnit(u); }}
-                onUnit={setUnit} onTargetValue={setTargetValue} />
+                onFormat={setUnit} onUnitLabel={setUnit} onTargetValue={setTargetValue} />
               <DateTimeField mode="date" label="Deadline (optional)" value={date} onChange={setDate} />
             </>
           )}

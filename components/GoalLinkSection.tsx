@@ -4,7 +4,8 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useStore } from '../store/useStore';
 import { FL } from './FormControls';
 import { DateTimeField } from './DateTimeField';
-import { isTimeUnit } from '../utils/values';
+import { valueFormat } from '../utils/values';
+import { ValueInput } from './ValueInput';
 import type { GoalWindowKind, GoalPeriodKind, GoalKind, GoalDirection, GoalAgg } from '../store/types';
 
 export interface GoalLink {
@@ -227,7 +228,7 @@ export function GoalKindPicker({ value, onChange }: { value: GoalKind; onChange:
   );
 }
 
-// The four value sub-types → direction + agg + unit defaults (all overridable).
+// The four value sub-types → direction + agg + default format (all overridable).
 export const VALUE_SUBTYPES: { id: string; label: string; direction: GoalDirection; agg: GoalAgg; unit: string }[] = [
   { id: 'time',       label: 'Beat a time / score (lower is better)', direction: 'lower',  agg: 'best',   unit: 'sec' },
   { id: 'reach',      label: 'Reach a number (higher is better)',     direction: 'higher', agg: 'best',   unit: '' },
@@ -235,16 +236,28 @@ export const VALUE_SUBTYPES: { id: string; label: string; direction: GoalDirecti
   { id: 'balance',    label: 'Track a balance (latest wins)',         direction: 'higher', agg: 'latest', unit: '$' },
 ];
 
-export function GoalValueSection({ direction, agg, unit, targetValue, onPick, onUnit, onTargetValue }: {
-  direction: GoalDirection; agg: GoalAgg; unit: string; targetValue: string;
+// Explicit FORMAT chooser — the format DECIDES the input control; it is never
+// guessed from a typed unit. Each maps to a canonical unit token.
+const VALUE_FORMATS: { id: string; label: string; unit: string }[] = [
+  { id: 'minsec', label: '⏱ Time · min:sec', unit: 'sec' },
+  { id: 'hrmin',  label: '⏱ Time · hr:min',  unit: 'hms' },
+  { id: 'number', label: '🔢 Number',        unit: '' },
+  { id: 'money',  label: '💲 Money',         unit: '$' },
+];
+
+export function GoalValueSection({ direction, agg, unit, targetValue, onPick, onFormat, onUnitLabel, onTargetValue }: {
+  direction: GoalDirection; agg: GoalAgg; unit: string; targetValue: number | null;
   onPick: (d: GoalDirection, a: GoalAgg, unit: string) => void;
-  onUnit: (u: string) => void;
-  onTargetValue: (v: string) => void;
+  onFormat: (unit: string) => void;
+  onUnitLabel: (u: string) => void;
+  onTargetValue: (v: number | null) => void;
 }) {
   const { colors } = useTheme();
+  const { chip, chipText } = useChipStyles();
   const fi = { backgroundColor: colors.glass, borderWidth: 1, borderColor: colors.border,
     borderRadius: 12, padding: 12, color: colors.text1, fontSize: 15, marginBottom: 14 };
   const activeSub = VALUE_SUBTYPES.find(s => s.direction === direction && s.agg === agg)?.id;
+  const fmt = valueFormat(unit);
   return (
     <>
       <FL label="What are you tracking?" />
@@ -262,12 +275,29 @@ export function GoalValueSection({ direction, agg, unit, targetValue, onPick, on
           );
         })}
       </View>
-      <FL label="Unit (sec, lbs, miles, $, hrs, books…)" />
-      <TextInput value={unit} onChangeText={onUnit} placeholder="sec" autoCapitalize="none"
-        placeholderTextColor={colors.text3} style={fi} />
-      <FL label={`Target${isTimeUnit(unit) ? ' (mm:ss)' : ''}`} />
-      <TextInput value={targetValue} onChangeText={onTargetValue} autoCapitalize="none"
-        placeholder={isTimeUnit(unit) ? '6:00' : 'e.g. 225'} placeholderTextColor={colors.text3} style={fi} />
+
+      <FL label="Format" />
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
+        {VALUE_FORMATS.map(f => {
+          const sel = fmt === f.id;
+          return (
+            <TouchableOpacity key={f.id} onPress={() => { if (fmt !== f.id) onFormat(f.unit); }}
+              style={{ ...chip(sel), flexGrow: 1, flexBasis: '47%', flex: undefined }}>
+              <Text style={chipText(sel)}>{f.label}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
+      {fmt === 'number' && (
+        <>
+          <FL label="Unit label (lbs, books, miles, reps, hrs…)" />
+          <TextInput value={unit} onChangeText={onUnitLabel} placeholder="e.g. lbs" autoCapitalize="none"
+            placeholderTextColor={colors.text3} style={fi} />
+        </>
+      )}
+
+      <ValueInput unit={unit} value={targetValue} onChange={onTargetValue} label="Target" />
     </>
   );
 }

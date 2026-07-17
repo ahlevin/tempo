@@ -1,43 +1,47 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, ScrollView, Text, TextInput, View } from 'react-native';
 import { useTheme } from '../contexts/ThemeContext';
-import { isMoneyUnit, isTimeUnit } from '../utils/values';
+import { valueFormat } from '../utils/values';
 
-// Unit-adaptive entry for a VALUE goal attempt. Emits the STORED numeric value
-// (seconds for time, a plain number otherwise) or null while empty. The same
-// control is used for logging a new attempt and editing an existing one.
-//   TIME  ('sec'/'time', usually lower-is-better) → two fields, Min : Sec,
-//          each typeable (numeric keyboard) AND scrollable (a spin wheel).
-//   MONEY ('$')                                   → single "$" field, plain number.
-//   PLAIN (lbs, books, miles, hrs, reps, …)       → single field + unit suffix.
-export function ValueInput({ unit, value, onChange }: {
+// Unit-adaptive entry for a VALUE goal attempt / target. The format is chosen
+// explicitly (never inferred from free text) via the unit token. Emits the
+// STORED numeric value (total seconds for time, a plain number otherwise) or
+// null while empty. Same control for logging, editing, and the goal's target.
+//   'sec' → Min : Sec, each typeable (numeric keyboard) AND scrollable (wheel).
+//   'hms' → Hr : Min,  same dual control (marathon-length times).
+//   '$'   → single "$" field, plain number.
+//   other → single field + free-text unit label as a suffix.
+export function ValueInput({ unit, value, onChange, label }: {
   unit?: string;
   value: number | null;
   onChange: (n: number | null) => void;
+  label?: string;
 }) {
   const { colors } = useTheme();
+  const fmt = valueFormat(unit);
 
-  if (isTimeUnit(unit)) {
-    const mm = value == null ? null : Math.floor(value / 60);
-    const ss = value == null ? null : value % 60;
-    const combine = (m: number | null, s: number | null) => {
-      if (m == null && s == null) { onChange(null); return; }
-      onChange((m ?? 0) * 60 + (s ?? 0));
+  if (fmt === 'minsec' || fmt === 'hrmin') {
+    const time = fmt === 'hrmin';
+    const big = value == null ? null : Math.floor(value / (time ? 3600 : 60));
+    const small = value == null ? null : (time ? Math.floor((value % 3600) / 60) : value % 60);
+    const combine = (a: number | null, b: number | null) => {
+      if (a == null && b == null) { onChange(null); return; }
+      onChange((a ?? 0) * (time ? 3600 : 60) + (b ?? 0) * (time ? 60 : 1));
     };
     return (
       <View style={{ marginBottom: 14 }}>
-        <FL label="Time (min : sec)" />
+        <FL label={label ?? (time ? 'Time (hr : min)' : 'Time (min : sec)')} />
         <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10 }}>
-          <WheelField label="Min" value={mm} min={0} max={90} typeMax={999} onChange={m => combine(m, ss)} />
+          <WheelField label={time ? 'Hr' : 'Min'} value={big} min={0} max={time ? 24 : 90} typeMax={time ? 99 : 999} onChange={a => combine(a, small)} />
           <Text style={{ fontSize: 26, fontWeight: '700', color: colors.text2, marginTop: 34 }}>:</Text>
-          <WheelField label="Sec" value={ss} min={0} max={59} pad onChange={s => combine(mm, s)} />
+          <WheelField label={time ? 'Min' : 'Sec'} value={small} min={0} max={59} pad onChange={b => combine(big, b)} />
         </View>
       </View>
     );
   }
 
-  if (isMoneyUnit(unit)) return <MoneyField value={value} onChange={onChange} />;
-  return <PlainField unit={unit} value={value} onChange={onChange} />;
+  if (fmt === 'money') return <MoneyField value={value} onChange={onChange} label={label} />;
+  return <PlainField unit={unit} value={value} onChange={onChange} label={label} />;
 }
 
 // ── A single numeric field that is both typeable and (on native) scrollable ──
@@ -125,7 +129,13 @@ function NumberWheel({ value, min, max, pad, onChange }: {
           ref.current?.scrollTo({ y: idxFor(value) * ITEM_H, animated: false });
         }}
         onScrollBeginDrag={() => { dragging.current = true; }}
-        onScrollEndDrag={e => settle(e.nativeEvent.contentOffset.y)}
+        onScrollEndDrag={e => {
+          // If the release has no fling velocity, no momentum event follows —
+          // settle now. Otherwise let onMomentumScrollEnd settle the final rest
+          // position (settling here would jump the wheel mid-fling).
+          const v = e.nativeEvent.velocity?.y ?? 0;
+          if (Math.abs(v) < 0.05) settle(e.nativeEvent.contentOffset.y);
+        }}
         onMomentumScrollEnd={e => settle(e.nativeEvent.contentOffset.y)}
       >
         {items.map(n => {
@@ -146,7 +156,7 @@ function NumberWheel({ value, min, max, pad, onChange }: {
 }
 
 // ── Money: leading "$", thousands-formatted when idle, plain digits while typing ──
-function MoneyField({ value, onChange }: { value: number | null; onChange: (n: number | null) => void }) {
+function MoneyField({ value, onChange, label }: { value: number | null; onChange: (n: number | null) => void; label?: string }) {
   const { colors } = useTheme();
   const focused = useRef(false);
   const [text, setText] = useState(value == null ? '' : value.toLocaleString());
@@ -163,7 +173,7 @@ function MoneyField({ value, onChange }: { value: number | null; onChange: (n: n
 
   return (
     <View style={{ marginBottom: 14 }}>
-      <FL label="Amount" />
+      <FL label={label ?? 'Amount'} />
       <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.glass,
         borderWidth: 1, borderColor: colors.border, borderRadius: 12, paddingHorizontal: 12 }}>
         <Text style={{ fontSize: 16, color: colors.text2, marginRight: 3 }}>$</Text>
@@ -183,7 +193,7 @@ function MoneyField({ value, onChange }: { value: number | null; onChange: (n: n
 }
 
 // ── Plain number with the unit shown as a suffix (allows decimals) ──
-function PlainField({ unit, value, onChange }: { unit?: string; value: number | null; onChange: (n: number | null) => void }) {
+function PlainField({ unit, value, onChange, label }: { unit?: string; value: number | null; onChange: (n: number | null) => void; label?: string }) {
   const { colors } = useTheme();
   const focused = useRef(false);
   const [text, setText] = useState(value == null ? '' : String(value));
@@ -201,7 +211,7 @@ function PlainField({ unit, value, onChange }: { unit?: string; value: number | 
 
   return (
     <View style={{ marginBottom: 14 }}>
-      <FL label={`Value${u ? ` (${u})` : ''}`} />
+      <FL label={label ?? `Value${u ? ` (${u})` : ''}`} />
       <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.glass,
         borderWidth: 1, borderColor: colors.border, borderRadius: 12, paddingHorizontal: 12 }}>
         <TextInput
