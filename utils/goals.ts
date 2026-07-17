@@ -129,6 +129,9 @@ export function valuePct(g: Goal, score: number | null): number {
 export function questChildren(g: Goal, goals: Goal[]): Goal[] {
   return goals.filter(x => x.parentGoalId === g.id);
 }
+// A quest child (parentGoalId set) belongs INSIDE its parent quest and must never
+// appear on any top-level goal list (Goals tab, Countdowns, favorites, hero).
+export const isTopLevelGoal = (g: Goal): boolean => !g.parentGoalId;
 export function questProgress(g: Goal, goals: Goal[], memories: Memory[], attempts: GoalAttempt[]): { done: number; total: number } {
   const children = questChildren(g, goals);
   const done = children.filter(c => isGoalComplete(c, goals, memories, attempts)).length;

@@ -5,6 +5,7 @@ import { router } from 'expo-router';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useStore } from '../../store/useStore';
 import { GoalCard } from '../../components/GoalCard';
+import { isTopLevelGoal } from '../../utils/goals';
 import { SectionHeader, EmptyPrompt, ScreenTitle } from '../../components/SectionUI';
 import { SearchBar } from '../../components/ListControls';
 
@@ -12,7 +13,8 @@ import { SearchBar } from '../../components/ListControls';
 // headline metrics; a search box filters the list by name.
 export default function GoalsScreen() {
   const { colors } = useTheme();
-  const goals = useStore(s => s.goals);
+  const allGoals = useStore(s => s.goals);
+  const goals = allGoals.filter(isTopLevelGoal);   // quest children live inside their parent, not here
   const add = () => router.push('/modals/add-goal');
 
   const [q, setQ] = useState('');

@@ -18,7 +18,7 @@ import { CATEGORIES } from '../../constants/data';
 import { catColor } from '../../constants/colors';
 import { visibleHolidays, HolidayItem } from '../../constants/holidays';
 import { upcomingLogItems, UpcomingLogItem } from '../../utils/lifelog';
-import { isRecurringGoal, hasDeadline } from '../../utils/goals';
+import { isRecurringGoal, hasDeadline, isTopLevelGoal } from '../../utils/goals';
 import { nextOccurrence, nextAnnual, daysUntil } from '../../utils/dates';
 
 // Countdowns filter pills, in a fixed presentation order: All, the recurring
@@ -100,7 +100,7 @@ export default function HomeScreen() {
   // goals show current-period progress (no deadline); one-shot goals need a
   // future deadline. All-time goals (no time bound) never appear here.
   if (isAll) {
-    goals.filter(g => g.showOnCountdown === true &&
+    goals.filter(g => g.showOnCountdown === true && isTopLevelGoal(g) &&
       (isRecurringGoal(g) ? true : (hasDeadline(g) && daysUntil(g.date) > 0)))
       .forEach(g => upcoming.push({ kind: 'goal', data: g }));
   }

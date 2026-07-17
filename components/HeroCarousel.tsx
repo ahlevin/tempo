@@ -6,7 +6,7 @@ import { openEventDetail, openGoalDetail, openMemoryDetail, openHolidayDetail, o
 import { CATEGORIES } from '../constants/data';
 import { visibleHolidays, HolidayItem } from '../constants/holidays';
 import { logCount, logVisits, upcomingCount, isCollectionLog, logUniverse, isUpcomingEntry } from '../utils/lifelog';
-import { isRecurringGoal, isLinkedGoal, hasDeadline, goalDerivedProgress } from '../utils/goals';
+import { isRecurringGoal, isLinkedGoal, hasDeadline, goalDerivedProgress, isTopLevelGoal } from '../utils/goals';
 import { currentPeriodProgress, goalStreak, goalPeriodKind, goalPeriodTarget, periodLabel, periodNoun } from '../utils/recurring';
 import { useTheme } from '../contexts/ThemeContext';
 import { useTick } from '../contexts/TickContext';
@@ -402,7 +402,7 @@ export function HeroCarousel() {
   // sorted by soonest upcoming date.
   const items: { kind: 'event' | 'goal' | 'memory' | 'holiday' | 'logentry'; data: any; days: number }[] = [];
   events.filter(e => e.fav).forEach(e => items.push({ kind:'event', data:e, days: daysUntil(nextOccurrence(e)) }));
-  goals.filter(g => g.fav).forEach(g => items.push({ kind:'goal', data:g, days: (isRecurringGoal(g) || !hasDeadline(g)) ? 0 : daysUntil(g.date) }));
+  goals.filter(g => g.fav && isTopLevelGoal(g)).forEach(g => items.push({ kind:'goal', data:g, days: (isRecurringGoal(g) || !hasDeadline(g)) ? 0 : daysUntil(g.date) }));
   memories
     .filter(m => m.fav && (m.type === 'birthday' || m.type === 'anniversary' || m.type === 'memorial' || m.type === 'lifelog'))
     .forEach(m => {

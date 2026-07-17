@@ -59,9 +59,12 @@ export function GoalCard({ goal: g }: { goal: Goal }) {
     : gk === 'milestone' ? msDone
     : gk === 'quest' ? (quest.total > 0 && quest.done === quest.total)
     : recurring ? prog >= pt : (linked ? goalDone(g, memories) : g.current >= g.target);
-  const doneLabel = gk === 'value' ? '✓ Reached!'
-    : gk === 'milestone' ? '✓ Done!'
-    : recurring ? `✓ ${periodLabel(pk)}!` : '✓ Complete!';
+  const doneLabel = '✓ Done';   // one consistent completed pill for every kind
+  // Right-side control system: milestone = tappable checkbox; every other kind that
+  // auto-completes (count/collection/value/quest, non-recurring) = a static, clearly
+  // non-tappable done badge. Streaks are ongoing — no done badge.
+  const showDoneBadge = done && !recurring && gk !== 'milestone';
+  const showDays = !done && standard && !recurring && showDeadline;
 
   // Confetti on the done transition (hooks run unconditionally — kind can change).
   const wasDone = useRef(done);
@@ -145,31 +148,26 @@ export function GoalCard({ goal: g }: { goal: Goal }) {
           )}
         </View>
 
-        {/* Right-side indicator per kind */}
+        {/* Right-side control — one coherent system across all kinds */}
         <View style={{ alignItems: 'center' }}>
           {gk === 'milestone' ? (
+            // Tappable checkbox: a bordered SQUARE (interactive affordance).
             <TouchableOpacity onPress={() => setMilestoneDone(g.id, !msDone)}
               style={{ width: 30, height: 30, borderRadius: 8, borderWidth: 2, marginBottom: 6,
                 borderColor: msDone ? colors.teal : colors.border, backgroundColor: msDone ? colors.teal : 'transparent',
                 alignItems: 'center', justifyContent: 'center' }}>
               {msDone && <Text style={{ color: colors.isDark ? '#0A0A0F' : '#fff', fontSize: 16, fontWeight: '800' }}>✓</Text>}
             </TouchableOpacity>
-          ) : standard && !recurring && showDeadline ? (
-            done ? (
-              <View style={{ alignItems: 'flex-end' }}>
-                <Text style={{ fontSize: 20, fontWeight: '800', color: colors.teal }}>✓</Text>
-                <Text style={{ fontSize: 9, color: colors.teal, textTransform: 'uppercase', fontWeight: '700' }}>done</Text>
-              </View>
-            ) : (
-              <View style={{ alignItems: 'flex-end' }}>
-                <Text style={{ fontSize: 18, fontWeight: '800', color: dayCountColor(colors, d) }}>{d}</Text>
-                <Text style={{ fontSize: 9, color: colors.text3, textTransform: 'uppercase' }}>days</Text>
-              </View>
-            )
-          ) : (gk === 'value' || gk === 'quest') && done ? (
+          ) : showDoneBadge ? (
+            // Static done badge: a filled CIRCLE, no border — clearly not tappable.
+            <View style={{ width: 30, height: 30, borderRadius: 15, marginBottom: 6, backgroundColor: colors.teal,
+              alignItems: 'center', justifyContent: 'center' }}>
+              <Text style={{ color: colors.isDark ? '#0A0A0F' : '#fff', fontSize: 16, fontWeight: '800' }}>✓</Text>
+            </View>
+          ) : showDays ? (
             <View style={{ alignItems: 'flex-end' }}>
-              <Text style={{ fontSize: 20, fontWeight: '800', color: colors.teal }}>✓</Text>
-              <Text style={{ fontSize: 9, color: colors.teal, textTransform: 'uppercase', fontWeight: '700' }}>done</Text>
+              <Text style={{ fontSize: 18, fontWeight: '800', color: dayCountColor(colors, d) }}>{d}</Text>
+              <Text style={{ fontSize: 9, color: colors.text3, textTransform: 'uppercase' }}>days</Text>
             </View>
           ) : null}
           <FavStar active={g.fav} onToggle={() => toggleFav(g.id)} />

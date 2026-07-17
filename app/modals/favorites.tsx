@@ -9,6 +9,7 @@ import { SwipeableRow } from '../../components/SwipeableRow';
 import { MemoryCard } from '../../components/MemoryCard';
 import { visibleHolidays } from '../../constants/holidays';
 import { openEventDetail, openGoalDetail, openHolidayDetail, openLogEntryDetail } from '../../utils/nav';
+import { isTopLevelGoal } from '../../utils/goals';
 import { nextOccurrence, daysUntil, fmtDateTime } from '../../utils/dates';
 import { isUpcomingEntry } from '../../utils/lifelog';
 
@@ -29,7 +30,7 @@ export default function FavoritesScreen() {
 
   const favEvents = events.filter(e => e.fav)
     .sort((a,b) => daysUntil(nextOccurrence(a)) - daysUntil(nextOccurrence(b)));
-  const favGoals = goals.filter(g => g.fav);
+  const favGoals = goals.filter(g => g.fav && isTopLevelGoal(g));
   // Favorited UPCOMING life-log entries (each an entry inside a lifelog memory).
   const favLogEntries = memories
     .filter(m => m.type === 'lifelog')

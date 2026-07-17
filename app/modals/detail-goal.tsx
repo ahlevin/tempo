@@ -134,17 +134,33 @@ export default function GoalDetailModal() {
               <Text style={{ fontSize: 13, color: colors.text3 }}>No milestones yet — add them from Edit.</Text>
             ) : children.map((c, i) => {
               const cdone = isGoalComplete(c, goals, memories, attempts);
+              const isMs = goalKind(c) === 'milestone';
               return (
-                <TouchableOpacity key={c.id} onPress={() => router.push({ pathname: '/modals/detail-goal', params: { id: c.id } })}
-                  style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10,
-                    borderTopWidth: i === 0 ? 0 : 1, borderTopColor: colors.border }}>
-                  <View style={{ width: 22, height: 22, borderRadius: 6, borderWidth: 2, borderColor: cdone ? colors.teal : colors.border,
-                    backgroundColor: cdone ? colors.teal : 'transparent', alignItems: 'center', justifyContent: 'center' }}>
-                    {cdone && <Text style={{ color: colors.isDark ? '#0A0A0F' : '#fff', fontSize: 12, fontWeight: '800' }}>✓</Text>}
+                <View key={c.id} style={{ paddingVertical: 10, borderTopWidth: i === 0 ? 0 : 1, borderTopColor: colors.border }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                    {/* Tappable checkbox (milestone children) — same setMilestoneDone flow: default today, clears on uncheck. */}
+                    <TouchableOpacity disabled={!isMs} onPress={() => setMilestoneDone(c.id, !cdone)}
+                      style={{ width: 22, height: 22, borderRadius: 6, borderWidth: 2, borderColor: cdone ? colors.teal : colors.border,
+                        backgroundColor: cdone ? colors.teal : 'transparent', alignItems: 'center', justifyContent: 'center' }}>
+                      {cdone && <Text style={{ color: colors.isDark ? '#0A0A0F' : '#fff', fontSize: 12, fontWeight: '800' }}>✓</Text>}
+                    </TouchableOpacity>
+                    <TouchableOpacity style={{ flex: 1 }} onPress={() => router.push({ pathname: '/modals/detail-goal', params: { id: c.id } })}>
+                      <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text1 }} numberOfLines={1}>{c.emoji} {c.name}</Text>
+                      {isMs && cdone && !!c.completedAt && (
+                        <Text style={{ fontSize: 12, color: colors.teal, marginTop: 2 }}>Completed {fmtShort(c.completedAt)}</Text>
+                      )}
+                    </TouchableOpacity>
+                    <Text style={{ fontSize: 15, color: colors.text3 }}>›</Text>
                   </View>
-                  <Text style={{ flex: 1, fontSize: 14, fontWeight: '600', color: colors.text1 }} numberOfLines={1}>{c.emoji} {c.name}</Text>
-                  <Text style={{ fontSize: 15, color: colors.text3 }}>›</Text>
-                </TouchableOpacity>
+                  {/* Editable, auto-saving completion date for a done child milestone. */}
+                  {isMs && cdone && (
+                    <View style={{ marginTop: 10, marginLeft: 32 }}>
+                      <DateTimeField mode="date" label="Completion date"
+                        value={(c.completedAt ?? '').slice(0, 10)}
+                        onChange={d => setMilestoneDone(c.id, true, d)} />
+                    </View>
+                  )}
+                </View>
               );
             })}
           </Section>
