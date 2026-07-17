@@ -84,7 +84,7 @@ export default function GoalDetailModal() {
     const showDeadline = hasDeadline(g);
     const days = daysUntil(g.date);
     return (
-      <DetailScreen onEdit={edit}>
+      <DetailScreen onEdit={edit} backLabel="Done">
         <DetailCard>
           <DetailHeader emoji={g.emoji} tint={colors.isDark ? 'rgba(62,207,178,0.14)' : colors.tint}
             title={g.name} subtitle={`🏁 Milestone · ${done ? 'Done' : 'Not yet'}`} subtitleColor={teal} />
@@ -106,7 +106,7 @@ export default function GoalDetailModal() {
             </TouchableOpacity>
             {done && (
               <View style={{ marginTop: 12 }}>
-                <DateTimeField mode="date" label="Completion date"
+                <DateTimeField mode="date" label="Completion date" hideInlineDone
                   value={(g.completedAt ?? '').slice(0, 10)}
                   onChange={d => setMilestoneDone(g.id, true, d)} />
               </View>
@@ -155,7 +155,7 @@ export default function GoalDetailModal() {
                   {/* Editable, auto-saving completion date for a done child milestone. */}
                   {isMs && cdone && (
                     <View style={{ marginTop: 10, marginLeft: 32 }}>
-                      <DateTimeField mode="date" label="Completion date"
+                      <DateTimeField mode="date" label="Completion date" hideInlineDone
                         value={(c.completedAt ?? '').slice(0, 10)}
                         onChange={d => setMilestoneDone(c.id, true, d)} />
                     </View>

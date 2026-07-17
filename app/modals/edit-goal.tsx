@@ -158,7 +158,7 @@ export default function EditGoalModal() {
                 </Text>
               </TouchableOpacity>
               {!!g.completedAt && (
-                <DateTimeField mode="date" label="Completion date"
+                <DateTimeField mode="date" label="Completion date" hideInlineDone
                   value={g.completedAt.slice(0, 10)}
                   onChange={d => setMilestoneDone(id, true, d)} />
               )}

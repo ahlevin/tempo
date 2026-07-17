@@ -56,7 +56,7 @@ interface TempoStore {
   updateEvent: (id: string, patch: Partial<Event>) => void;
   deleteEvent: (id: string) => void;
   toggleEventFav: (id: string) => void;
-  addGoal: (g: Omit<Goal, 'id' | 'created' | 'current'>) => void;
+  addGoal: (g: Omit<Goal, 'id' | 'created' | 'current'>) => string;
   updateGoal: (id: string, patch: Partial<Goal>) => void;
   deleteGoal: (id: string) => void;
   nudgeGoal: (id: string, dir: 1 | -1) => void;
@@ -323,6 +323,7 @@ export const useStore = create<TempoStore>()(
           const id = uuid();
           set(s => ({ goals: [...s.goals, { ...g, id, created: today(), current: 0 }] }));
           enqueue({ kind: 'upsert', table: 'goals', id });
+          return id;   // callers (e.g. a new quest) need the id to attach children
         },
         updateGoal: (id, patch) => {
           set(s => ({ goals: s.goals.map(g => g.id === id ? { ...g, ...patch } : g) }));

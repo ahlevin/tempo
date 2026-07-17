@@ -38,6 +38,11 @@ export default function AddGoalModal() {
   const [direction, setDirection] = useState<GoalDirection>('lower');
   const [agg, setAgg] = useState<GoalAgg>('best');
   const [targetValue, setTargetValue] = useState<number | null>(null);
+  // Quest children can be added inline BEFORE the quest is first saved (held here,
+  // then persisted with the new parent's id on submit).
+  const [milestones, setMilestones] = useState<string[]>([]);
+  const [childName, setChildName] = useState('');
+  const addMilestone = () => { const n = childName.trim(); if (!n) return; setMilestones(ms => [...ms, n]); setChildName(''); };
 
   const fi = { backgroundColor:colors.glass, borderWidth:1,
     borderColor:colors.border, borderRadius:12, padding:12,
@@ -65,7 +70,9 @@ export default function AddGoalModal() {
       if (tv == null) { showToast('⚠️', 'Missing info', 'Enter a target value.'); return; }
       addGoal({ ...base, kind, target: 0, unit: unit.trim(), step: 1, date, repeats: false, direction, agg, targetValue: tv });
     } else { // quest
-      addGoal({ ...base, kind, target: 0, unit: '', step: 1, date: '', repeats: false });
+      const parentId = addGoal({ ...base, kind, target: 0, unit: '', step: 1, date: '', repeats: false });
+      milestones.forEach(n => addGoal({ name: n, emoji: '🏁', fav: false, note: '', alerts: [], links: [],
+        kind: 'milestone', target: 0, unit: '', step: 1, date: '', repeats: false, parentGoalId: parentId }));
     }
     router.back();
   }
@@ -105,9 +112,31 @@ export default function AddGoalModal() {
           )}
 
           {kind === 'quest' && (
-            <Text style={{ fontSize:12, color:colors.text3, marginBottom:14 }}>
-              A quest completes as its milestones do. Create it, then add milestones from the goal.
-            </Text>
+            <>
+              <Text style={{ fontSize:12, color:colors.text3, marginBottom:12 }}>
+                A quest completes as its milestones do. Add them now — or later from the goal.
+              </Text>
+              <FL label={`Milestones · ${milestones.length}`} />
+              {milestones.map((n, i) => (
+                <View key={i} style={{ flexDirection:'row', alignItems:'center', gap:10, marginBottom:8 }}>
+                  <View style={{ width:24, height:24, borderRadius:6, borderWidth:2, borderColor:colors.border, alignItems:'center', justifyContent:'center' }}>
+                    <Text style={{ fontSize:12 }}>🏁</Text>
+                  </View>
+                  <Text style={{ flex:1, fontSize:14, fontWeight:'600', color:colors.text1 }} numberOfLines={1}>{n}</Text>
+                  <TouchableOpacity onPress={() => setMilestones(ms => ms.filter((_, j) => j !== i))} hitSlop={{ top:8, bottom:8, left:8, right:8 }}>
+                    <Text style={{ fontSize:20, color:colors.text3 }}>×</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+              <View style={{ flexDirection:'row', gap:8, marginTop:4, marginBottom:14 }}>
+                <TextInput value={childName} onChangeText={setChildName} placeholder="New milestone…"
+                  placeholderTextColor={colors.text3} style={{ ...fi, flex:1, marginBottom:0 }} onSubmitEditing={addMilestone} returnKeyType="done" />
+                <TouchableOpacity onPress={addMilestone}
+                  style={{ paddingHorizontal:16, borderRadius:12, backgroundColor:colors.teal, alignItems:'center', justifyContent:'center' }}>
+                  <Text style={{ color: colors.isDark ? '#0A0A0F' : '#fff', fontWeight:'700' }}>Add</Text>
+                </TouchableOpacity>
+              </View>
+            </>
           )}
 
           {kind === 'streak' && (

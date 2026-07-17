@@ -16,9 +16,13 @@ interface Props {
   onChange: (next: string) => void;
   mode?: DateTimeMode;
   label?: string;
+  /** iOS only: drop the inline "Done" pressable under the spinner and let tapping the
+   *  field toggle it closed instead. Used on auto-saving completion-date fields so the
+   *  transient "Done" doesn't imply the date change is a discrete save step. */
+  hideInlineDone?: boolean;
 }
 
-export function DateTimeField({ value, onChange, mode = 'date', label }: Props) {
+export function DateTimeField({ value, onChange, mode = 'date', label, hideInlineDone }: Props) {
   const { colors } = useTheme();
   const [show, setShow] = useState(false);
   const [androidStep, setAndroidStep] = useState<'date' | 'time'>('date');
@@ -97,7 +101,7 @@ export function DateTimeField({ value, onChange, mode = 'date', label }: Props) 
   return (
     <View style={{ marginBottom: 14 }}>
       {!!label && <FieldLabel text={label} />}
-      <Pressable onPress={() => { setAndroidStep('date'); setShow(true); }}
+      <Pressable onPress={() => { setAndroidStep('date'); setShow(s => hideInlineDone ? !s : true); }}
         style={{ backgroundColor: colors.glass, borderWidth: 1,
           borderColor: colors.border, borderRadius: 12, padding: 12 }}>
         <Text style={{ color: colors.text1, fontSize: 15 }}>{display}</Text>
@@ -111,7 +115,7 @@ export function DateTimeField({ value, onChange, mode = 'date', label }: Props) 
           onChange={handleChange}
         />
       )}
-      {Platform.OS === 'ios' && show && (
+      {Platform.OS === 'ios' && show && !hideInlineDone && (
         <Pressable onPress={() => setShow(false)} style={{ alignSelf: 'flex-end', paddingVertical: 6, paddingHorizontal: 4 }}>
           <Text style={{ color: colors.accent, fontWeight: '700', fontSize: 14 }}>Done</Text>
         </Pressable>

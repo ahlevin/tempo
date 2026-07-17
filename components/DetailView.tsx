@@ -15,19 +15,31 @@ import { linkLabel, openUrl } from '../utils/links';
 
 // Header: 44px round back button (left) + filled Edit button (right), then a
 // scroll body. Edit is navy-filled in light, glass in dark.
-export function DetailScreen({ onEdit, editLabel = '✏️ Edit', children }:
-  { onEdit?: () => void; editLabel?: string; children: ReactNode }) {
+export function DetailScreen({ onEdit, editLabel = '✏️ Edit', backLabel, children }:
+  { onEdit?: () => void; editLabel?: string; backLabel?: string; children: ReactNode }) {
   const { colors } = useTheme();
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.surf2 }} edges={['top', 'bottom']}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
         paddingHorizontal: 16, paddingTop: 12, paddingBottom: 10 }}>
-        <TouchableOpacity onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Back"
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          style={{ width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center',
-            backgroundColor: colors.isDark ? colors.glass : colors.surf, borderWidth: 1, borderColor: colors.border }}>
-          <Text style={{ fontSize: 22, lineHeight: 24, fontWeight: '700', color: colors.text1, marginTop: -3 }}>‹</Text>
-        </TouchableOpacity>
+        {backLabel ? (
+          // Labeled exit (e.g. "Done") for auto-saving screens — a confident "close
+          // this", not a hunt for the arrow. Auto-save already persisted the change.
+          <TouchableOpacity onPress={() => router.back()} accessibilityRole="button" accessibilityLabel={backLabel}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            style={{ minHeight: 44, paddingHorizontal: 18, borderRadius: 22, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 4,
+              backgroundColor: colors.isDark ? colors.glass : colors.accent, borderWidth: 1, borderColor: colors.isDark ? colors.border : colors.accent }}>
+            <Text style={{ fontSize: 20, lineHeight: 22, fontWeight: '700', color: colors.isDark ? colors.text1 : '#fff', marginTop: -2 }}>‹</Text>
+            <Text style={{ fontSize: 15, fontWeight: '700', color: colors.isDark ? colors.text1 : '#fff' }}>{backLabel}</Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Back"
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            style={{ width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center',
+              backgroundColor: colors.isDark ? colors.glass : colors.surf, borderWidth: 1, borderColor: colors.border }}>
+            <Text style={{ fontSize: 22, lineHeight: 24, fontWeight: '700', color: colors.text1, marginTop: -3 }}>‹</Text>
+          </TouchableOpacity>
+        )}
         {onEdit && (
           <TouchableOpacity onPress={onEdit} accessibilityRole="button" accessibilityLabel="Edit"
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
