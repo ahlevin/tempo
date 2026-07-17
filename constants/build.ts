@@ -2,4 +2,4 @@
 // you need to confirm a fresh deploy actually went live (Cloudflare Pages can lag
 // or cache) — if the footer still shows the old marker after a hard refresh, the
 // new build hasn't deployed yet, so the issue is the deploy, not the code.
-export const BUILD_ID = '2026-07-16 · hooks before not-found guard (fix React #300 on delete)';
+export const BUILD_ID = '2026-07-16 · goal measurement layer — 6 kinds, value attempts, quests, milestones';

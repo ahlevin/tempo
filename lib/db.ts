@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { Event, Goal, Memory, UserPrefs, LogEntry } from '../store/types';
+import { Event, Goal, Memory, UserPrefs, LogEntry, GoalAttempt } from '../store/types';
 import { getPreset } from '../constants/lifelogs';
 
 // ---------------------------------------------------------------------------
@@ -118,6 +118,14 @@ export function rowToGoal(r: any): Goal {
     periodTarget: r.period_target != null ? Number(r.period_target) : null,
     manualPeriods: Array.isArray(r.manual_periods) ? r.manual_periods : [],
     completedAt: r.completed_at ?? null,
+    // Measurement layer. `kind` is backfilled server-side; infer for any legacy
+    // local cache row missing it (repeats→streak, linked→collection, else count).
+    kind: r.kind ?? (r.repeats ? 'streak' : (r.linked_preset || r.linked_log_id) ? 'collection' : 'count'),
+    direction: r.direction ?? null,
+    agg: r.agg ?? null,
+    targetValue: r.target_value != null ? Number(r.target_value) : null,
+    parentGoalId: r.parent_goal_id ?? null,
+    joinCode: r.join_code ?? null,
   };
 }
 
@@ -146,7 +154,39 @@ export function goalToRow(g: Goal, userId: string) {
     period_target: g.periodTarget ?? null,
     manual_periods: g.manualPeriods ?? [],
     completed_at: g.completedAt ?? null,
+    kind: g.kind ?? (g.repeats ? 'streak' : (g.linkedPreset || g.linkedLogId) ? 'collection' : 'count'),
+    direction: g.direction ?? null,
+    agg: g.agg ?? null,
+    target_value: g.targetValue ?? null,
+    parent_goal_id: g.parentGoalId ?? null,
+    join_code: g.joinCode ?? null,
     created_at: tsFromDate(g.created),
+  };
+}
+
+// ---- Goal attempts (VALUE goals) ------------------------------------------
+export function rowToGoalAttempt(r: any): GoalAttempt {
+  return {
+    id: r.id,
+    goalId: r.goal_id,
+    profileId: r.profile_id,
+    value: Number(r.value ?? 0),
+    occurredAt: datePart(r.occurred_at ?? ''),
+    note: r.note ?? '',
+    links: r.links ?? [],
+    createdAt: r.created_at ?? undefined,
+  };
+}
+export function goalAttemptToRow(a: GoalAttempt) {
+  // No user_id column — RLS scopes by profile ownership. created_at is a server default.
+  return {
+    id: a.id,
+    goal_id: a.goalId,
+    profile_id: a.profileId,
+    value: a.value,
+    occurred_at: dateCol(a.occurredAt),
+    note: a.note ?? '',
+    links: a.links ?? [],
   };
 }
 
@@ -236,29 +276,50 @@ export interface CloudSnapshot {
   events: Event[];
   goals: Goal[];
   memories: Memory[];
+  goalAttempts: GoalAttempt[];
   prefs: UserPrefs | null; // null => no prefs row => brand-new (not onboarded) user
 }
 
 export async function fetchAll(userId: string): Promise<CloudSnapshot> {
-  const [ev, go, me, pr] = await Promise.all([
+  // goal_attempts has no user_id column — RLS scopes it to the user's profiles,
+  // so an unfiltered select returns only their own rows.
+  const [ev, go, me, ga, pr] = await Promise.all([
     supabase.from('events').select('*').eq('user_id', userId),
     supabase.from('goals').select('*').eq('user_id', userId),
     supabase.from('memories').select('*').eq('user_id', userId),
+    supabase.from('goal_attempts').select('*'),
     supabase.from('prefs').select('*').eq('user_id', userId).maybeSingle(),
   ]);
   if (ev.error) throw ev.error;
   if (go.error) throw go.error;
   if (me.error) throw me.error;
+  if (ga.error) throw ga.error;
   if (pr.error) throw pr.error;
   return {
     events: (ev.data ?? []).map(rowToEvent),
     goals: (go.data ?? []).map(rowToGoal),
     memories: (me.data ?? []).map(rowToMemory),
+    goalAttempts: (ga.data ?? []).map(rowToGoalAttempt),
     prefs: pr.data ? rowToPrefs(pr.data) : null,
   };
 }
 
-export type CloudTable = 'events' | 'goals' | 'memories';
+// The current user's PRIMARY profile id (needed to write goal_attempts). Tries a
+// user_id-owned profile first, then a profile whose id IS the auth user id.
+// Returns null on error/none (attempt writes are then gated until it resolves).
+export async function fetchPrimaryProfileId(userId: string): Promise<string | null> {
+  try {
+    const byOwner = await supabase.from('profiles').select('id').eq('user_id', userId).limit(1).maybeSingle();
+    if (!byOwner.error && byOwner.data?.id) return byOwner.data.id as string;
+  } catch { /* fall through */ }
+  try {
+    const byId = await supabase.from('profiles').select('id').eq('id', userId).maybeSingle();
+    if (!byId.error && byId.data?.id) return byId.data.id as string;
+  } catch { /* fall through */ }
+  return null;
+}
+
+export type CloudTable = 'events' | 'goals' | 'memories' | 'goal_attempts';
 
 export async function dbUpsert(table: CloudTable, row: any): Promise<void> {
   const { error } = await supabase.from(table).upsert(row);
@@ -267,6 +328,13 @@ export async function dbUpsert(table: CloudTable, row: any): Promise<void> {
 
 export async function dbDelete(table: CloudTable, id: string, userId: string): Promise<void> {
   const { error } = await supabase.from(table).delete().eq('id', id).eq('user_id', userId);
+  if (error) throw error;
+}
+
+// Delete by id only (for tables without a user_id column, e.g. goal_attempts —
+// RLS restricts to the caller's own rows via profile ownership).
+export async function dbDeleteById(table: CloudTable, id: string): Promise<void> {
+  const { error } = await supabase.from(table).delete().eq('id', id);
   if (error) throw error;
 }
 

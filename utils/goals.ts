@@ -1,4 +1,4 @@
-import type { Goal, Memory, LogEntry } from '../store/types';
+import type { Goal, Memory, LogEntry, GoalAttempt, GoalKind } from '../store/types';
 import { isCollectionLog, isUpcomingEntry } from './lifelog';
 import { fmtShort } from './dates';
 
@@ -80,4 +80,70 @@ export function windowLabel(g: Goal): string {
   if (win === 'year') return `in ${g.windowYear ?? ''}`.trim();
   if (win === 'by_date') return `${fmtShort(effectiveStart(g))} – ${fmtShort(g.date)}`;
   return 'all-time';
+}
+
+// ── Kind ────────────────────────────────────────────────────────────────────
+// The goal's kind, inferring for any legacy row missing it (repeats→streak,
+// linked→collection, else count) so pre-measurement goals behave as before.
+export function goalKind(g: Goal): GoalKind {
+  if (g.kind) return g.kind;
+  if (g.repeats) return 'streak';
+  if (isLinkedGoal(g)) return 'collection';
+  return 'count';
+}
+
+// ── VALUE goals: derived standing from attempts (never stored) ───────────────
+function attemptsFor(g: Goal, attempts: GoalAttempt[]): GoalAttempt[] {
+  return attempts.filter(a => a.goalId === g.id);
+}
+// Reverse-chronological (newest first) by occurredAt then createdAt.
+export function sortedAttempts(g: Goal, attempts: GoalAttempt[]): GoalAttempt[] {
+  return attemptsFor(g, attempts).sort((a, b) =>
+    (b.occurredAt || '').localeCompare(a.occurredAt || '') ||
+    (b.createdAt || '').localeCompare(a.createdAt || ''));
+}
+// Current standing: best (min for lower / max for higher), sum, or latest.
+export function valueScore(g: Goal, attempts: GoalAttempt[]): number | null {
+  const list = attemptsFor(g, attempts);
+  if (!list.length) return null;
+  const agg = g.agg ?? 'best';
+  if (agg === 'sum') return list.reduce((s, a) => s + a.value, 0);
+  if (agg === 'latest') return sortedAttempts(g, attempts)[0].value;
+  const vals = list.map(a => a.value);
+  return g.direction === 'lower' ? Math.min(...vals) : Math.max(...vals);
+}
+export function valueReached(g: Goal, score: number | null): boolean {
+  if (score == null || g.targetValue == null) return false;
+  return g.direction === 'lower' ? score <= g.targetValue : score >= g.targetValue;
+}
+// 0–100 progress toward the value target (best-effort for the bar).
+export function valuePct(g: Goal, score: number | null): number {
+  if (score == null || g.targetValue == null || g.targetValue === 0) return 0;
+  const raw = g.direction === 'lower'
+    ? (g.targetValue / score) * 100   // lower is better → closer to (or below) target = more
+    : (score / g.targetValue) * 100;
+  return Math.max(0, Math.min(100, Math.round(raw)));
+}
+
+// ── QUEST goals: fraction of child goals completed ───────────────────────────
+export function questChildren(g: Goal, goals: Goal[]): Goal[] {
+  return goals.filter(x => x.parentGoalId === g.id);
+}
+export function questProgress(g: Goal, goals: Goal[], memories: Memory[], attempts: GoalAttempt[]): { done: number; total: number } {
+  const children = questChildren(g, goals);
+  const done = children.filter(c => isGoalComplete(c, goals, memories, attempts)).length;
+  return { done, total: children.length };
+}
+
+// ── Unified completion across all kinds ──────────────────────────────────────
+export function isGoalComplete(g: Goal, goals: Goal[], memories: Memory[], attempts: GoalAttempt[]): boolean {
+  switch (goalKind(g)) {
+    case 'milestone': return !!g.completedAt;
+    case 'value':     return valueReached(g, valueScore(g, attempts));
+    case 'quest': {
+      const { done, total } = questProgress(g, goals, memories, attempts);
+      return total > 0 && done === total;
+    }
+    default:          return goalDone(g, memories); // count / collection / streak — reused
+  }
 }

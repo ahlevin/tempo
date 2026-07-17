@@ -4,7 +4,8 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useStore } from '../store/useStore';
 import { FL } from './FormControls';
 import { DateTimeField } from './DateTimeField';
-import type { GoalWindowKind, GoalPeriodKind } from '../store/types';
+import { isTimeUnit } from '../utils/values';
+import type { GoalWindowKind, GoalPeriodKind, GoalKind, GoalDirection, GoalAgg } from '../store/types';
 
 export interface GoalLink {
   linkedLogId?: string | null;
@@ -79,10 +80,11 @@ const PERIODS: { kind: GoalPeriodKind; label: string; noun: string }[] = [
 
 // Recurring toggle + period picker + target-per-period. When repeats is ON the
 // caller hides the one-shot fields (single target / deadline / progress window).
-export function GoalRepeatSection({ repeats, onRepeats, periodKind, onPeriodKind, periodTarget, onPeriodTarget }: {
+export function GoalRepeatSection({ repeats, onRepeats, periodKind, onPeriodKind, periodTarget, onPeriodTarget, showToggle = true }: {
   repeats: boolean; onRepeats: (v: boolean) => void;
   periodKind: GoalPeriodKind; onPeriodKind: (k: GoalPeriodKind) => void;
   periodTarget: string; onPeriodTarget: (v: string) => void;
+  showToggle?: boolean;  // false → always show period fields (kind is already 'streak')
 }) {
   const { colors } = useTheme();
   const { chip, chipText } = useChipStyles();
@@ -91,8 +93,8 @@ export function GoalRepeatSection({ repeats, onRepeats, periodKind, onPeriodKind
     borderRadius: 12, padding: 12, color: colors.text1, fontSize: 15, marginBottom: 14 };
   return (
     <>
-      <MiniToggle label="🔁 Repeats (streak goal)" value={repeats} onChange={onRepeats} />
-      {repeats && (
+      {showToggle && <MiniToggle label="🔁 Repeats (streak goal)" value={repeats} onChange={onRepeats} />}
+      {(repeats || !showToggle) && (
         <>
           <FL label="Period" />
           <View style={{ flexDirection: 'row', gap: 6, marginBottom: 14 }}>
@@ -189,6 +191,83 @@ export function GoalLogLink({ value, onChange }: { value: GoalLink; onChange: (v
           )}
         </View>
       )}
+    </>
+  );
+}
+
+// ── Kind picker + value fields (measurement layer) ──────────────────────────
+const KINDS: { kind: GoalKind; emoji: string; label: string }[] = [
+  { kind: 'milestone',  emoji: '🏁', label: 'Milestone' },
+  { kind: 'count',      emoji: '🔢', label: 'Count' },
+  { kind: 'collection', emoji: '🗺️', label: 'Collection' },
+  { kind: 'streak',     emoji: '🔥', label: 'Streak' },
+  { kind: 'value',      emoji: '📈', label: 'Value' },
+  { kind: 'quest',      emoji: '🧭', label: 'Quest' },
+];
+
+export function GoalKindPicker({ value, onChange }: { value: GoalKind; onChange: (k: GoalKind) => void }) {
+  const { colors } = useTheme();
+  return (
+    <>
+      <FL label="Goal type" />
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 7, marginBottom: 14 }}>
+        {KINDS.map(k => {
+          const sel = value === k.kind;
+          return (
+            <TouchableOpacity key={k.kind} onPress={() => onChange(k.kind)}
+              style={{ paddingVertical: 8, paddingHorizontal: 12, borderRadius: 11, borderWidth: 1.5,
+                borderColor: sel ? colors.teal : colors.border,
+                backgroundColor: sel ? (colors.isDark ? 'rgba(62,207,178,0.14)' : colors.tint) : colors.glass }}>
+              <Text style={{ fontSize: 13, fontWeight: sel ? '700' : '600', color: sel ? colors.teal : colors.text2 }}>{k.emoji} {k.label}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </>
+  );
+}
+
+// The four value sub-types → direction + agg + unit defaults (all overridable).
+export const VALUE_SUBTYPES: { id: string; label: string; direction: GoalDirection; agg: GoalAgg; unit: string }[] = [
+  { id: 'time',       label: 'Beat a time / score (lower is better)', direction: 'lower',  agg: 'best',   unit: 'sec' },
+  { id: 'reach',      label: 'Reach a number (higher is better)',     direction: 'higher', agg: 'best',   unit: '' },
+  { id: 'accumulate', label: 'Accumulate a total',                    direction: 'higher', agg: 'sum',    unit: '' },
+  { id: 'balance',    label: 'Track a balance (latest wins)',         direction: 'higher', agg: 'latest', unit: '$' },
+];
+
+export function GoalValueSection({ direction, agg, unit, targetValue, onPick, onUnit, onTargetValue }: {
+  direction: GoalDirection; agg: GoalAgg; unit: string; targetValue: string;
+  onPick: (d: GoalDirection, a: GoalAgg, unit: string) => void;
+  onUnit: (u: string) => void;
+  onTargetValue: (v: string) => void;
+}) {
+  const { colors } = useTheme();
+  const fi = { backgroundColor: colors.glass, borderWidth: 1, borderColor: colors.border,
+    borderRadius: 12, padding: 12, color: colors.text1, fontSize: 15, marginBottom: 14 };
+  const activeSub = VALUE_SUBTYPES.find(s => s.direction === direction && s.agg === agg)?.id;
+  return (
+    <>
+      <FL label="What are you tracking?" />
+      <View style={{ gap: 7, marginBottom: 14 }}>
+        {VALUE_SUBTYPES.map(s => {
+          const sel = activeSub === s.id;
+          return (
+            <TouchableOpacity key={s.id} onPress={() => onPick(s.direction, s.agg, s.unit)}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 10, padding: 11, borderRadius: 11, borderWidth: 1.5,
+                borderColor: sel ? colors.teal : colors.border,
+                backgroundColor: sel ? (colors.isDark ? 'rgba(62,207,178,0.12)' : colors.tint) : colors.glass }}>
+              <Text style={{ flex: 1, fontSize: 13, fontWeight: '600', color: sel ? colors.teal : colors.text1 }}>{s.label}</Text>
+              {sel && <Text style={{ fontSize: 15, color: colors.teal }}>✓</Text>}
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+      <FL label="Unit (sec, lbs, miles, $, hrs, books…)" />
+      <TextInput value={unit} onChangeText={onUnit} placeholder="sec" autoCapitalize="none"
+        placeholderTextColor={colors.text3} style={fi} />
+      <FL label={`Target${isTimeUnit(unit) ? ' (mm:ss)' : ''}`} />
+      <TextInput value={targetValue} onChangeText={onTargetValue} autoCapitalize="none"
+        placeholder={isTimeUnit(unit) ? '6:00' : 'e.g. 225'} placeholderTextColor={colors.text3} style={fi} />
     </>
   );
 }

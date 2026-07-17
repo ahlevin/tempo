@@ -5,12 +5,13 @@ import { format, addDays } from 'date-fns';
 import { Event, Goal, Memory, UserPrefs, Alert, Recurrence } from './types';
 import { DEFAULT_HOLIDAY_IDS } from '../constants/holidays';
 import {
-  fetchAll, dbUpsert, dbDelete, dbUpsertPrefs,
-  eventToRow, goalToRow, memoryToRow, prefsToRow, uuid, CloudTable,
+  fetchAll, dbUpsert, dbDelete, dbDeleteById, dbUpsertPrefs, fetchPrimaryProfileId,
+  eventToRow, goalToRow, memoryToRow, goalAttemptToRow, prefsToRow, uuid, CloudTable,
 } from '../lib/db';
+import type { GoalAttempt, Link } from './types';
 import { fetchUniverses, setUniverseOverlay, UniverseRow } from '../lib/universes';
 import { currentPeriodKey } from '../utils/recurring';
-import { goalDone } from '../utils/goals';
+import { goalDone, goalKind } from '../utils/goals';
 
 const today = () => format(new Date(), 'yyyy-MM-dd');
 
@@ -36,6 +37,8 @@ interface TempoStore {
   events: Event[];
   goals: Goal[];
   memories: Memory[];
+  goalAttempts: GoalAttempt[];       // value-goal measurements (goal_attempts table)
+  profileId: string | null;          // current user's primary profile id (for attempt writes)
   prefs: UserPrefs;
   userId: string | null;
   prefsExists: boolean;   // did a prefs row exist in the cloud? (false => new user)
@@ -61,6 +64,12 @@ interface TempoStore {
   reconcileGoalCompletions: () => void;
   setGoalProgress: (id: string, value: number) => void;
   toggleGoalFav: (id: string) => void;
+  /** MILESTONE goals: set/clear completed_at (its done state). */
+  setMilestoneDone: (id: string, done: boolean) => void;
+  /** VALUE goals: attempts round-trip through goal_attempts. */
+  addGoalAttempt: (a: { goalId: string; value: number; occurredAt: string; note?: string; links?: Link[] }) => string | null;
+  updateGoalAttempt: (id: string, patch: Partial<Pick<GoalAttempt, 'value' | 'occurredAt' | 'note' | 'links'>>) => void;
+  deleteGoalAttempt: (id: string) => void;
   addMemory: (m: Omit<Memory, 'id'>) => string;
   updateMemory: (id: string, patch: Partial<Memory>) => void;
   deleteMemory: (id: string) => void;
@@ -117,6 +126,7 @@ function opDesc(op: SyncOp): string {
 function rowForUpsert(s: TempoStore, table: CloudTable, id: string, uid: string) {
   if (table === 'events') { const e = s.events.find(x => x.id === id); return e ? eventToRow(e, uid) : null; }
   if (table === 'goals')  { const g = s.goals.find(x => x.id === id);  return g ? goalToRow(g, uid) : null; }
+  if (table === 'goal_attempts') { const a = s.goalAttempts.find(x => x.id === id); return a ? goalAttemptToRow(a) : null; }
   const m = s.memories.find(x => x.id === id); return m ? memoryToRow(m, uid) : null;
 }
 
@@ -165,7 +175,9 @@ export const useStore = create<TempoStore>()(
             await dbUpsert(op.table, row);
           } else {
             slog(`→ DELETE /rest/v1/${op.table} (id=${op.id})`);
-            await dbDelete(op.table, op.id, uid);
+            // goal_attempts has no user_id column → delete by id (RLS-scoped).
+            if (op.table === 'goal_attempts') await dbDeleteById(op.table, op.id);
+            else await dbDelete(op.table, op.id, uid);
           }
           slog(`✓ ${opDesc(op)} written`);
           return 'ok';
@@ -176,7 +188,7 @@ export const useStore = create<TempoStore>()(
       };
 
       return {
-        events: [], goals: [], memories: [], prefs: DEFAULT_PREFS,
+        events: [], goals: [], memories: [], goalAttempts: [], profileId: null, prefs: DEFAULT_PREFS,
         userId: null, prefsExists: false, loading: false, ready: false, outbox: [],
         remoteUniverses: [],
 
@@ -196,10 +208,12 @@ export const useStore = create<TempoStore>()(
           const sameUser = prev === uid;
           if (prev && !sameUser) {
             // User switch: never let User B see User A's cache.
-            set({ events: [], goals: [], memories: [], prefs: DEFAULT_PREFS, prefsExists: false, outbox: [] });
+            set({ events: [], goals: [], memories: [], goalAttempts: [], profileId: null, prefs: DEFAULT_PREFS, prefsExists: false, outbox: [] });
           }
           // Same user with a warm cache => show instantly and refresh in background.
           set({ userId: uid, loading: true, ready: sameUser });
+          // Resolve the primary profile id (non-blocking) so value-attempt writes work.
+          void fetchPrimaryProfileId(uid).then(pid => { if (pid) set({ profileId: pid }); });
           try {
             await get().flushOutbox();                 // push local intent first (LWW)
             const snap = await fetchAll(uid);
@@ -212,6 +226,7 @@ export const useStore = create<TempoStore>()(
               events:   mergePending(snap.events,   get().events,   pendingUpsertIds(ob, 'events'),   pendingDeleteIds(ob, 'events')),
               goals:    mergePending(snap.goals,    get().goals,    pendingUpsertIds(ob, 'goals'),    pendingDeleteIds(ob, 'goals')),
               memories: mergePending(snap.memories, get().memories, pendingUpsertIds(ob, 'memories'), pendingDeleteIds(ob, 'memories')),
+              goalAttempts: mergePending(snap.goalAttempts, get().goalAttempts, pendingUpsertIds(ob, 'goal_attempts'), pendingDeleteIds(ob, 'goal_attempts')),
               prefs: prefsPending ? get().prefs : (snap.prefs ?? DEFAULT_PREFS),
               prefsExists: snap.prefs !== null || prefsPending,
               loading: false, ready: true,
@@ -225,7 +240,7 @@ export const useStore = create<TempoStore>()(
 
         clearForSignOut: () => {
           set({
-            events: [], goals: [], memories: [], prefs: DEFAULT_PREFS,
+            events: [], goals: [], memories: [], goalAttempts: [], profileId: null, prefs: DEFAULT_PREFS,
             userId: null, prefsExists: false, loading: false, ready: false, outbox: [],
           });
         },
@@ -313,8 +328,11 @@ export const useStore = create<TempoStore>()(
           enqueue({ kind: 'upsert', table: 'goals', id });
         },
         deleteGoal: (id) => {
-          set(s => ({ goals: s.goals.filter(g => g.id !== id) }));
+          // Cascade the goal's value attempts locally + in the sync queue.
+          const attemptIds = get().goalAttempts.filter(a => a.goalId === id).map(a => a.id);
+          set(s => ({ goals: s.goals.filter(g => g.id !== id), goalAttempts: s.goalAttempts.filter(a => a.goalId !== id) }));
           enqueue({ kind: 'delete', table: 'goals', id });
+          attemptIds.forEach(aid => enqueue({ kind: 'delete', table: 'goal_attempts', id: aid }));
         },
         nudgeGoal: (id, dir) => {
           set(s => ({ goals: s.goals.map(g => g.id !== id ? g : { ...g, current: Math.max(0, Math.min(g.target, g.current + dir * (g.step || 1))) }) }));
@@ -345,7 +363,12 @@ export const useStore = create<TempoStore>()(
         // completion is permanent — never cleared/re-stamped if it later drops.
         reconcileGoalCompletions: () => {
           const s = get();
-          const toStamp = s.goals.filter(g => !g.repeats && !g.completedAt && goalDone(g, s.memories));
+          // Only numeric-target one-shot kinds auto-stamp on reaching target.
+          // milestone/value/quest manage their own completion; streak recurs.
+          const toStamp = s.goals.filter(g => {
+            const k = goalKind(g);
+            return (k === 'count' || k === 'collection') && !g.completedAt && goalDone(g, s.memories);
+          });
           if (!toStamp.length) return;
           const ids = new Set(toStamp.map(g => g.id));
           const ts = new Date().toISOString();
@@ -359,6 +382,33 @@ export const useStore = create<TempoStore>()(
         toggleGoalFav: (id) => {
           set(s => ({ goals: s.goals.map(g => g.id === id ? { ...g, fav: !g.fav } : g) }));
           enqueue({ kind: 'upsert', table: 'goals', id });
+        },
+        // MILESTONE goals: completed_at IS the done state. Stamp now / clear it.
+        setMilestoneDone: (id, done) => {
+          set(s => ({ goals: s.goals.map(g => g.id === id ? { ...g, completedAt: done ? new Date().toISOString() : null } : g) }));
+          enqueue({ kind: 'upsert', table: 'goals', id });
+        },
+        // VALUE attempts. profileId must be resolved (loaded on sign-in); returns
+        // null if it isn't yet (UI surfaces that). Attempts round-trip via goal_attempts.
+        addGoalAttempt: (a) => {
+          const profileId = get().profileId;
+          if (!profileId) { slog('addGoalAttempt: no profileId yet — skipped'); return null; }
+          const id = uuid();
+          const attempt: GoalAttempt = {
+            id, goalId: a.goalId, profileId, value: a.value, occurredAt: a.occurredAt,
+            note: a.note ?? '', links: a.links ?? [], createdAt: new Date().toISOString(),
+          };
+          set(s => ({ goalAttempts: [...s.goalAttempts, attempt] }));
+          enqueue({ kind: 'upsert', table: 'goal_attempts', id });
+          return id;
+        },
+        updateGoalAttempt: (id, patch) => {
+          set(s => ({ goalAttempts: s.goalAttempts.map(x => x.id === id ? { ...x, ...patch } : x) }));
+          enqueue({ kind: 'upsert', table: 'goal_attempts', id });
+        },
+        deleteGoalAttempt: (id) => {
+          set(s => ({ goalAttempts: s.goalAttempts.filter(x => x.id !== id) }));
+          enqueue({ kind: 'delete', table: 'goal_attempts', id });
         },
         addMemory: (m) => {
           const id = uuid();
@@ -587,6 +637,7 @@ export const useStore = create<TempoStore>()(
       // start resolves offline); loading/ready are runtime.
       partialize: (s) => ({
         events: s.events, goals: s.goals, memories: s.memories,
+        goalAttempts: s.goalAttempts, profileId: s.profileId,
         prefs: s.prefs, userId: s.userId, prefsExists: s.prefsExists, outbox: s.outbox,
         remoteUniverses: s.remoteUniverses,
       }),

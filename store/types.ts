@@ -40,6 +40,26 @@ export type GoalWindowKind = 'year' | 'by_date' | 'all_time';
 
 export type GoalPeriodKind = 'day' | 'week' | 'month';
 
+// The six goal KINDS. count/collection/streak reuse the existing machinery
+// (target/step, linked preset, repeats/period) unchanged; milestone/value/quest
+// are new. `kind` is backfilled server-side for existing goals.
+export type GoalKind = 'milestone' | 'count' | 'collection' | 'streak' | 'value' | 'quest';
+export type GoalDirection = 'lower' | 'higher';
+export type GoalAgg = 'best' | 'sum' | 'latest';
+
+// A single measured attempt for a VALUE goal (goal_attempts table). Derived
+// progress (best/sum/latest) is computed from these — never stored on the goal.
+export interface GoalAttempt {
+  id: string;
+  goalId: string;
+  profileId: string;
+  value: number;         // numeric; for time units stored as total seconds
+  occurredAt: string;    // "YYYY-MM-DD"
+  note?: string;
+  links?: Link[];
+  createdAt?: string;    // ISO; server default
+}
+
 /** One period's manual progress for a RECURRING manual goal. `key` is the
  *  period key (e.g. "2026-07-09" | "2026-W28" | "2026-07"); `n` the tapped
  *  count in that period. A period counts as "met" when n >= periodTarget.
@@ -81,8 +101,21 @@ export interface Goal {
   manualPeriods?: ManualPeriod[]; // MANUAL recurring only; derived streak source
   /** ISO timestamp stamped ONCE, the first time a NON-recurring goal reaches
    *  done. A completion is a historical fact: never cleared or re-stamped if the
-   *  goal later drops below target. Recurring goals never set this. */
+   *  goal later drops below target. Recurring goals never set this. For MILESTONE
+   *  goals it IS the progress (set → done). */
   completedAt?: string | null;
+  // ── Measurement layer ──────────────────────────────────────────────────
+  /** Goal kind. count/collection/streak behave exactly as before. */
+  kind?: GoalKind;
+  /** VALUE goals: is a lower or higher number better, and how to aggregate
+   *  attempts. compared to targetValue. */
+  direction?: GoalDirection | null;
+  agg?: GoalAgg | null;
+  targetValue?: number | null;
+  /** QUEST children point at their parent quest goal. */
+  parentGoalId?: string | null;
+  /** Reserved for a later (multiplayer) prompt — not used here. */
+  joinCode?: string | null;
 }
 
 export type DatePrecision = 'none' | 'year' | 'month' | 'full';

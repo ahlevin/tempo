@@ -8,18 +8,20 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { CloseButton } from '../../components/CloseButton';
 import { IconPicker } from '../../components/IconPicker';
 import { useStore } from '../../store/useStore';
-import { Alert as AlertType, Link } from '../../store/types';
+import { Alert as AlertType, Link, GoalKind, GoalDirection, GoalAgg } from '../../store/types';
 import { DateTimeField } from '../../components/DateTimeField';
 import { AlertsEditor } from '../../components/AlertsEditor';
 import { LinksEditor } from '../../components/LinksEditor';
-import { GoalWindowPicker, GoalLogLink, GoalRepeatSection, GoalLink } from '../../components/GoalLinkSection';
+import { GoalWindowPicker, GoalLogLink, GoalRepeatSection, GoalKindPicker, GoalValueSection, GoalLink } from '../../components/GoalLinkSection';
 import { Toggle } from '../../components/FormControls';
+import { parseValue } from '../../utils/values';
 import type { GoalPeriodKind } from '../../store/types';
 
 export default function AddGoalModal() {
   const { colors } = useTheme();
   const addGoal = useStore(s => s.addGoal);
   const { showToast } = useToast();
+  const [kind,   setKind]   = useState<GoalKind>('count');
   const [name,   setName]   = useState('');
   const [target, setTarget] = useState('');
   const [unit,   setUnit]   = useState('');
@@ -31,32 +33,41 @@ export default function AddGoalModal() {
   const [links,  setLinks]  = useState<Link[]>([]);
   const [link,   setLink]   = useState<GoalLink>({});
   const [showOnCountdown, setShowOnCountdown] = useState(false);
-  const [repeats, setRepeats] = useState(false);
   const [periodKind, setPeriodKind] = useState<GoalPeriodKind>('week');
   const [periodTarget, setPeriodTarget] = useState('');
+  // Value goal fields
+  const [direction, setDirection] = useState<GoalDirection>('lower');
+  const [agg, setAgg] = useState<GoalAgg>('best');
+  const [targetValue, setTargetValue] = useState('');
 
   const fi = { backgroundColor:colors.glass, borderWidth:1,
     borderColor:colors.border, borderRadius:12, padding:12,
     color:colors.text1, fontSize:15, marginBottom:14 };
-  // Linked goals derive progress → Unit/Increment Step are meaningless, so hidden.
   const linked = !!(link.linkedLogId || link.linkedPreset);
 
   function submit() {
-    if (repeats) {
-      // Recurring goal: per-period target, NO single deadline. Progress is
-      // linked (from a life log) or manual (the tap counter). target mirrors
-      // periodTarget so pct math stays valid.
+    if (!name.trim()) { showToast('⚠️', 'Missing info', 'Give the goal a name.'); return; }
+    const base = { name: name.trim(), emoji, fav: false, note: note.trim(), alerts, links, showOnCountdown };
+    if (kind === 'milestone') {
+      addGoal({ ...base, kind, target: 0, unit: '', step: 1, date, repeats: false });
+    } else if (kind === 'count') {
+      if (!target) { showToast('⚠️', 'Missing info', 'Enter a target.'); return; }
+      addGoal({ ...base, kind, target: parseFloat(target), unit: unit.trim() || 'units', step: parseFloat(step) || 1, date, repeats: false, ...link });
+    } else if (kind === 'collection') {
+      if (!linked) { showToast('⚠️', 'Link a life log', 'Collection goals track a linked log.'); return; }
+      if (!target) { showToast('⚠️', 'Missing info', 'Enter a target.'); return; }
+      addGoal({ ...base, kind, target: parseFloat(target), unit: '', step: 1, date, repeats: false, ...link });
+    } else if (kind === 'streak') {
       const pt = parseFloat(periodTarget);
-      if (!name.trim() || !pt) { showToast('⚠️', 'Missing info', 'Name and a target per period are required.'); return; }
-      addGoal({ name:name.trim(), emoji, target:pt, unit:unit.trim()||'units', step:1, date:'', fav:false,
-        note:note.trim(), alerts, links, showOnCountdown,
-        repeats:true, periodKind, periodTarget:pt, manualPeriods:[], ...link });
-      router.back();
-      return;
+      if (!pt) { showToast('⚠️', 'Missing info', 'Enter a target per period.'); return; }
+      addGoal({ ...base, kind, target: pt, unit: '', step: 1, date: '', repeats: true, periodKind, periodTarget: pt, manualPeriods: [], ...link });
+    } else if (kind === 'value') {
+      const tv = parseValue(targetValue, unit);
+      if (tv == null) { showToast('⚠️', 'Missing info', 'Enter a target value.'); return; }
+      addGoal({ ...base, kind, target: 0, unit: unit.trim(), step: 1, date, repeats: false, direction, agg, targetValue: tv });
+    } else { // quest
+      addGoal({ ...base, kind, target: 0, unit: '', step: 1, date: '', repeats: false });
     }
-    if (!name.trim() || !target || !date) { showToast('⚠️', 'Missing info', 'Please fill in all fields.'); return; }
-    addGoal({ name:name.trim(), emoji, target:parseFloat(target),
-      unit:unit.trim()||'units', step:parseFloat(step)||1, date, fav:false, note:note.trim(), alerts, links, showOnCountdown, ...link });
     router.back();
   }
 
@@ -73,51 +84,73 @@ export default function AddGoalModal() {
         <ScrollView contentContainerStyle={{ padding:20 }}
           showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
 
-          {/* 1 — Goal Name */}
+          <GoalKindPicker value={kind} onChange={setKind} />
+
           <FL label="Goal Name" />
           <TextInput value={name} onChangeText={setName}
-            placeholder="e.g. Run 100 miles…" placeholderTextColor={colors.text3} style={fi} />
+            placeholder="e.g. Run a 6:00 mile…" placeholderTextColor={colors.text3} style={fi} />
 
-          {/* Repeats (streak) toggle + period/target when on */}
-          <GoalRepeatSection repeats={repeats} onRepeats={setRepeats}
-            periodKind={periodKind} onPeriodKind={setPeriodKind}
-            periodTarget={periodTarget} onPeriodTarget={setPeriodTarget} />
-
-          {/* One-shot fields — hidden for recurring goals (period target replaces them) */}
-          {!repeats && (
+          {kind === 'value' && (
             <>
-              {/* 2–3 — Progress Window (+ Count from when By target date) */}
-              <GoalWindowPicker value={link} onChange={setLink} createdDate={format(new Date(), 'yyyy-MM-dd')} />
-              {/* 4 — Deadline */}
-              <DateTimeField mode="date" label="Deadline" value={date} onChange={setDate} />
+              <GoalValueSection direction={direction} agg={agg} unit={unit} targetValue={targetValue}
+                onPick={(d, a, u) => { setDirection(d); setAgg(a); if (u || !unit) setUnit(u); }}
+                onUnit={setUnit} onTargetValue={setTargetValue} />
+              <DateTimeField mode="date" label="Deadline (optional)" value={date} onChange={setDate} />
             </>
           )}
 
-          {/* 5–6 — Link to a life log + collapsed Life Log picker (both modes) */}
-          <GoalLogLink value={link} onChange={setLink} />
+          {kind === 'milestone' && (
+            <Text style={{ fontSize:12, color:colors.text3, marginBottom:14 }}>
+              Binary — done or not. Mark it complete from the goal. No target or unit.
+            </Text>
+          )}
 
-          {/* 7 — Target (one-shot only; recurring uses Target per period above) */}
-          {!repeats && (
+          {kind === 'quest' && (
+            <Text style={{ fontSize:12, color:colors.text3, marginBottom:14 }}>
+              A quest completes as its milestones do. Create it, then add milestones from the goal.
+            </Text>
+          )}
+
+          {kind === 'streak' && (
             <>
+              <GoalRepeatSection showToggle={false} repeats onRepeats={() => {}}
+                periodKind={periodKind} onPeriodKind={setPeriodKind}
+                periodTarget={periodTarget} onPeriodTarget={setPeriodTarget} />
+              <GoalLogLink value={link} onChange={setLink} />
+            </>
+          )}
+
+          {kind === 'collection' && (
+            <>
+              <GoalLogLink value={link} onChange={setLink} />
+              <GoalWindowPicker value={link} onChange={setLink} createdDate={format(new Date(), 'yyyy-MM-dd')} />
+              <DateTimeField mode="date" label="Deadline" value={date} onChange={setDate} />
               <FL label="Target" />
               <TextInput value={target} onChangeText={setTarget}
-                placeholder={linked ? 'e.g. 2' : '100'} placeholderTextColor={colors.text3}
-                keyboardType="numeric" style={fi} />
-              {!linked && (
-                <>
-                  <FL label="Unit" />
-                  <TextInput value={unit} onChangeText={setUnit}
-                    placeholder="miles, books, $…" placeholderTextColor={colors.text3} style={fi} />
-                  <FL label="Increment Step" />
-                  <TextInput value={step} onChangeText={setStep}
-                    placeholder="1" placeholderTextColor={colors.text3}
-                    keyboardType="numeric" style={fi} />
-                </>
-              )}
+                placeholder="e.g. 50" placeholderTextColor={colors.text3} keyboardType="numeric" style={fi} />
             </>
           )}
 
-          {/* 8 — DISPLAY & REMINDERS */}
+          {kind === 'count' && (
+            <>
+              <GoalWindowPicker value={link} onChange={setLink} createdDate={format(new Date(), 'yyyy-MM-dd')} />
+              <DateTimeField mode="date" label="Deadline" value={date} onChange={setDate} />
+              <FL label="Target" />
+              <TextInput value={target} onChangeText={setTarget}
+                placeholder="100" placeholderTextColor={colors.text3} keyboardType="numeric" style={fi} />
+              <FL label="Unit" />
+              <TextInput value={unit} onChangeText={setUnit}
+                placeholder="miles, books, $…" placeholderTextColor={colors.text3} style={fi} />
+              <FL label="Increment Step" />
+              <TextInput value={step} onChangeText={setStep}
+                placeholder="1" placeholderTextColor={colors.text3} keyboardType="numeric" style={fi} />
+            </>
+          )}
+
+          {kind === 'milestone' && (
+            <DateTimeField mode="date" label="Deadline (optional)" value={date} onChange={setDate} />
+          )}
+
           <SH label="Display & Reminders" />
           <Toggle label="⏳ Show on Countdowns" value={showOnCountdown} onChange={setShowOnCountdown} />
           <Text style={{ fontSize:11, color:colors.text3, marginTop:-6, marginBottom:14, marginLeft:2 }}>
@@ -125,7 +158,6 @@ export default function AddGoalModal() {
           </Text>
           <AlertsEditor value={alerts} onChange={setAlerts} />
 
-          {/* 11 — APPEARANCE */}
           <SH label="Appearance" />
           <FL label="Icon" />
           <IconPicker value={emoji} onChange={setEmoji} accent={colors.teal} />
@@ -135,7 +167,6 @@ export default function AddGoalModal() {
             style={{ ...fi, minHeight:64, textAlignVertical:'top' }} />
           <LinksEditor value={links} onChange={setLinks} />
 
-          {/* 15 — Save */}
           <TouchableOpacity onPress={submit}
             style={{ backgroundColor:colors.teal, borderRadius:14, padding:15, alignItems:'center', marginTop:8 }}>
             <Text style={{ color: colors.isDark ? '#0A0A0F' : '#fff', fontSize:15, fontWeight:'700' }}>Set Goal →</Text>
@@ -152,11 +183,9 @@ function FL({ label }: { label: string }) {
   return <Text style={{ fontSize:11, fontWeight:'600', color:colors.text3,
     textTransform:'uppercase', letterSpacing:0.5, marginBottom:6 }}>{label}</Text>;
 }
-
-// Grouped section header (underlined) — matches the app's grouped-form style.
-function SH({ label, first }: { label: string; first?: boolean }) {
+function SH({ label }: { label: string }) {
   const { colors } = useTheme();
   return <Text style={{ fontSize:12, fontWeight:'800', color:colors.text1, letterSpacing:0.4,
-    textTransform:'uppercase', marginTop: first ? 0 : 22, marginBottom:12,
+    textTransform:'uppercase', marginTop:22, marginBottom:12,
     borderBottomWidth:1, borderBottomColor:colors.border, paddingBottom:8 }}>{label}</Text>;
 }
