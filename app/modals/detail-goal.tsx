@@ -6,6 +6,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { dayCountColor } from '../../constants/colors';
 import { daysUntil, fmtDateTimeFull, fmtShort } from '../../utils/dates';
 import { DetailScreen, DetailCard, DetailHeader, StatRow, Section, Field, remindersText, LinksSection } from '../../components/DetailView';
+import { DateTimeField } from '../../components/DateTimeField';
 import { isLinkedGoal, goalDerivedProgress, goalDone, linkedLog, windowLabel, isRecurringGoal, hasDeadline,
   goalKind, valueScore, valueReached, valuePct, sortedAttempts, questChildren, questProgress, isGoalComplete } from '../../utils/goals';
 import { currentPeriodProgress, goalStreak, goalPeriodKind, goalPeriodTarget, periodLabel, periodNoun } from '../../utils/recurring';
@@ -99,8 +100,17 @@ export default function GoalDetailModal() {
                 backgroundColor: done ? colors.teal : 'transparent', alignItems: 'center', justifyContent: 'center' }}>
                 {done && <Text style={{ color: colors.isDark ? '#0A0A0F' : '#fff', fontSize: 16, fontWeight: '800' }}>✓</Text>}
               </View>
-              <Text style={{ fontSize: 15, fontWeight: '700', color: done ? colors.teal : colors.text1 }}>{done ? 'Completed' : 'Mark complete'}</Text>
+              <Text style={{ fontSize: 15, fontWeight: '700', color: done ? colors.teal : colors.text1 }}>
+                {done ? `Completed ${fmtShort(g.completedAt!)}` : 'Mark complete'}
+              </Text>
             </TouchableOpacity>
+            {done && (
+              <View style={{ marginTop: 12 }}>
+                <DateTimeField mode="date" label="Completion date"
+                  value={(g.completedAt ?? '').slice(0, 10)}
+                  onChange={d => setMilestoneDone(g.id, true, d)} />
+              </View>
+            )}
           </Section>
           <Footer g={g} recurring={false} />
         </DetailCard>

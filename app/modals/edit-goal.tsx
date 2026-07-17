@@ -15,6 +15,7 @@ import { GoalWindowPicker, GoalLogLink, GoalRepeatSection, GoalKindPicker, GoalV
 import { Toggle } from '../../components/FormControls';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { goalKind, questChildren, isGoalComplete } from '../../utils/goals';
+import { fmtShort } from '../../utils/dates';
 import type { GoalPeriodKind } from '../../store/types';
 
 export default function EditGoalModal() {
@@ -143,8 +144,24 @@ export default function EditGoalModal() {
 
           {kind === 'milestone' && (
             <>
-              <Text style={{ fontSize:12, color:colors.text3, marginBottom:14 }}>Binary — done or not. Toggle it complete from the goal.</Text>
+              <Text style={{ fontSize:12, color:colors.text3, marginBottom:14 }}>A dated achievement — mark it complete and set the date it happened.</Text>
               <DateTimeField mode="date" label="Deadline (optional)" value={date || ''} onChange={setDate} />
+              <TouchableOpacity onPress={() => setMilestoneDone(id, !g.completedAt)}
+                style={{ flexDirection:'row', alignItems:'center', gap:12, padding:14, borderRadius:14, borderWidth:1.5, marginBottom:14,
+                  borderColor: g.completedAt ? colors.teal : colors.border, backgroundColor: g.completedAt ? (colors.isDark ? 'rgba(62,207,178,0.12)' : colors.tint) : colors.glass }}>
+                <View style={{ width:28, height:28, borderRadius:8, borderWidth:2, borderColor: g.completedAt ? colors.teal : colors.border,
+                  backgroundColor: g.completedAt ? colors.teal : 'transparent', alignItems:'center', justifyContent:'center' }}>
+                  {!!g.completedAt && <Text style={{ color: colors.isDark ? '#0A0A0F' : '#fff', fontSize:16, fontWeight:'800' }}>✓</Text>}
+                </View>
+                <Text style={{ fontSize:15, fontWeight:'700', color: g.completedAt ? colors.teal : colors.text1 }}>
+                  {g.completedAt ? `Completed ${fmtShort(g.completedAt)}` : 'Mark complete'}
+                </Text>
+              </TouchableOpacity>
+              {!!g.completedAt && (
+                <DateTimeField mode="date" label="Completion date"
+                  value={g.completedAt.slice(0, 10)}
+                  onChange={d => setMilestoneDone(id, true, d)} />
+              )}
             </>
           )}
 

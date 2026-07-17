@@ -133,7 +133,9 @@ export function GoalCard({ goal: g }: { goal: Goal }) {
             </Text>
           )}
           {gk === 'milestone' && (
-            <Text style={{ fontSize: 13, color: colors.text2, marginTop: 2 }} numberOfLines={1}>🏁 Milestone{showDeadline && !!dstr ? ` · ${dstr}` : ''}</Text>
+            <Text style={{ fontSize: 13, color: msDone ? colors.teal : colors.text2, marginTop: 2 }} numberOfLines={1}>
+              {msDone ? `🏁 Completed ${fmtShort(g.completedAt!)}` : `🏁 Milestone${showDeadline && !!dstr ? ` · ${dstr}` : ''}`}
+            </Text>
           )}
           {gk === 'quest' && (
             <Text style={{ fontSize: 13, color: colors.text2, marginTop: 2 }} numberOfLines={1}>🧭 {quest.done} of {quest.total} milestones</Text>

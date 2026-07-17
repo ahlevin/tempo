@@ -64,8 +64,9 @@ interface TempoStore {
   reconcileGoalCompletions: () => void;
   setGoalProgress: (id: string, value: number) => void;
   toggleGoalFav: (id: string) => void;
-  /** MILESTONE goals: set/clear completed_at (its done state). */
-  setMilestoneDone: (id: string, done: boolean) => void;
+  /** MILESTONE goals: set/clear completed_at (its done state). When marking done,
+   *  `date` ("YYYY-MM-DD") sets the completion date; omitted → local today. */
+  setMilestoneDone: (id: string, done: boolean, date?: string) => void;
   /** VALUE goals: attempts round-trip through goal_attempts. */
   addGoalAttempt: (a: { goalId: string; value: number; occurredAt: string; note?: string; links?: Link[] }) => string | null;
   updateGoalAttempt: (id: string, patch: Partial<Pick<GoalAttempt, 'value' | 'occurredAt' | 'note' | 'links'>>) => void;
@@ -383,9 +384,15 @@ export const useStore = create<TempoStore>()(
           set(s => ({ goals: s.goals.map(g => g.id === id ? { ...g, fav: !g.fav } : g) }));
           enqueue({ kind: 'upsert', table: 'goals', id });
         },
-        // MILESTONE goals: completed_at IS the done state. Stamp now / clear it.
-        setMilestoneDone: (id, done) => {
-          set(s => ({ goals: s.goals.map(g => g.id === id ? { ...g, completedAt: done ? new Date().toISOString() : null } : g) }));
+        // MILESTONE goals: completed_at IS the done state. A milestone is a dated
+        // achievement, so store a user-chosen DATE (default local today), not "now".
+        // Anchor at local noon so the calendar day survives a UTC round-trip on read.
+        setMilestoneDone: (id, done, date) => {
+          const now = new Date();
+          const localToday = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+          const day = date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : localToday;
+          const completedAt = done ? `${day}T12:00:00` : null;
+          set(s => ({ goals: s.goals.map(g => g.id === id ? { ...g, completedAt } : g) }));
           enqueue({ kind: 'upsert', table: 'goals', id });
         },
         // VALUE attempts. profileId must be resolved (loaded on sign-in); returns
