@@ -10,8 +10,8 @@ import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { DateTimeField } from '../../components/DateTimeField';
 import { LinksEditor } from '../../components/LinksEditor';
+import { ValueInput } from '../../components/ValueInput';
 import { Link } from '../../store/types';
-import { parseValue, formatValue, isTimeUnit } from '../../utils/values';
 
 // Log (or edit) a single attempt for a VALUE goal. Params: id (goal id) and
 // optional attempt (attempt id) to edit an existing one.
@@ -31,7 +31,7 @@ export default function LogAttemptModal() {
   const editing = attempt ? attempts.find(a => a.id === attempt) : undefined;
   const unit = g?.unit ?? '';
 
-  const [value, setValue]   = useState(editing ? formatValue(editing.value, unit) : '');
+  const [value, setValue]   = useState<number | null>(editing ? editing.value : null);
   const [date,  setDate]    = useState(editing?.occurredAt || format(new Date(), 'yyyy-MM-dd'));
   const [note,  setNote]    = useState(editing?.note || '');
   const [links, setLinks]   = useState<Link[]>(editing?.links ?? []);
@@ -45,8 +45,8 @@ export default function LogAttemptModal() {
 
   function save() {
     if (saving.current) return;
-    const v = parseValue(value, unit);
-    if (v == null) { showToast('⚠️', 'Enter a value', isTimeUnit(unit) ? 'Use mm:ss (e.g. 6:21).' : 'Enter a number.'); return; }
+    const v = value;
+    if (v == null) { showToast('⚠️', 'Enter a value', 'Add a number to log this attempt.'); return; }
     if (editing) {
       updateGoalAttempt(editing.id, { value: v, occurredAt: date, note: note.trim(), links });
     } else {
@@ -75,10 +75,7 @@ export default function LogAttemptModal() {
           <View style={{ flexShrink:0 }}><CloseButton /></View>
         </View>
         <ScrollView contentContainerStyle={{ padding:20 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-          <FL label={`Value${isTimeUnit(unit) ? ' (mm:ss)' : unit ? ` (${unit})` : ''}`} />
-          <TextInput value={value} onChangeText={setValue} autoCapitalize="none"
-            placeholder={isTimeUnit(unit) ? '6:21' : (unit === '$' ? '1000' : 'e.g. 225')}
-            placeholderTextColor={colors.text3} style={fi} />
+          <ValueInput unit={unit} value={value} onChange={setValue} />
 
           <DateTimeField mode="date" label="Date" value={date} onChange={setDate} />
 
