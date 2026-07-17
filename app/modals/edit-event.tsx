@@ -49,6 +49,9 @@ export default function EditEventModal() {
     borderColor:colors.border, borderRadius:12, padding:12,
     color:colors.text1, fontSize:15, marginBottom:14 };
 
+  // Guard against double-invocation while a confirm is already in flight. MUST be
+  // above the not-found guard so hook count stays constant (Rules of Hooks / #300).
+  const deleting = useRef(false);
   // Never navigate during render (illegal side effect → ErrorBoundary). The
   // delete/save handlers own dismissal for the normal flow; this only covers a
   // stale id at mount. Guard returns null safely.
@@ -64,8 +67,6 @@ export default function EditEventModal() {
     router.back();
   }
 
-  // Guard against double-invocation while a confirm is already in flight.
-  const deleting = useRef(false);
   async function del() {
     if (deleting.current) return;
     deleting.current = true;

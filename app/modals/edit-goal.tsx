@@ -51,6 +51,9 @@ export default function EditGoalModal() {
   // Linked goals derive progress → Unit/Increment Step are meaningless, so hidden.
   const linked = !!(link.linkedLogId || link.linkedPreset);
 
+  // Guard against double-invocation while a confirm is already in flight. MUST be
+  // above the not-found guard so hook count stays constant (Rules of Hooks / #300).
+  const deleting = useRef(false);
   // Never navigate during render (illegal side effect → ErrorBoundary). Delete/
   // save own dismissal; this only covers a stale id at mount.
   useEffect(() => { if (!g) router.back(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -74,8 +77,6 @@ export default function EditGoalModal() {
     router.back();
   }
 
-  // Guard against double-invocation while a confirm is already in flight.
-  const deleting = useRef(false);
   async function del() {
     if (deleting.current) return;
     deleting.current = true;

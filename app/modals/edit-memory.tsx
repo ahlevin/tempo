@@ -43,6 +43,9 @@ export default function EditMemoryModal() {
     memorial:'Date to Remember', lifelog:'First Occurrence'
   };
 
+  // Guard against double-invocation while a confirm is already in flight. MUST be
+  // above the not-found guard so hook count stays constant (Rules of Hooks / #300).
+  const deleting = useRef(false);
   // Never navigate during render (illegal side effect → ErrorBoundary). Delete/
   // save own dismissal; this only covers a stale id at mount.
   useEffect(() => { if (!m) router.back(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -57,8 +60,6 @@ export default function EditMemoryModal() {
     router.back();
   }
 
-  // Guard against double-invocation while a confirm is already in flight.
-  const deleting = useRef(false);
   async function del() {
     if (deleting.current) return;
     deleting.current = true;
