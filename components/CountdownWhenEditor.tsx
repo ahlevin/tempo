@@ -29,23 +29,38 @@ const addHour = (iso: string) => {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}:00`;
 };
 
-export function defaultWhen(baseDay: string): WhenValue {
+const pad2 = (n: number) => String(n).padStart(2, '0');
+// A naive wall-clock string "YYYY-MM-DDTHH:mm:ss" from a Date's LOCAL parts (never
+// UTC — avoids the midnight-UTC off-by-one that flips the day in UTC− zones).
+const localWall = (dt: Date) =>
+  `${dt.getFullYear()}-${pad2(dt.getMonth() + 1)}-${pad2(dt.getDate())}T${pad2(dt.getHours())}:${pad2(dt.getMinutes())}:00`;
+const localDateStr = (dt: Date) => `${dt.getFullYear()}-${pad2(dt.getMonth() + 1)}-${pad2(dt.getDate())}`;
+
+// Sensible new-countdown defaults, computed from the viewer's LOCAL clock:
+//  - date        = today (local)
+//  - time        = the NEXT round hour (10:03 → 11:00; 10:00 → 11:00), like
+//                  Google/Apple Calendar. Rolling past midnight advances the date
+//                  (JS Date normalizes hour 24 → next local day).
+//  - end (when added) = start + 1h; timezone = device tz.
+export function defaultWhen(now: Date = new Date()): WhenValue {
+  const nextHour = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours() + 1, 0, 0, 0);
+  const plusOne = new Date(nextHour.getTime() + 60 * 60 * 1000);
   return {
     type: 'date_only',
-    dateOnlyDate: baseDay,
+    dateOnlyDate: localDateStr(now),
     dateOnlyEnd: '',
-    exactStart: `${baseDay}T19:00:00`,
-    exactEnd: `${baseDay}T20:00:00`,
+    exactStart: localWall(nextHour),
+    exactEnd: localWall(plusOne),
     exactHasEnd: false,
     exactTz: deviceTz(),
-    floatWhen: `${baseDay}T09:00:00`,
+    floatWhen: localWall(nextHour),
   };
 }
 
 // Prefill the editor from an existing event (for edit / type conversions).
 export function eventToWhen(e: Event): WhenValue {
   const t = countdownType(e);
-  const base = defaultWhen((e.start ?? '').slice(0, 10) || new Date().toISOString().slice(0, 10));
+  const base = defaultWhen();
   if (t === 'exact_instant') {
     return { ...base, type: t,
       exactStart: e.startLocal || e.start || base.exactStart,

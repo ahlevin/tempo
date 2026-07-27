@@ -3,7 +3,6 @@ import { ScrollView, View, Text, TextInput, TouchableOpacity, KeyboardAvoidingVi
 import { useToast } from '../../components/Toast';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { format, addDays } from 'date-fns';
 import { useTheme } from '../../contexts/ThemeContext';
 import { CloseButton } from '../../components/CloseButton';
 import { CATEGORIES } from '../../constants/data';
@@ -22,9 +21,8 @@ export default function AddEventModal() {
   const addEvent    = useStore(s => s.addEvent);
   const addLogEntry = useStore(s => s.addLogEntry);
   const { showToast } = useToast();
-  const defaultDay = format(addDays(new Date(), 30), 'yyyy-MM-dd');
   const [name,    setName]    = useState('');
-  const [when,    setWhen]    = useState<WhenValue>(() => defaultWhen(defaultDay));
+  const [when,    setWhen]    = useState<WhenValue>(() => defaultWhen());
   const [emoji,   setEmoji]   = useState('🎉');
   const [cat,     setCat]     = useState('parties');
   const [note,   setNote]   = useState('');

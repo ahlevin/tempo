@@ -3,7 +3,6 @@ import { ScrollView, View, Text, TextInput, TouchableOpacity, KeyboardAvoidingVi
 import { useToast } from '../../components/Toast';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
-import { format } from 'date-fns';
 import { useTheme } from '../../contexts/ThemeContext';
 import { CloseButton } from '../../components/CloseButton';
 import { CATEGORIES } from '../../constants/data';
@@ -31,7 +30,7 @@ export default function EditEventModal() {
   const attachRef = useRef<AttachHandle>(null);
 
   const [name,   setName]   = useState(event?.name   || '');
-  const [when,   setWhen]   = useState<WhenValue>(() => event ? eventToWhen(event) : defaultWhen(format(new Date(), 'yyyy-MM-dd')));
+  const [when,   setWhen]   = useState<WhenValue>(() => event ? eventToWhen(event) : defaultWhen());
   const [emoji,  setEmoji]  = useState(event?.emoji  || '🎉');
   const [cat,    setCat]    = useState<string>(event?.cat || 'parties');
   const [note,   setNote]   = useState(event?.note   || '');
