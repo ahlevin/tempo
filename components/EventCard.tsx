@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Text, View } from 'react-native';
 import { catBg, catColor, dayCountColor } from '../constants/colors';
 import { useTheme } from '../contexts/ThemeContext';
@@ -9,7 +10,9 @@ import { CountdownCard } from './CountdownCard';
 import { nextOccurrence, daysUntil, eventProgress, recurLabel, fmtDateTime } from '../utils/dates';
 import { openEventDetail } from '../utils/nav';
 
-export function EventCard({ event: e }: { event: Event }) {
+// memo: EventCard reads only its `event` prop + stable store actions, so it skips
+// re-render when the countdowns list re-renders for an unrelated (goal/memory) change.
+export const EventCard = memo(function EventCard({ event: e }: { event: Event }) {
   const { colors } = useTheme();
   const toggleFav   = useStore(s => s.toggleEventFav);
   const deleteEvent = useStore(s => s.deleteEvent);
@@ -50,4 +53,4 @@ export function EventCard({ event: e }: { event: Event }) {
       confirmMessage={`Delete "${e.name}"? This can't be undone.`}
     />
   );
-}
+});

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 import { DimensionValue, Text, TouchableOpacity, View } from 'react-native';
 import { router } from 'expo-router';
 import { useTheme } from '../contexts/ThemeContext';
@@ -17,7 +17,10 @@ import { FavStar } from './FavStar';
 import { AlertBadge } from './AlertBadge';
 import { LinkBadge } from './LinkBadge';
 
-export function GoalCard({ goal: g }: { goal: Goal }) {
+// memo: skips re-render when the parent list re-renders with the same `goal`. Note
+// it still re-renders on any goals/memories/goalAttempts change (it subscribes to
+// those arrays internally) — fully isolating it would require lifting that data flow.
+export const GoalCard = memo(function GoalCard({ goal: g }: { goal: Goal }) {
   const { colors } = useTheme();
   const memories   = useStore(s => s.memories);
   const goals      = useStore(s => s.goals);
@@ -220,4 +223,4 @@ export function GoalCard({ goal: g }: { goal: Goal }) {
     </View>
     </SwipeableRow>
   );
-}
+});

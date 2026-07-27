@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { ScrollView, Text, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -15,18 +15,20 @@ import { getPreset } from '../../constants/lifelogs';
 export default function LifeLogScreen() {
   const { colors } = useTheme();
   const memories = useStore(s => s.memories);
-  const logs = memories.filter(m => m.type === 'lifelog');
+  const logs = useMemo(() => memories.filter(m => m.type === 'lifelog'), [memories]);
   const add = () => router.push({ pathname: '/modals/add-memory', params: { type: 'lifelog' } });
 
   const [q, setQ] = useState('');
-  const query = q.trim().toLowerCase();
   // Match on the log name OR its preset/group name (so "baseball" finds a
   // ballparks log). Filters the LIST only — not entries within a log.
-  const shown = query
-    ? logs.filter(m =>
-        m.name.toLowerCase().includes(query) ||
-        (getPreset(m.logPreset)?.name.toLowerCase().includes(query) ?? false))
-    : logs;
+  const shown = useMemo(() => {
+    const query = q.trim().toLowerCase();
+    return query
+      ? logs.filter(m =>
+          m.name.toLowerCase().includes(query) ||
+          (getPreset(m.logPreset)?.name.toLowerCase().includes(query) ?? false))
+      : logs;
+  }, [logs, q]);
 
   return (
     <SafeAreaView style={{ flex:1, backgroundColor:colors.bg }} edges={['top']}>

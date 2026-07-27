@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { DimensionValue, Text, TouchableOpacity, View } from 'react-native';
 import { router } from 'expo-router';
 import { useTheme } from '../contexts/ThemeContext';
@@ -55,7 +56,9 @@ function Bridge({ text, color }: { text: string; color: string }) {
 
 const KNOWN_TYPES = new Set(['birthday', 'anniversary', 'memorial', 'lifelog']);
 
-export function MemoryCard({ memory: m }: { memory: Memory }) {
+// memo: MemoryCard reads only its `memory` prop + stable store actions, so it skips
+// re-render when a sibling list item changes.
+export const MemoryCard = memo(function MemoryCard({ memory: m }: { memory: Memory }) {
   const { colors } = useTheme();
   const deleteMemory    = useStore(s => s.deleteMemory);
   const toggleMemoryFav = useStore(s => s.toggleMemoryFav);
@@ -121,7 +124,7 @@ export function MemoryCard({ memory: m }: { memory: Memory }) {
     </View>
     </SwipeableRow>
   );
-}
+});
 
 type YMD = { y: number; mo: number; d: number };
 

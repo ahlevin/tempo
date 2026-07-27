@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, FlatList, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { format } from 'date-fns';
@@ -85,17 +85,28 @@ export default function BrowseUniverseModal() {
             placeholder="Search name, city, or state…" placeholderTextColor={colors.text3} style={fi} />
         </View>
 
-        <ScrollView contentContainerStyle={{ paddingHorizontal:16, paddingBottom:24 }}
-          keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-          {items.length === 0 ? (
+        <FlatList
+          data={items}
+          style={{ flex:1 }}
+          contentContainerStyle={{ paddingHorizontal:16, paddingBottom:24 }}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          keyExtractor={(it, i) => itemName(it) + i}
+          extraData={selected}
+          initialNumToRender={12}
+          maxToRenderPerBatch={12}
+          windowSize={11}
+          removeClippedSubviews
+          ListEmptyComponent={
             <Text style={{ fontSize:13, color:colors.text3, padding:14 }}>{query ? 'No matches.' : 'No items.'}</Text>
-          ) : items.map((it, i) => {
+          }
+          renderItem={({ item: it }) => {
             const name = itemName(it);
             const addr = itemFullAddress(it);
             const count = counts.get(name) ?? 0;
             const sel = selected.has(name);
             return (
-              <TouchableOpacity key={name + i} activeOpacity={0.7} onPress={() => toggle(name)}
+              <TouchableOpacity activeOpacity={0.7} onPress={() => toggle(name)}
                 style={{ flexDirection:'row', alignItems:'center', gap:12, backgroundColor:colors.surf,
                   borderWidth:1, borderColor: sel ? colors.teal : colors.border, borderRadius:12,
                   padding:12, marginBottom:8 }}>
@@ -123,8 +134,8 @@ export default function BrowseUniverseModal() {
                 </TouchableOpacity>
               </TouchableOpacity>
             );
-          })}
-        </ScrollView>
+          }}
+        />
 
         <View style={{ paddingHorizontal:16, paddingTop:8, paddingBottom:6,
           borderTopWidth:1, borderTopColor:colors.border }}>

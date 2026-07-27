@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { View, Text, ScrollView, Dimensions, TouchableOpacity, Platform } from 'react-native';
 import { useIsFocused } from 'expo-router';
 import { catColor, heroTintBg, lightCardShadow } from '../constants/colors';
@@ -399,31 +399,36 @@ export function HeroCarousel() {
   };
 
   // Hero = ONLY starred items, of every type (events, goals, memories, holidays),
-  // sorted by soonest upcoming date.
-  const items: { kind: 'event' | 'goal' | 'memory' | 'holiday' | 'logentry'; data: any; days: number }[] = [];
-  events.filter(e => e.fav).forEach(e => items.push({ kind:'event', data:e, days: daysUntil(nextOccurrence(e)) }));
-  goals.filter(g => g.fav && isTopLevelGoal(g)).forEach(g => items.push({ kind:'goal', data:g, days: (isRecurringGoal(g) || !hasDeadline(g)) ? 0 : daysUntil(g.date) }));
-  memories
-    .filter(m => m.fav && (m.type === 'birthday' || m.type === 'anniversary' || m.type === 'memorial' || m.type === 'lifelog'))
-    .forEach(m => {
-      const days = (m.type === 'birthday' || m.type === 'anniversary' || m.type === 'memorial')
-        ? daysUntil(nextAnnual(m.originDate)) : Number.MAX_SAFE_INTEGER;
-      items.push({ kind:'memory', data:m, days });
+  // sorted by soonest upcoming date. Memoized on its store inputs so scrolling
+  // (which calls setIdx every frame) and the per-minute tick never rebuild this
+  // O(memories × entries) scan — only a data change does.
+  const items = useMemo(() => {
+    const list: { kind: 'event' | 'goal' | 'memory' | 'holiday' | 'logentry'; data: any; days: number }[] = [];
+    events.filter(e => e.fav).forEach(e => list.push({ kind:'event', data:e, days: daysUntil(nextOccurrence(e)) }));
+    goals.filter(g => g.fav && isTopLevelGoal(g)).forEach(g => list.push({ kind:'goal', data:g, days: (isRecurringGoal(g) || !hasDeadline(g)) ? 0 : daysUntil(g.date) }));
+    memories
+      .filter(m => m.fav && (m.type === 'birthday' || m.type === 'anniversary' || m.type === 'memorial' || m.type === 'lifelog'))
+      .forEach(m => {
+        const days = (m.type === 'birthday' || m.type === 'anniversary' || m.type === 'memorial')
+          ? daysUntil(nextAnnual(m.originDate)) : Number.MAX_SAFE_INTEGER;
+        list.push({ kind:'memory', data:m, days });
+      });
+    // Favorited UPCOMING life-log ENTRIES (entry.fav) surface individually — the
+    // same entry the UpcomingLogRow/Favorites modal shows, keyed by memory+index.
+    memories.filter(m => m.type === 'lifelog').forEach(m => {
+      m.entries.forEach((e, index) => {
+        if (e.fav && isUpcomingEntry(e)) {
+          list.push({ kind:'logentry', days: daysUntil(e.date), data: {
+            memId: m.id, index, emoji: m.emoji, logName: m.name,
+            label: e.item || m.name, dateISO: e.date, days: daysUntil(e.date),
+          } });
+        }
+      });
     });
-  // Favorited UPCOMING life-log ENTRIES (entry.fav) surface individually — the
-  // same entry the UpcomingLogRow/Favorites modal shows, keyed by memory+index.
-  memories.filter(m => m.type === 'lifelog').forEach(m => {
-    m.entries.forEach((e, index) => {
-      if (e.fav && isUpcomingEntry(e)) {
-        items.push({ kind:'logentry', days: daysUntil(e.date), data: {
-          memId: m.id, index, emoji: m.emoji, logName: m.name,
-          label: e.item || m.name, dateISO: e.date, days: daysUntil(e.date),
-        } });
-      }
-    });
-  });
-  visibleHolidays(holidayPrefs).filter(h => h.fav).forEach(h => items.push({ kind:'holiday', data:h, days: h.days }));
-  items.sort((a, b) => a.days - b.days);
+    visibleHolidays(holidayPrefs).filter(h => h.fav).forEach(h => list.push({ kind:'holiday', data:h, days: h.days }));
+    list.sort((a, b) => a.days - b.days);
+    return list;
+  }, [events, goals, memories, holidayPrefs]);
 
   if (!items.length) {
     return (

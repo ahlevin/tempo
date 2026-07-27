@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { ScrollView, View, Text, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -71,40 +71,44 @@ export default function HomeScreen() {
 
   // Countdowns list: 'all' interleaves events + recurring memories + holidays; a
   // category pill narrows to those events; a memory-type pill narrows to those
-  // memories. All sorted by soonest next occurrence.
-  const upcoming: UpcomingItem[] = [];
-  if (isAll || isCat) {
-    events
-      .filter(e => isAll || e.cat === filter)
-      .forEach(e => upcoming.push({ kind: 'event', data: e }));
-  }
-  if (isAll) {
-    memories
-      .filter(m => m.type === 'birthday' || m.type === 'anniversary' || m.type === 'memorial')
-      .forEach(m => upcoming.push({ kind: 'memory', data: m }));
-  } else if (isMemType) {
-    memories
-      .filter(m => m.type === filter)
-      .forEach(m => upcoming.push({ kind: 'memory', data: m }));
-  }
-  // Visible holidays (derived, never stored) show under "All" and the Holidays pill.
-  if (isAll || filter === 'holidays') {
-    visibleHolidays(prefs.holidays).forEach(h => upcoming.push({ kind: 'holiday', data: h }));
-  }
-  // Future-dated life-log entries surface as countdowns until their date passes
-  // (derived from the entry date — no stored event, auto-transitions to completed).
-  if (isAll) {
-    upcomingLogItems(memories).forEach(it => upcoming.push({ kind: 'logentry', data: it }));
-  }
-  // Goals surface as countdowns ONLY when opted in (show_on_countdown). Recurring
-  // goals show current-period progress (no deadline); one-shot goals need a
-  // future deadline. All-time goals (no time bound) never appear here.
-  if (isAll) {
-    goals.filter(g => g.showOnCountdown === true && isTopLevelGoal(g) &&
-      (isRecurringGoal(g) ? true : (hasDeadline(g) && daysUntil(g.date) > 0)))
-      .forEach(g => upcoming.push({ kind: 'goal', data: g }));
-  }
-  upcoming.sort((a, b) => upcomingDays(a) - upcomingDays(b));
+  // memories. All sorted by soonest next occurrence. Memoized on its real inputs so
+  // it recomputes only when data/filter change — not on every unrelated re-render.
+  const upcoming: UpcomingItem[] = useMemo(() => {
+    const list: UpcomingItem[] = [];
+    if (isAll || isCat) {
+      events
+        .filter(e => isAll || e.cat === filter)
+        .forEach(e => list.push({ kind: 'event', data: e }));
+    }
+    if (isAll) {
+      memories
+        .filter(m => m.type === 'birthday' || m.type === 'anniversary' || m.type === 'memorial')
+        .forEach(m => list.push({ kind: 'memory', data: m }));
+    } else if (isMemType) {
+      memories
+        .filter(m => m.type === filter)
+        .forEach(m => list.push({ kind: 'memory', data: m }));
+    }
+    // Visible holidays (derived, never stored) show under "All" and the Holidays pill.
+    if (isAll || filter === 'holidays') {
+      visibleHolidays(prefs.holidays).forEach(h => list.push({ kind: 'holiday', data: h }));
+    }
+    // Future-dated life-log entries surface as countdowns until their date passes
+    // (derived from the entry date — no stored event, auto-transitions to completed).
+    if (isAll) {
+      upcomingLogItems(memories).forEach(it => list.push({ kind: 'logentry', data: it }));
+    }
+    // Goals surface as countdowns ONLY when opted in (show_on_countdown). Recurring
+    // goals show current-period progress (no deadline); one-shot goals need a
+    // future deadline. All-time goals (no time bound) never appear here.
+    if (isAll) {
+      goals.filter(g => g.showOnCountdown === true && isTopLevelGoal(g) &&
+        (isRecurringGoal(g) ? true : (hasDeadline(g) && daysUntil(g.date) > 0)))
+        .forEach(g => list.push({ kind: 'goal', data: g }));
+    }
+    list.sort((a, b) => upcomingDays(a) - upcomingDays(b));
+    return list;
+  }, [events, memories, goals, prefs.holidays, filter, isAll, isCat, isMemType]);
 
   const listTitle = isAll ? 'Upcoming' : (FILTERS.find(f => f.id === filter)?.label ?? 'Upcoming');
 

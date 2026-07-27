@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { ScrollView, Text, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -14,12 +14,15 @@ import { SearchBar } from '../../components/ListControls';
 export default function GoalsScreen() {
   const { colors } = useTheme();
   const allGoals = useStore(s => s.goals);
-  const goals = allGoals.filter(isTopLevelGoal);   // quest children live inside their parent, not here
+  // quest children live inside their parent, not here
+  const goals = useMemo(() => allGoals.filter(isTopLevelGoal), [allGoals]);
   const add = () => router.push('/modals/add-goal');
 
   const [q, setQ] = useState('');
-  const query = q.trim().toLowerCase();
-  const shown = query ? goals.filter(g => g.name.toLowerCase().includes(query)) : goals;
+  const shown = useMemo(() => {
+    const query = q.trim().toLowerCase();
+    return query ? goals.filter(g => g.name.toLowerCase().includes(query)) : goals;
+  }, [goals, q]);
 
   return (
     <SafeAreaView style={{ flex:1, backgroundColor:colors.bg }} edges={['top']}>
