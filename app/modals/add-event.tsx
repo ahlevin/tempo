@@ -10,7 +10,7 @@ import { CATEGORIES } from '../../constants/data';
 import { IconPicker } from '../../components/IconPicker';
 import { useStore } from '../../store/useStore';
 import { Recurrence, Alert as AlertType } from '../../store/types';
-import { DateTimeField } from '../../components/DateTimeField';
+import { CountdownWhenEditor, whenToEventFields, defaultWhen, WhenValue } from '../../components/CountdownWhenEditor';
 import { RecurrenceEditor } from '../../components/RecurrenceEditor';
 import { AlertsEditor } from '../../components/AlertsEditor';
 import { LifelogAttachSection, AttachHandle } from '../../components/LifelogAttachSection';
@@ -24,9 +24,7 @@ export default function AddEventModal() {
   const { showToast } = useToast();
   const defaultDay = format(addDays(new Date(), 30), 'yyyy-MM-dd');
   const [name,    setName]    = useState('');
-  const [allDay,  setAllDay]  = useState(true);
-  const [start,   setStart]   = useState(`${defaultDay}T09:00:00`);
-  const [end,     setEnd]     = useState(`${defaultDay}T10:00:00`);
+  const [when,    setWhen]    = useState<WhenValue>(() => defaultWhen(defaultDay));
   const [emoji,   setEmoji]   = useState('🎉');
   const [cat,     setCat]     = useState('parties');
   const [note,   setNote]   = useState('');
@@ -40,7 +38,8 @@ export default function AddEventModal() {
 
   function submit() {
     if (!name.trim()) { showToast('⚠️', 'Missing info', 'Please enter a name.'); return; }
-    const startIso = allDay ? `${start.slice(0, 10)}T00:00:00` : start;
+    const res = whenToEventFields(when);
+    if (!res.fields) { showToast('⚠️', 'Check the time', res.error); return; }
 
     if (attachLog) {
       // ONE source of truth per log: a future-dated entry in EACH selected life
@@ -48,7 +47,7 @@ export default function AddEventModal() {
       // date passes. The entries are independent — no cross-linkage.
       const targets = attachRef.current?.resolve();
       if (!targets) return; // the picker surfaced the reason
-      const date = startIso.slice(0, 10);
+      const date = res.fields.date!;
       targets.forEach(t => addLogEntry(t.targetId,
         { date, note: note.trim(), item: t.item, datePrecision: 'full', links, alerts,
           city: t.city, state: t.state, address: t.address }));
@@ -57,8 +56,7 @@ export default function AddEventModal() {
     }
 
     addEvent({
-      name: name.trim(), emoji, cat: cat as any,
-      allDay, start: startIso, end: allDay ? null : end, date: startIso.slice(0, 10), fav: false,
+      name: name.trim(), emoji, cat: cat as any, ...res.fields as any, fav: false,
       note: note.trim(), recur, alerts, links,
     });
     router.back();
@@ -85,16 +83,7 @@ export default function AddEventModal() {
           <TextInput value={name} onChangeText={setName}
             placeholder="e.g. Summer vacation…" placeholderTextColor={colors.text3} style={fi} />
 
-          <Toggle label="📅 All-day" value={allDay} onChange={setAllDay} />
-          {allDay ? (
-            <DateTimeField mode="date" label="Date" value={start}
-              onChange={d => setStart(`${d}T00:00:00`)} />
-          ) : (
-            <>
-              <DateTimeField mode="datetime" label="Starts" value={start} onChange={setStart} />
-              <DateTimeField mode="datetime" label="Ends"   value={end}   onChange={setEnd} />
-            </>
-          )}
+          <CountdownWhenEditor value={when} onChange={setWhen} />
 
           <FL label="Icon" />
           <IconPicker value={emoji} onChange={setEmoji} />
@@ -132,7 +121,7 @@ export default function AddEventModal() {
             <>
               <LifelogAttachSection ref={attachRef} emoji={emoji} eventName={name} />
               <Text style={{ fontSize:12, color:colors.text3, marginBottom:8, marginLeft:2 }}>
-                Logs “{name.trim() || '…'}” on {start.slice(0,10)}. It counts down until then, then reads as completed.
+                Logs “{name.trim() || '…'}” on {when.type === 'date_only' ? when.dateOnlyDate : when.type === 'viewer_local' ? when.floatWhen.slice(0,10) : when.exactStart.slice(0,10)}. It counts down until then, then reads as completed.
               </Text>
             </>
           )}

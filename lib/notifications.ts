@@ -2,6 +2,7 @@ import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { Event, Goal, Memory, Alert } from '../store/types';
 import { nextOccurrence, nextAnnual, toDate, isValidDate } from '../utils/dates';
+import { countdownType, eventStartMs } from '../utils/events';
 
 // Notifications only run on the native app. On web everything below is a no-op.
 const isNative = Platform.OS !== 'web';
@@ -117,10 +118,21 @@ export async function rescheduleAll(data: Snapshot): Promise<void> {
     // events get their following instance re-scheduled on the next rescheduleAll.
     for (const e of data.events) {
       if (!e.alerts?.length) continue;
-      const start = toDate(nextOccurrence(e));
-      if (!isValidDate(start)) continue;
-      // All-day → base is 9:00 AM local on the event date; timed → the exact start.
-      const base = e.allDay ? at9am(start) : start;
+      const type = countdownType(e);
+      // date_only → 9:00 AM local on the event date (UNCHANGED at9am + offset
+      // precision). exact_instant → the REAL start instant (startAtUtc), correct
+      // across timezones. viewer_local → the local time in the DEVICE's tz. Alerts
+      // fire at base − offset for all three (a 0-offset alert fires AT start).
+      let base: Date; let allDayLead: boolean;
+      if (type === 'date_only') {
+        const start = toDate(nextOccurrence(e));
+        if (!isValidDate(start)) continue;
+        base = at9am(start); allDayLead = true;
+      } else {
+        const ms = eventStartMs(e);
+        if (ms == null) continue;
+        base = new Date(ms); allDayLead = false;
+      }
       for (const a of e.alerts) {
         const fire = new Date(base.getTime() - offsetMs(a)); // full offset precision
         const ok = fire.getTime() > now;
@@ -129,7 +141,7 @@ export async function rescheduleAll(data: Snapshot): Promise<void> {
         if (!ok) continue;
         await schedule(
           { type: Notifications.SchedulableTriggerInputTypes.DATE, date: fire },
-          `${e.emoji} ${e.name}`, `Starts ${humanizeLead(fire, base, e.allDay)}`,
+          `${e.emoji} ${e.name}`, `Starts ${humanizeLead(fire, base, allDayLead)}`,
         );
       }
     }

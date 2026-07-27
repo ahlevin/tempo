@@ -69,8 +69,69 @@ export function TickProvider({ children }: { children: React.ReactNode }) {
 // caller once a minute. Only call it in a component that is actually visible and
 // needs a live countdown (e.g. the active hero card) so the interval stays idle
 // whenever nothing on screen is ticking.
-export function useTick(): number {
+export function useTick(active: boolean = true): number {
   const { now, subscribe } = useContext(TickCtx);
-  useEffect(() => subscribe(), [subscribe]);
+  useEffect(() => {
+    if (!active) return;   // date_only cards pass false so they never tick (perf)
+    return subscribe();
+  }, [active, subscribe]);
+  return now;
+}
+
+// ── A SEPARATE per-SECOND clock, for the live hr:min:sec countdown when a timed
+// event is NEAR. Same ref-counted + visibility gating as the minute tick, but the
+// subscription is CONDITIONAL on `active` — so the 1s interval runs ONLY while at
+// least one near/timed countdown is on screen, and ONLY those components re-render
+// each second (never the whole feed — preserving the perf pass).
+const SEC_MS = 1_000;
+const SecondCtx = createContext<TickValue>({ now: Date.now(), subscribe: () => () => {} });
+
+export function SecondTickProvider({ children }: { children: React.ReactNode }) {
+  const [now, setNow] = useState(() => Date.now());
+  const [active, setActive] = useState(false);
+  const [visible, setVisible] = useState(true);
+  const count = useRef(0);
+
+  useEffect(() => {
+    if (Platform.OS === 'web') {
+      const doc: any = (globalThis as any).document;
+      if (!doc) return;
+      const onVis = () => setVisible(doc.visibilityState !== 'hidden');
+      onVis();
+      doc.addEventListener('visibilitychange', onVis);
+      return () => doc.removeEventListener('visibilitychange', onVis);
+    }
+    const sub = AppState.addEventListener('change', s => setVisible(s === 'active'));
+    return () => sub.remove();
+  }, []);
+
+  const subscribe = useRef(() => {
+    count.current += 1;
+    if (count.current === 1) setActive(true);
+    return () => {
+      count.current = Math.max(0, count.current - 1);
+      if (count.current === 0) setActive(false);
+    };
+  }).current;
+
+  useEffect(() => {
+    if (!active || !visible) return;
+    setNow(Date.now());
+    const id = setInterval(() => setNow(Date.now()), SEC_MS);
+    return () => clearInterval(id);
+  }, [active, visible]);
+
+  return <SecondCtx.Provider value={{ now, subscribe }}>{children}</SecondCtx.Provider>;
+}
+
+// Subscribe to the per-second tick ONLY while `active` (i.e. this component is
+// showing a near/live countdown). When inactive it doesn't subscribe, so the 1s
+// interval stays off unless something on screen truly needs it.
+export function useSecondTick(active: boolean): number {
+  const { now, subscribe } = useContext(SecondCtx);
+  useEffect(() => {
+    if (!active) return;
+    return subscribe();
+  }, [active, subscribe]);
   return now;
 }

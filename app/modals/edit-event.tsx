@@ -3,20 +3,19 @@ import { ScrollView, View, Text, TextInput, TouchableOpacity, KeyboardAvoidingVi
 import { useToast } from '../../components/Toast';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
-import { format, addHours } from 'date-fns';
+import { format } from 'date-fns';
 import { useTheme } from '../../contexts/ThemeContext';
 import { CloseButton } from '../../components/CloseButton';
 import { CATEGORIES } from '../../constants/data';
 import { IconPicker } from '../../components/IconPicker';
 import { useStore } from '../../store/useStore';
 import { Recurrence, Alert as AlertType, Link } from '../../store/types';
-import { DateTimeField } from '../../components/DateTimeField';
+import { CountdownWhenEditor, whenToEventFields, eventToWhen, defaultWhen, WhenValue } from '../../components/CountdownWhenEditor';
 import { RecurrenceEditor } from '../../components/RecurrenceEditor';
 import { AlertsEditor } from '../../components/AlertsEditor';
 import { LinksEditor } from '../../components/LinksEditor';
 import { LifelogAttachSection, AttachHandle } from '../../components/LifelogAttachSection';
 import { useConfirm } from '../../components/ConfirmDialog';
-import { toDate } from '../../utils/dates';
 
 export default function EditEventModal() {
   const { colors } = useTheme();
@@ -31,13 +30,8 @@ export default function EditEventModal() {
   const [attachOpen, setAttachOpen] = useState(false);
   const attachRef = useRef<AttachHandle>(null);
 
-  const initStart = event?.start || `${event?.date || format(new Date(), 'yyyy-MM-dd')}T00:00:00`;
-  const initEnd   = event?.end   || format(addHours(toDate(initStart), 1), "yyyy-MM-dd'T'HH:mm:ss");
-
   const [name,   setName]   = useState(event?.name   || '');
-  const [allDay, setAllDay] = useState(event?.allDay ?? true);
-  const [start,  setStart]  = useState(initStart);
-  const [end,    setEnd]    = useState(initEnd);
+  const [when,   setWhen]   = useState<WhenValue>(() => event ? eventToWhen(event) : defaultWhen(format(new Date(), 'yyyy-MM-dd')));
   const [emoji,  setEmoji]  = useState(event?.emoji  || '🎉');
   const [cat,    setCat]    = useState<string>(event?.cat || 'parties');
   const [note,   setNote]   = useState(event?.note   || '');
@@ -60,9 +54,9 @@ export default function EditEventModal() {
 
   function save() {
     if (!name.trim()) { showToast('⚠️', 'Missing info', 'Please enter a name.'); return; }
-    const startIso = allDay ? `${start.slice(0, 10)}T00:00:00` : start;
-    updateEvent(id, { name:name.trim(), emoji, cat:cat as any,
-      allDay, start:startIso, end: allDay ? null : end, date: startIso.slice(0, 10),
+    const res = whenToEventFields(when);
+    if (!res.fields) { showToast('⚠️', 'Check the time', res.error); return; }
+    updateEvent(id, { name:name.trim(), emoji, cat:cat as any, ...res.fields as any,
       note: note.trim(), recur, alerts, links });
     router.back();
   }
@@ -91,8 +85,9 @@ export default function EditEventModal() {
     if (!ok) return;
     const targets = attachRef.current?.resolve();
     if (!targets) return;
-    const startIso = allDay ? `${start.slice(0, 10)}T00:00:00` : start;
-    const date = startIso.slice(0, 10);
+    const res = whenToEventFields(when);
+    if (!res.fields) { showToast('⚠️', 'Check the time', res.error); return; }
+    const date = res.fields.date!;
     // Remove the standalone event once, then add each independent entry.
     deleteEvent(id);
     targets.forEach(t => addLogEntry(t.targetId,
@@ -115,16 +110,7 @@ export default function EditEventModal() {
           showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
           <FL label="Event Name" />
           <TextInput value={name} onChangeText={setName} placeholderTextColor={colors.text3} style={fi} />
-          <Toggle label="📅 All-day" value={allDay} onChange={setAllDay} />
-          {allDay ? (
-            <DateTimeField mode="date" label="Date" value={start}
-              onChange={d => setStart(`${d}T00:00:00`)} />
-          ) : (
-            <>
-              <DateTimeField mode="datetime" label="Starts" value={start} onChange={setStart} />
-              <DateTimeField mode="datetime" label="Ends"   value={end}   onChange={setEnd} />
-            </>
-          )}
+          <CountdownWhenEditor value={when} onChange={setWhen} />
           <FL label="Icon" />
           <IconPicker value={emoji} onChange={setEmoji} />
           <FL label="Category" />

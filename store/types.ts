@@ -18,6 +18,19 @@ export interface Recurrence {
   count?: number;
 }
 
+// The countdown model. A missing/absent value is treated as 'date_only' (the
+// original all-day behavior) — existing events need no migration.
+//  - date_only     : a calendar day; counts to VIEWER-LOCAL midnight. Stored as a
+//                    plain "YYYY-MM-DD" in `start` (no tz, no UTC). Optional
+//                    exclusive `endDate` for all-day ranges.
+//  - exact_instant : one worldwide moment. `startAtUtc` (+ optional `endAtUtc`) is
+//                    the real instant; `eventTimezone` (IANA) + `startLocal`/
+//                    `endLocal` preserve the origin wall-clock for display/DST.
+//  - viewer_local  : floating — the same wall-clock time for every viewer. Stored
+//                    as `localDate` + `localTime`; the target instant is resolved
+//                    in the VIEWER's current tz at render/schedule time (no UTC).
+export type CountdownType = 'date_only' | 'exact_instant' | 'viewer_local';
+
 export interface Event {
   id: string;
   name: string;
@@ -34,6 +47,17 @@ export interface Event {
   recur: Recurrence | null;
   alerts: Alert[];
   links: Link[];
+
+  // ── Timed-event countdown model (all optional; absent ⇒ date_only) ──────────
+  countdownType?: CountdownType | null;
+  endDate?: string | null;        // date_only: exclusive end "YYYY-MM-DD" (range)
+  startAtUtc?: string | null;     // exact_instant: real start instant (ISO UTC, "…Z")
+  endAtUtc?: string | null;       // exact_instant: real end instant (ISO UTC)
+  eventTimezone?: string | null;  // exact_instant: IANA origin zone, e.g. "America/Los_Angeles"
+  startLocal?: string | null;     // exact_instant: origin wall-clock "YYYY-MM-DDTHH:mm"
+  endLocal?: string | null;       // exact_instant: origin wall-clock end
+  localDate?: string | null;      // viewer_local: "YYYY-MM-DD"
+  localTime?: string | null;      // viewer_local: "HH:mm"
 }
 
 export type GoalWindowKind = 'year' | 'by_date' | 'all_time';

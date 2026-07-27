@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 import { Event, Goal, Memory, UserPrefs, LogEntry, GoalAttempt } from '../store/types';
 import { getPreset } from '../constants/lifelogs';
+import { countdownType } from '../utils/events';
 
 // ---------------------------------------------------------------------------
 // Field mapping notes (app camelCase <-> DB snake_case)
@@ -69,11 +70,21 @@ export function rowToEvent(r: any): Event {
     recur: r.recur ?? null,
     alerts: r.alerts ?? [],
     links: r.links ?? [],
+    // Timed-event model (all null on legacy rows → inferred date_only on read).
+    countdownType: r.countdown_type ?? null,
+    endDate: r.end_date ? datePart(r.end_date) : null,
+    startAtUtc: r.start_at_utc ?? null,
+    endAtUtc: r.end_at_utc ?? null,
+    eventTimezone: r.event_timezone ?? null,
+    startLocal: r.start_local ?? null,
+    endLocal: r.end_local ?? null,
+    localDate: r.local_date ? datePart(r.local_date) : null,
+    localTime: r.local_time ?? null,
   };
 }
 
 export function eventToRow(e: Event, userId: string) {
-  return {
+  const base = {
     id: e.id,
     user_id: userId,
     name: e.name,
@@ -88,6 +99,24 @@ export function eventToRow(e: Event, userId: string) {
     alerts: e.alerts,
     links: e.links ?? [],
     created_at: tsFromDate(e.created),
+  };
+  // A plain all-day event (date_only, no range) emits EXACTLY the legacy row — no
+  // new columns — so existing events are byte-for-byte unchanged and sync even
+  // before the 0003 migration is applied. Only events that actually use the timed
+  // model or an all-day range include the new columns (which require the migration).
+  const t = countdownType(e);
+  if (t === 'date_only' && !e.endDate) return base;
+  return {
+    ...base,
+    countdown_type: t,
+    end_date: dateCol(e.endDate),
+    start_at_utc: e.startAtUtc ?? null,
+    end_at_utc: e.endAtUtc ?? null,
+    event_timezone: e.eventTimezone ?? null,
+    start_local: e.startLocal ?? null,
+    end_local: e.endLocal ?? null,
+    local_date: dateCol(e.localDate),
+    local_time: e.localTime ?? null,
   };
 }
 

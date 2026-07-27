@@ -7,6 +7,7 @@ import { CATEGORIES } from '../constants/data';
 import { visibleHolidays, HolidayItem } from '../constants/holidays';
 import { logCount, logVisits, upcomingCount, isCollectionLog, logUniverse, isUpcomingEntry } from '../utils/lifelog';
 import { isRecurringGoal, isLinkedGoal, hasDeadline, goalDerivedProgress, isTopLevelGoal } from '../utils/goals';
+import { isTimed, eventTimeLabel } from '../utils/events';
 import { currentPeriodProgress, goalStreak, goalPeriodKind, goalPeriodTarget, periodLabel, periodNoun } from '../utils/recurring';
 import { useTheme } from '../contexts/ThemeContext';
 import { useTick } from '../contexts/TickContext';
@@ -142,7 +143,8 @@ function EventCard({ event: e, active }: { event: any; active: boolean }) {
   const accent = catColor(colors, e.cat);
   const rl     = recurLabel(e);
   const cat    = CATEGORIES.find(c => c.id === e.cat);
-  const secondary = cat ? `${cat.emoji} ${cat.short}` : 'Countdown';
+  const tl     = isTimed(e) ? eventTimeLabel(e) : '';
+  const secondary = (cat ? `${cat.emoji} ${cat.short}` : 'Countdown') + (tl ? ` · ${tl}` : '');
   return (
     <HeroFrame bgDark="#1A1830" borderDark="rgba(124,106,245,0.22)" fav={e.fav} onFav={() => toggleFav(e.id)}
       onPress={() => openEventDetail(e.id)}>

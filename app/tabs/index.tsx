@@ -19,6 +19,7 @@ import { catColor } from '../../constants/colors';
 import { visibleHolidays, HolidayItem } from '../../constants/holidays';
 import { upcomingLogItems, UpcomingLogItem } from '../../utils/lifelog';
 import { isRecurringGoal, hasDeadline, isTopLevelGoal } from '../../utils/goals';
+import { isTimed, eventStartMs } from '../../utils/events';
 import { nextOccurrence, nextAnnual, daysUntil } from '../../utils/dates';
 
 // Countdowns filter pills, in a fixed presentation order: All, the recurring
@@ -51,7 +52,10 @@ type UpcomingItem =
   | { kind: 'logentry'; data: UpcomingLogItem }
   | { kind: 'goal'; data: Goal };
 const upcomingDays = (it: UpcomingItem) =>
-  it.kind === 'event' ? daysUntil(nextOccurrence(it.data))
+  it.kind === 'event'
+    ? (isTimed(it.data)
+        ? ((eventStartMs(it.data) ?? Date.now()) - Date.now()) / 86_400_000  // sub-day ordering for timed
+        : daysUntil(nextOccurrence(it.data)))
   : it.kind === 'memory' ? daysUntil(nextAnnual(it.data.originDate))
   : it.kind === 'goal' ? (isRecurringGoal(it.data) ? 0 : daysUntil(it.data.date))
   : it.data.days;
