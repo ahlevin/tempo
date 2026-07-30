@@ -187,6 +187,10 @@ export interface Memory {
   logKind?: 'count' | 'collection';
   logPreset?: string;   // preset id (constants/lifelogs.ts), or undefined for custom
   logTarget?: number;   // the "Y" (universe size or custom target) for collections
+  /** A USER-AUTHORED collection's item list (checklist the user typed). When set,
+   *  it IS the log's universe — flowing through the SAME code paths as a preset
+   *  universe (item picker, browse, coverage). Absent for presets / freeform. */
+  logItems?: string[];
   /** Memory-level date precision (default 'full'); life-log entries can each
    *  override via LogEntry.datePrecision for back-filled/partial dates. */
   datePrecision?: DatePrecision;

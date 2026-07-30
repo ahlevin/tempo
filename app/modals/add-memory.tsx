@@ -45,6 +45,17 @@ export default function AddMemoryModal() {
   // Life-log shaping. preset='' means Custom (name it yourself; optional target).
   const [preset, setPreset] = useState<string>('');
   const [customTarget, setCustomTarget] = useState('');
+  // Custom log sub-kind: 'freeform' (name + optional count target) or 'checklist'
+  // (a user-authored item list that becomes the log's universe).
+  const [customKind, setCustomKind] = useState<'freeform' | 'checklist'>('freeform');
+  const [items, setItems] = useState<string[]>([]);
+  const [itemDraft, setItemDraft] = useState('');
+  const addItem = () => {
+    const v = itemDraft.trim();
+    if (!v) return;
+    setItems(prev => prev.some(x => x.toLowerCase() === v.toLowerCase()) ? prev : [...prev, v]);
+    setItemDraft('');
+  };
   // UI-only flow state for the Life Log path (no effect on saved data).
   const [browserOpen,   setBrowserOpen]   = useState(true);  // browser expanded vs collapsed selection
   const [customMode,    setCustomMode]    = useState(false); // "Custom" chosen (vs a real preset)
@@ -88,10 +99,14 @@ export default function AddMemoryModal() {
     let logKind: 'count' | 'collection' = 'count';
     let logPreset: string | undefined;
     let logTarget: number | undefined;
+    let logItems: string[] | undefined;
     if (lifelog) {
       const p = getPreset(preset);
       if (p) {
         logKind = p.kind; logPreset = p.id; logTarget = p.target;
+      } else if (customKind === 'checklist' && items.length > 0) {
+        // User-authored collection: the list IS the universe; target = its size.
+        logKind = 'collection'; logItems = items; logTarget = items.length;
       } else {
         const t = parseInt(customTarget, 10);
         if (t > 0) { logKind = 'collection'; logTarget = t; }
@@ -106,6 +121,7 @@ export default function AddMemoryModal() {
       logKind: lifelog ? logKind : undefined,
       logPreset: lifelog ? logPreset : undefined,
       logTarget: lifelog ? logTarget : undefined,
+      logItems: lifelog ? logItems : undefined,
       note: lifelog ? '' : note.trim(),
       // Reminders only apply to the recurring types (birthday/anniversary/memorial).
       fav: false, alerts: lifelog ? [] : alerts,
@@ -121,7 +137,7 @@ export default function AddMemoryModal() {
   const chosenCount = chosen?.kind === 'collection' ? chosen.universe?.length : undefined;
   // Sticky Create bar appears once a Life Log choice is made (preset or custom).
   const showSticky = lifelog && !browserOpen && (preset !== '' || customMode);
-  const createDisabled = customMode && !name.trim();
+  const createDisabled = customMode && (!name.trim() || (customKind === 'checklist' && items.length === 0));
 
   return (
     <SafeAreaView style={{ flex:1, backgroundColor:colors.surf2 }} edges={['bottom']}>
@@ -208,12 +224,58 @@ export default function AddMemoryModal() {
                     placeholder="e.g. Coffee shops tried" placeholderTextColor={colors.text3} style={fi} />
                   <FL label="Icon" />
                   <IconGrid value={emoji} onChange={setEmoji} />
-                  <FL label="Target (optional)" />
-                  <TextInput value={customTarget} onChangeText={setCustomTarget} keyboardType="numeric"
-                    placeholder="e.g. 50 — leave blank to just count" placeholderTextColor={colors.text3} style={fi} />
-                  <Text style={{ fontSize:11, color:colors.text3, marginTop:-8, marginBottom:8, marginLeft:2 }}>
-                    Set a number to track “X of Y”; leave blank for a simple count.
-                  </Text>
+
+                  {/* Freeform (type each entry) vs Checklist (author an item list). */}
+                  <FL label="Log type" />
+                  <View style={{ flexDirection:'row', gap:8, marginBottom:14 }}>
+                    {([['freeform','✍️ Freeform','Type each entry'],['checklist','☑️ Checklist','Track a list of items']] as const).map(([k,label,hint]) => {
+                      const sel = customKind === k;
+                      return (
+                        <TouchableOpacity key={k} onPress={() => setCustomKind(k)}
+                          style={{ flex:1, padding:12, borderRadius:12, borderWidth:1.5,
+                            borderColor: sel ? colors.teal : colors.border,
+                            backgroundColor: sel ? (colors.isDark ? 'rgba(62,207,178,0.12)' : colors.tint) : colors.glass }}>
+                          <Text style={{ fontSize:13, fontWeight:'700', color: sel ? colors.teal : colors.text1 }}>{label}</Text>
+                          <Text style={{ fontSize:11, color:colors.text3, marginTop:3 }}>{hint}</Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+
+                  {customKind === 'freeform' ? (
+                    <>
+                      <FL label="Target (optional)" />
+                      <TextInput value={customTarget} onChangeText={setCustomTarget} keyboardType="numeric"
+                        placeholder="e.g. 50 — leave blank to just count" placeholderTextColor={colors.text3} style={fi} />
+                      <Text style={{ fontSize:11, color:colors.text3, marginTop:-8, marginBottom:8, marginLeft:2 }}>
+                        Set a number to track “X of Y”; leave blank for a simple count.
+                      </Text>
+                    </>
+                  ) : (
+                    <>
+                      <FL label={`Items${items.length ? ` · ${items.length}` : ''}`} />
+                      {items.map((it, i) => (
+                        <View key={it + i} style={{ flexDirection:'row', alignItems:'center', gap:10, marginBottom:8,
+                          backgroundColor:colors.surf, borderWidth:1, borderColor:colors.border, borderRadius:12, padding:11 }}>
+                          <Text style={{ flex:1, fontSize:14, fontWeight:'600', color:colors.text1 }} numberOfLines={1}>{it}</Text>
+                          <TouchableOpacity onPress={() => setItems(prev => prev.filter((_, j) => j !== i))} hitSlop={{ top:8, bottom:8, left:8, right:8 }}>
+                            <Text style={{ fontSize:20, color:colors.text3 }}>×</Text>
+                          </TouchableOpacity>
+                        </View>
+                      ))}
+                      <View style={{ flexDirection:'row', gap:8, marginBottom:8 }}>
+                        <TextInput value={itemDraft} onChangeText={setItemDraft} onSubmitEditing={addItem} returnKeyType="done"
+                          placeholder="Add an item…" placeholderTextColor={colors.text3} style={{ ...fi, flex:1, marginBottom:0 }} />
+                        <TouchableOpacity onPress={addItem}
+                          style={{ paddingHorizontal:16, borderRadius:12, backgroundColor:colors.teal, alignItems:'center', justifyContent:'center' }}>
+                          <Text style={{ color: colors.isDark ? '#0A0A0F' : '#fff', fontWeight:'700' }}>Add</Text>
+                        </TouchableOpacity>
+                      </View>
+                      <Text style={{ fontSize:11, color:colors.text3, marginTop:-2, marginBottom:8, marginLeft:2 }}>
+                        Your list becomes a checklist — log entries against these items and track “X of {items.length || 'Y'}”.
+                      </Text>
+                    </>
+                  )}
                 </>
               )}
             </>

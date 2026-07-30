@@ -30,10 +30,15 @@ export function isCollectionLog(m: Memory): boolean {
   // logKind (e.g. an expanded-universe log that got 'count'), so they get the item
   // picker without recreation. Custom logs (no preset) fall back to logKind.
   if (m.logPreset && getPreset(m.logPreset)?.kind === 'collection') return true;
+  if (m.logItems && m.logItems.length > 0) return true;  // user-authored checklist
   return (m.logKind ?? 'count') === 'collection';
 }
 
+// The log's universe (item list). A USER-AUTHORED list wins when present, so a
+// custom collection flows through the SAME picker/browse/coverage code as a preset
+// universe; otherwise resolve from the preset. Freeform logs have neither → undefined.
 export function logUniverse(m: Memory): UniverseItem[] | undefined {
+  if (m.logItems && m.logItems.length > 0) return m.logItems;  // string[] ⊂ UniverseItem[]
   return presetUniverse(m.logPreset);
 }
 

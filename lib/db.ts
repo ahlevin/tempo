@@ -237,6 +237,7 @@ export function rowToMemory(r: any): Memory {
       ?? (r.log_kind === 'collection' ? 'collection' : 'count'),
     logPreset: r.log_preset ?? undefined,
     logTarget: r.log_target ?? undefined,
+    logItems: Array.isArray(r.log_items) ? r.log_items : undefined,
     datePrecision: r.date_precision ?? 'full',
     note: r.note ?? '',
     fav: !!r.fav,
@@ -246,7 +247,7 @@ export function rowToMemory(r: any): Memory {
 }
 
 export function memoryToRow(m: Memory, userId: string) {
-  return {
+  const base = {
     id: m.id,
     user_id: userId,
     type: m.type,
@@ -264,6 +265,11 @@ export function memoryToRow(m: Memory, userId: string) {
     links: m.links ?? [],
     fav: m.fav,
   };
+  // Only user-authored collections carry a log_items list — so every existing
+  // memory (presets, freeform, birthdays) emits the exact legacy row and syncs
+  // unchanged even before the 0004 migration adds the column.
+  if (m.logItems && m.logItems.length > 0) return { ...base, log_items: m.logItems };
+  return base;
 }
 
 // ---- Prefs ----------------------------------------------------------------
