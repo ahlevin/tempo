@@ -12,6 +12,7 @@ import { DateTimeField } from '../../components/DateTimeField';
 import { AlertsEditor } from '../../components/AlertsEditor';
 import { LinksEditor } from '../../components/LinksEditor';
 import { Toggle } from '../../components/FormControls';
+import { ItemListEditor, cleanItems } from '../../components/ItemListEditor';
 import { useConfirm } from '../../components/ConfirmDialog';
 
 export default function EditMemoryModal() {
@@ -33,6 +34,8 @@ export default function EditMemoryModal() {
   const [yearUnknown, setYearUnknown] = useState(m?.yearUnknown ?? false);
   const [alerts, setAlerts] = useState<AlertType[]>(m?.alerts ?? []);
   const [links,  setLinks]  = useState<Link[]>(m?.links ?? []);
+  // A user-authored collection's checklist (logItems present ⟺ custom collection).
+  const [items,  setItems]  = useState<string[]>(m?.logItems ?? []);
 
   const fi = { backgroundColor:colors.glass, borderWidth:1,
     borderColor:colors.border, borderRadius:12, padding:12,
@@ -54,8 +57,12 @@ export default function EditMemoryModal() {
   function save() {
     const lifelog = m!.type === 'lifelog';
     if (!name.trim() || (!lifelog && !date)) { showToast('⚠️', 'Missing info', 'Please fill in all fields.'); return; }
+    // Custom-collection logs (user-authored logItems) also persist the edited
+    // checklist + its size as the target; presets/freeform logs are untouched.
+    const customCollection = lifelog && Array.isArray(m!.logItems);
+    const cleaned = customCollection ? cleanItems(items) : [];
     updateMemory(id, lifelog
-      ? { name:name.trim(), emoji }   // life-log container: name + emoji only
+      ? { name:name.trim(), emoji, ...(customCollection ? { logItems: cleaned, logTarget: cleaned.length } : {}) }
       : { name:name.trim(), originDate:date, emoji, note:note.trim(), yearUnknown, alerts, links });
     router.back();
   }
@@ -125,6 +132,17 @@ export default function EditMemoryModal() {
           )}
           <FL label="Icon" />
           <IconPicker value={emoji} onChange={setEmoji} accent={colors.rose} />
+          {/* Manage items — ONLY user-authored collections (logItems present).
+              Preset universes stay read-only; freeform logs have no list. */}
+          {m.type === 'lifelog' && Array.isArray(m.logItems) && (
+            <>
+              <FL label={`Manage items${items.length ? ` · ${items.length}` : ''}`} />
+              <ItemListEditor items={items} onChange={setItems} />
+              <Text style={{ fontSize:11, color:colors.text3, marginTop:-2, marginBottom:14, marginLeft:2 }}>
+                Add, rename, or remove checklist items. Entries you've already logged are kept even if you remove their item.
+              </Text>
+            </>
+          )}
           {m.type !== 'lifelog' && (
             <>
               <FL label="Note (optional)" />

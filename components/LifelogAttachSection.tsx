@@ -3,8 +3,8 @@ import { View, Text, TextInput, TouchableOpacity, ScrollView } from 'react-nativ
 import { useTheme } from '../contexts/ThemeContext';
 import { useToast } from './Toast';
 import { useStore } from '../store/useStore';
-import { getPreset, presetUniverse } from '../constants/lifelogs';
-import { canonItem } from '../utils/lifelog';
+import { getPreset } from '../constants/lifelogs';
+import { canonItem, logUniverse } from '../utils/lifelog';
 import { itemName, itemCityState, locationForName, UniverseItem } from '../lib/universes';
 import { PresetBrowser } from './PresetBrowser';
 
@@ -68,7 +68,9 @@ export const LifelogAttachSection = forwardRef<AttachHandle, { emoji: string; ev
 
   // Build a Sel for an existing log (prefill its item from the event name).
   const selFromLog = (l: typeof lifelogs[number]): Sel => {
-    const universe = presetUniverse(l.logPreset);
+    // logUniverse resolves a USER-AUTHORED list (logItems) when present, else the
+    // preset — so attaching to a custom collection offers its items, same as a preset.
+    const universe = logUniverse(l);
     const hasU = !!universe && universe.length > 0;
     return { key: `log:${l.id}`, targetId: l.id, name: l.name, emoji: l.emoji,
       universe: hasU ? universe : undefined,

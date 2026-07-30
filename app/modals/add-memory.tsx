@@ -15,6 +15,7 @@ import { LinksEditor } from '../../components/LinksEditor';
 import { Toggle } from '../../components/FormControls';
 import { getPreset, LifelogPreset } from '../../constants/lifelogs';
 import { PresetBrowser, OccasionType } from '../../components/PresetBrowser';
+import { ItemListEditor, cleanItems } from '../../components/ItemListEditor';
 
 const DATE_LABELS: Record<string,string> = {
   birthday:'Date of Birth', anniversary:'Anniversary Date',
@@ -49,13 +50,6 @@ export default function AddMemoryModal() {
   // (a user-authored item list that becomes the log's universe).
   const [customKind, setCustomKind] = useState<'freeform' | 'checklist'>('freeform');
   const [items, setItems] = useState<string[]>([]);
-  const [itemDraft, setItemDraft] = useState('');
-  const addItem = () => {
-    const v = itemDraft.trim();
-    if (!v) return;
-    setItems(prev => prev.some(x => x.toLowerCase() === v.toLowerCase()) ? prev : [...prev, v]);
-    setItemDraft('');
-  };
   // UI-only flow state for the Life Log path (no effect on saved data).
   const [browserOpen,   setBrowserOpen]   = useState(true);  // browser expanded vs collapsed selection
   const [customMode,    setCustomMode]    = useState(false); // "Custom" chosen (vs a real preset)
@@ -104,9 +98,10 @@ export default function AddMemoryModal() {
       const p = getPreset(preset);
       if (p) {
         logKind = p.kind; logPreset = p.id; logTarget = p.target;
-      } else if (customKind === 'checklist' && items.length > 0) {
+      } else if (customKind === 'checklist' && cleanItems(items).length > 0) {
         // User-authored collection: the list IS the universe; target = its size.
-        logKind = 'collection'; logItems = items; logTarget = items.length;
+        const cleaned = cleanItems(items);
+        logKind = 'collection'; logItems = cleaned; logTarget = cleaned.length;
       } else {
         const t = parseInt(customTarget, 10);
         if (t > 0) { logKind = 'collection'; logTarget = t; }
@@ -254,25 +249,9 @@ export default function AddMemoryModal() {
                   ) : (
                     <>
                       <FL label={`Items${items.length ? ` · ${items.length}` : ''}`} />
-                      {items.map((it, i) => (
-                        <View key={it + i} style={{ flexDirection:'row', alignItems:'center', gap:10, marginBottom:8,
-                          backgroundColor:colors.surf, borderWidth:1, borderColor:colors.border, borderRadius:12, padding:11 }}>
-                          <Text style={{ flex:1, fontSize:14, fontWeight:'600', color:colors.text1 }} numberOfLines={1}>{it}</Text>
-                          <TouchableOpacity onPress={() => setItems(prev => prev.filter((_, j) => j !== i))} hitSlop={{ top:8, bottom:8, left:8, right:8 }}>
-                            <Text style={{ fontSize:20, color:colors.text3 }}>×</Text>
-                          </TouchableOpacity>
-                        </View>
-                      ))}
-                      <View style={{ flexDirection:'row', gap:8, marginBottom:8 }}>
-                        <TextInput value={itemDraft} onChangeText={setItemDraft} onSubmitEditing={addItem} returnKeyType="done"
-                          placeholder="Add an item…" placeholderTextColor={colors.text3} style={{ ...fi, flex:1, marginBottom:0 }} />
-                        <TouchableOpacity onPress={addItem}
-                          style={{ paddingHorizontal:16, borderRadius:12, backgroundColor:colors.teal, alignItems:'center', justifyContent:'center' }}>
-                          <Text style={{ color: colors.isDark ? '#0A0A0F' : '#fff', fontWeight:'700' }}>Add</Text>
-                        </TouchableOpacity>
-                      </View>
+                      <ItemListEditor items={items} onChange={setItems} />
                       <Text style={{ fontSize:11, color:colors.text3, marginTop:-2, marginBottom:8, marginLeft:2 }}>
-                        Your list becomes a checklist — log entries against these items and track “X of {items.length || 'Y'}”.
+                        Your list becomes a checklist — log entries against these items and track “X of {items.length || 'Y'}”. You can add or edit items later from the log.
                       </Text>
                     </>
                   )}
