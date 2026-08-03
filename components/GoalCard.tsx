@@ -24,7 +24,11 @@ export const GoalCard = memo(function GoalCard({ goal: g }: { goal: Goal }) {
   const { colors } = useTheme();
   const memories   = useStore(s => s.memories);
   const goals      = useStore(s => s.goals);
-  const attempts   = useStore(s => s.goalAttempts);
+  const allAttempts = useStore(s => s.goalAttempts);
+  const profileId  = useStore(s => s.profileId);
+  // Solo card progress/score/best = current user's own attempts only (a shared goal's
+  // pool includes co-participants; the challenge view shows those, attributed).
+  const attempts   = allAttempts.filter(a => a.profileId === profileId);
   const toggleFav  = useStore(s => s.toggleGoalFav);
   const nudgeGoal  = useStore(s => s.nudgeGoal);
   const incPeriod  = useStore(s => s.incrementGoalPeriod);

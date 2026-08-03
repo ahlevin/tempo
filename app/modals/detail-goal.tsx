@@ -18,7 +18,12 @@ export default function GoalDetailModal() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const goals = useStore(s => s.goals);
   const memories = useStore(s => s.memories);
-  const attempts = useStore(s => s.goalAttempts);
+  const allAttempts = useStore(s => s.goalAttempts);
+  const profileId = useStore(s => s.profileId);
+  // SOLO goal view = ONLY the current user's own attempts. The store's goalAttempts
+  // pool includes co-participants' attempts for a SHARED (challenge) goal (RLS lets
+  // participants see each other's); those belong on the challenge screen, not here.
+  const attempts = allAttempts.filter(a => a.profileId === profileId);
   const setMilestoneDone = useStore(s => s.setMilestoneDone);
   const g = goals.find(x => x.id === id);
   useEffect(() => { if (!g) router.dismissTo('/tabs/goals'); }, [g]);

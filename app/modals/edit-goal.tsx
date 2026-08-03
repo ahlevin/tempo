@@ -23,7 +23,10 @@ export default function EditGoalModal() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const goals      = useStore(s => s.goals);
   const memories   = useStore(s => s.memories);
-  const attempts   = useStore(s => s.goalAttempts);
+  const allAttempts = useStore(s => s.goalAttempts);
+  const profileId  = useStore(s => s.profileId);
+  // Solo view: quest-child completion reflects the current user's own attempts only.
+  const attempts   = allAttempts.filter(a => a.profileId === profileId);
   const updateGoal = useStore(s => s.updateGoal);
   const deleteGoal = useStore(s => s.deleteGoal);
   const addGoal    = useStore(s => s.addGoal);
