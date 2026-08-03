@@ -27,11 +27,12 @@ export interface CountdownCardProps {
   onDelete: () => void;
   confirmTitle: string;
   confirmMessage: string;
+  dim?: boolean;             // de-emphasize a passed/recently-ended item
 }
 
 export function CountdownCard({
   emoji, emojiBg, accentBar, title, titleMaxWidth = '70%', badges, subtitle, note,
-  days, daysLabel, dayColor, progressPct, fav, onFav, onPress, onDelete, confirmTitle, confirmMessage,
+  days, daysLabel, dayColor, progressPct, fav, onFav, onPress, onDelete, confirmTitle, confirmMessage, dim,
 }: CountdownCardProps) {
   const { colors } = useTheme();
   return (
@@ -41,6 +42,7 @@ export function CountdownCard({
           backgroundColor: colors.surf, borderRadius: 18, borderWidth: 1,
           borderColor: colors.border, padding: 14, paddingLeft: 16,
           marginBottom: 8, flexDirection: 'row', alignItems: 'center', gap: 12,
+          opacity: dim ? 0.55 : 1,
           ...(colors.isDark ? null : lightCardShadow),
         }}>
         {colors.isDark && <View style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, backgroundColor: accentBar, borderRadius: 2 }} />}

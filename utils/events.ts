@@ -109,6 +109,43 @@ export function countdownInfo(e: Event, now: number = Date.now()): CountdownInfo
   return { type, phase, targetMs, startMs, endMs, live, passed, visibleToday };
 }
 
+// ── Passing lifecycle (pure function of the clock — no stored flag, no job) ──
+
+// A one-shot event lingers in Upcoming for this long AFTER it passes, then archives.
+export const LINGER_WINDOW_MS = 48 * 60 * 60 * 1000; // 48h
+
+// The instant a ONE-SHOT event's countdown truly completes, for lifecycle staging.
+// Reuses the SAME date resolvers as countdownInfo (no second passing calc):
+//  - timed: its end instant, else its start instant.
+//  - all-day: END of its last LOCAL day — an exclusive endDate midnight, or the
+//    midnight AFTER a single-day event (so an all-day event is "today" all day).
+// Returns null for recurring events (they advance to a future occurrence → never
+// pass) and for malformed data.
+export function eventPassedAtMs(e: Event, now: number = Date.now()): number | null {
+  if (e.recur) return null;
+  const startMs = eventStartMs(e);
+  const endMs = eventEndMs(e);
+  if (isTimed(e)) return endMs ?? startMs;
+  if (endMs != null) return endMs;                     // date_only range → exclusive end midnight
+  if (startMs == null) return null;
+  const d = new Date(startMs);                         // single all-day day → next local midnight
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1, 0, 0, 0).getTime();
+}
+
+export type EventStage = 'upcoming' | 'recently_passed' | 'archived';
+
+// upcoming → not yet passed (incl. every recurring event).
+// recently_passed → passed within LINGER_WINDOW_MS (stays in Upcoming, de-emphasized).
+// archived → passed longer ago (leaves Upcoming; shows only in History).
+export function eventStage(e: Event, now: number = Date.now()): EventStage {
+  const at = eventPassedAtMs(e, now);
+  if (at == null || now < at) return 'upcoming';
+  return now - at <= LINGER_WINDOW_MS ? 'recently_passed' : 'archived';
+}
+
+/** True once a one-shot event has passed (recently_passed OR archived). */
+export const isPassedEvent = (e: Event, now: number = Date.now()) => eventStage(e, now) !== 'upcoming';
+
 // ── Display helpers ─────────────────────────────────────────────────────────
 
 // The origin zone for an exact_instant (falls back to device tz).

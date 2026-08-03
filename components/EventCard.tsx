@@ -9,7 +9,7 @@ import { AlertBadge } from './AlertBadge';
 import { LinkBadge } from './LinkBadge';
 import { CountdownCard } from './CountdownCard';
 import { nextOccurrence, daysUntil, eventProgress, recurLabel, fmtDateTime } from '../utils/dates';
-import { countdownInfo, isTimed, eventTimeLabel, formatHMS } from '../utils/events';
+import { countdownInfo, isTimed, eventTimeLabel, formatHMS, isPassedEvent } from '../utils/events';
 import { useTick, useSecondTick } from '../contexts/TickContext';
 import { openEventDetail } from '../utils/nav';
 
@@ -28,6 +28,7 @@ export const EventCard = memo(function EventCard({ event: e }: { event: Event })
   const base = countdownInfo(e, baseNow);
   const sec = useSecondTick(base.live);          // 1s tick only while near
   const now = base.live ? sec : baseNow;
+  const passed = isPassedEvent(e, now);          // one-shot & past (recurring never)
 
   const rl = recurLabel(e);
   const badges = (
@@ -50,9 +51,13 @@ export const EventCard = memo(function EventCard({ event: e }: { event: Event })
     confirmTitle: 'Delete Event', confirmMessage: `Delete "${e.name}"? This can't be undone.`,
   };
 
-  // ── date_only — byte-for-byte the original rendering ──
+  // ── date_only — byte-for-byte the original rendering (passed → de-emphasized) ──
   if (!timed) {
     const nd = nextOccurrence(e);
+    if (passed) {
+      return <CountdownCard {...common} dim subtitle={`Ended · ${fmtDateTime(nd, true)}`}
+        days="Ended" daysLabel="" dayColor={colors.text3} />;
+    }
     const d = daysUntil(nd);
     return <CountdownCard {...common} subtitle={fmtDateTime(nd, e.allDay)} days={d} dayColor={dayCountColor(colors, d)} />;
   }
@@ -70,7 +75,7 @@ export const EventCard = memo(function EventCard({ event: e }: { event: Event })
   let dayColor = dayCountColor(colors, dCal);
 
   if (info.phase === 'after') {
-    big = 'Ended'; daysLabel = ''; subtitle = `Ended · ${timeLabel}`;
+    big = 'Ended'; daysLabel = ''; subtitle = `Ended · ${timeLabel}`; dayColor = colors.text3;
   } else if (info.phase === 'during') {
     big = formatHMS((info.endMs ?? now) - now); daysLabel = 'left';
     subtitle = `Happening now · ${timeLabel}`; dayColor = colors.rose;
@@ -81,5 +86,5 @@ export const EventCard = memo(function EventCard({ event: e }: { event: Event })
     subtitle = `${dateStr} · ${timeLabel}`;
   }
 
-  return <CountdownCard {...common} subtitle={subtitle} days={big} daysLabel={daysLabel} dayColor={dayColor} />;
+  return <CountdownCard {...common} subtitle={subtitle} days={big} daysLabel={daysLabel} dayColor={dayColor} dim={passed} />;
 });

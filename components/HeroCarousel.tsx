@@ -7,7 +7,7 @@ import { CATEGORIES } from '../constants/data';
 import { visibleHolidays, HolidayItem } from '../constants/holidays';
 import { logCount, logVisits, upcomingCount, isCollectionLog, logUniverse, isUpcomingEntry } from '../utils/lifelog';
 import { isRecurringGoal, isLinkedGoal, hasDeadline, goalDerivedProgress, isTopLevelGoal } from '../utils/goals';
-import { isTimed, eventTimeLabel } from '../utils/events';
+import { isTimed, eventTimeLabel, isPassedEvent } from '../utils/events';
 import { currentPeriodProgress, goalStreak, goalPeriodKind, goalPeriodTarget, periodLabel, periodNoun } from '../utils/recurring';
 import { useTheme } from '../contexts/ThemeContext';
 import { useTick } from '../contexts/TickContext';
@@ -406,7 +406,9 @@ export function HeroCarousel() {
   // O(memories × entries) scan — only a data change does.
   const items = useMemo(() => {
     const list: { kind: 'event' | 'goal' | 'memory' | 'holiday' | 'logentry'; data: any; days: number }[] = [];
-    events.filter(e => e.fav).forEach(e => list.push({ kind:'event', data:e, days: daysUntil(nextOccurrence(e)) }));
+    // Exclude passed one-shot events — a dead event shouldn't float to the hero
+    // front (recurring events never pass; they stay). Still findable in Past.
+    events.filter(e => e.fav && !isPassedEvent(e)).forEach(e => list.push({ kind:'event', data:e, days: daysUntil(nextOccurrence(e)) }));
     goals.filter(g => g.fav && isTopLevelGoal(g)).forEach(g => list.push({ kind:'goal', data:g, days: (isRecurringGoal(g) || !hasDeadline(g)) ? 0 : daysUntil(g.date) }));
     memories
       .filter(m => m.fav && (m.type === 'birthday' || m.type === 'anniversary' || m.type === 'memorial' || m.type === 'lifelog'))

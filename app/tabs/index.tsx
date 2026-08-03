@@ -19,7 +19,7 @@ import { catColor } from '../../constants/colors';
 import { visibleHolidays, HolidayItem } from '../../constants/holidays';
 import { upcomingLogItems, UpcomingLogItem } from '../../utils/lifelog';
 import { isRecurringGoal, hasDeadline, isTopLevelGoal } from '../../utils/goals';
-import { isTimed, eventStartMs } from '../../utils/events';
+import { isTimed, eventStartMs, eventStage, eventPassedAtMs, isPassedEvent } from '../../utils/events';
 import { nextOccurrence, nextAnnual, daysUntil } from '../../utils/dates';
 
 // Countdowns filter pills, in a fixed presentation order: All, the recurring
@@ -41,6 +41,7 @@ const FILTERS: { id: string; label: string; emoji: string }[] = [
   CAT('medical'),
   CAT('house'),       // "House/Vehicle"
   { id: 'memorial',    label: 'Memorials',     emoji: '🕊️' },
+  { id: 'history',     label: 'Past',          emoji: '🕘' },
 ];
 
 // A row in the "Upcoming" list: an event, a recurring memory, or a visible
@@ -78,10 +79,20 @@ export default function HomeScreen() {
   // memories. All sorted by soonest next occurrence. Memoized on its real inputs so
   // it recomputes only when data/filter change — not on every unrelated re-render.
   const upcoming: UpcomingItem[] = useMemo(() => {
+    const now = Date.now();
+    // History/Past view: ARCHIVED one-shot events (passed > 48h ago), reverse-chron
+    // (most recently passed first). Never deleted — derived purely from the clock.
+    if (filter === 'history') {
+      return events
+        .filter(e => eventStage(e, now) === 'archived')
+        .sort((a, b) => (eventPassedAtMs(b, now) ?? 0) - (eventPassedAtMs(a, now) ?? 0))
+        .map(e => ({ kind: 'event', data: e } as UpcomingItem));
+    }
     const list: UpcomingItem[] = [];
     if (isAll || isCat) {
       events
-        .filter(e => isAll || e.cat === filter)
+        // Exclude archived (passed > 48h); keep upcoming + recently-passed (linger).
+        .filter(e => (isAll || e.cat === filter) && eventStage(e, now) !== 'archived')
         .forEach(e => list.push({ kind: 'event', data: e }));
     }
     if (isAll) {
@@ -110,7 +121,16 @@ export default function HomeScreen() {
         (isRecurringGoal(g) ? true : (hasDeadline(g) && daysUntil(g.date) > 0)))
         .forEach(g => list.push({ kind: 'goal', data: g }));
     }
-    list.sort((a, b) => upcomingDays(a) - upcomingDays(b));
+    // Passed-but-lingering events sink BELOW all still-upcoming items (fixing the
+    // old bug where negative upcomingDays floated them to the TOP); among passed,
+    // most-recently-passed first. Only events can be passed (other kinds self-clean).
+    list.sort((a, b) => {
+      const pa = a.kind === 'event' && isPassedEvent(a.data, now);
+      const pb = b.kind === 'event' && isPassedEvent(b.data, now);
+      if (pa !== pb) return pa ? 1 : -1;
+      if (pa && pb) return upcomingDays(b) - upcomingDays(a);
+      return upcomingDays(a) - upcomingDays(b);
+    });
     return list;
   }, [events, memories, goals, prefs.holidays, filter, isAll, isCat, isMemType]);
 
@@ -175,8 +195,9 @@ export default function HomeScreen() {
         {/* Countdowns: events + birthdays/anniversaries/memorials + holidays */}
         <SectionHeader title={listTitle} onAdd={() => setChooserOpen(true)} />
         {upcoming.length === 0 ? (
-          <EmptyPrompt icon="⏳" text="Nothing here yet — tap to start counting down to something."
-            onPress={() => setChooserOpen(true)} />
+          filter === 'history'
+            ? <EmptyPrompt icon="🕘" text="No past events yet — events show here for 48 hours after they end, then move to Past." onPress={() => setChooserOpen(true)} />
+            : <EmptyPrompt icon="⏳" text="Nothing here yet — tap to start counting down to something." onPress={() => setChooserOpen(true)} />
         ) : upcoming.map(it => it.kind === 'event'
             ? <EventCard key={`e-${it.data.id}`} event={it.data} />
             : it.kind === 'memory'
