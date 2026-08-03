@@ -1,7 +1,8 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, DimensionValue } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useStore } from '../../store/useStore';
+import { useToast } from '../../components/Toast';
 import { useTheme } from '../../contexts/ThemeContext';
 import { dayCountColor } from '../../constants/colors';
 import { daysUntil, fmtDateTimeFull, fmtShort } from '../../utils/dates';
@@ -243,8 +244,43 @@ export default function GoalDetailModal() {
 
 // Reminders + Note + Links + Created/Completed dates — shared across all kinds.
 function Footer({ g, recurring }: { g: import('../../store/types').Goal; recurring: boolean }) {
+  const { colors } = useTheme();
+  const shareGoal = useStore(s => s.shareGoal);
+  const { showToast } = useToast();
+  const [busy, setBusy] = useState(false);
+  const kind = goalKind(g);
+  const measurable = kind === 'value' || kind === 'count' || kind === 'collection' || kind === 'streak';
+
+  const makeChallenge = async () => {
+    if (busy) return;
+    setBusy(true);
+    const res = await shareGoal(g.id);
+    setBusy(false);
+    if (res.error || !res.code) { showToast('⚠️', 'Could not share', res.error ?? 'Try again.'); return; }
+    showToast('🏆', 'Challenge created!', `Join code ${res.code}`);
+    router.push({ pathname: '/modals/challenge-detail', params: { id: g.id } });
+  };
+
   return (
     <>
+      {/* Multiplayer: turn a measurable goal into a shared challenge (or open it). */}
+      {measurable && (
+        <Section label="Challenge">
+          {g.joinCode ? (
+            <TouchableOpacity onPress={() => router.push({ pathname: '/modals/challenge-detail', params: { id: g.id } })}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.isDark ? 'rgba(62,207,178,0.12)' : colors.tint,
+                borderRadius: 12, paddingVertical: 12, paddingHorizontal: 14 }}>
+              <Text style={{ fontSize: 15, fontWeight: '700', color: colors.teal }}>🏆 View challenge</Text>
+              <Text style={{ fontSize: 13, color: colors.text3, marginLeft: 'auto', letterSpacing: 1 }}>{g.joinCode}</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity onPress={makeChallenge} disabled={busy}
+              style={{ backgroundColor: colors.teal, borderRadius: 12, paddingVertical: 12, alignItems: 'center', opacity: busy ? 0.6 : 1 }}>
+              <Text style={{ fontSize: 15, fontWeight: '700', color: colors.isDark ? '#0A0A0F' : '#fff' }}>{busy ? 'Creating…' : '🏆 Make it a challenge'}</Text>
+            </TouchableOpacity>
+          )}
+        </Section>
+      )}
       <Section label="Reminders">
         <Field label="Alerts" value={remindersText(g.alerts)} />
       </Section>

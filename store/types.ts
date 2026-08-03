@@ -84,6 +84,29 @@ export interface GoalAttempt {
   createdAt?: string;    // ISO; server default
 }
 
+// The current user's own profile (identity), from the `profiles` table. Other
+// users' name/avatar are only ever obtained via goal_standings / find_profile_by_code.
+export interface Profile {
+  id: string;
+  displayName: string;
+  avatarEmoji: string;
+  inviteCode: string;    // the user's profile code (find_profile_by_code)
+}
+
+// One participant's standing in a challenge, from the goal_standings(gid) RPC.
+// DERIVED server-side — never stored.
+export interface Standing {
+  profileId: string;
+  displayName: string;
+  avatarEmoji: string;
+  attempts: number;
+  score: number | null;        // best/sum/latest per the goal's agg
+  latestValue: number | null;
+  latestAt: string | null;     // "YYYY-MM-DD"
+  target: number | null;       // effective target (per-participant handicap or base)
+  reached: boolean;
+}
+
 /** One period's manual progress for a RECURRING manual goal. `key` is the
  *  period key (e.g. "2026-07-09" | "2026-W28" | "2026-07"); `n` the tapped
  *  count in that period. A period counts as "met" when n >= periodTarget.
@@ -140,6 +163,9 @@ export interface Goal {
   parentGoalId?: string | null;
   /** Reserved for a later (multiplayer) prompt — not used here. */
   joinCode?: string | null;
+  /** The owner's auth user_id (read-only) — lets the client tell an owned goal from
+   *  one the user only JOINED (visible via RLS). Never written back. */
+  ownerUserId?: string | null;
 }
 
 export type DatePrecision = 'none' | 'year' | 'month' | 'full';

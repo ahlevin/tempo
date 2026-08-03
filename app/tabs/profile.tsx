@@ -1,10 +1,13 @@
 import { ScrollView, View, Text, TouchableOpacity, TextInput, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { router } from 'expo-router';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useStore } from '../../store/useStore';
 import { useAuth } from '../../contexts/AuthContext';
+import { useToast } from '../../components/Toast';
+import { IconPicker } from '../../components/IconPicker';
+import { copyToClipboard } from '../../utils/clipboard';
 import { TIMEZONES, QUOTES } from '../../constants/data';
 import { catColor } from '../../constants/colors';
 import { BUILD_ID } from '../../constants/build';
@@ -21,27 +24,92 @@ export default function ProfileScreen() {
   const { colors, theme, setTheme } = useTheme();
   const prefs = useStore(s => s.prefs);
   const updatePrefs = useStore(s => s.updatePrefs);
+  const myProfile = useStore(s => s.myProfile);
+  const updateMyProfile = useStore(s => s.updateMyProfile);
+  const joinChallenge = useStore(s => s.joinChallenge);
   const { user, signOut } = useAuth();
+  const { showToast } = useToast();
   const [locOpen, setLocOpen] = useState(false);
   const [tzOpen,  setTzOpen]  = useState(false);
   const [locVal,  setLocVal]  = useState(prefs.location || '');
+  // Identity (challenge) fields.
+  const [nameDraft, setNameDraft] = useState(myProfile?.displayName ?? '');
+  const [nameFocused, setNameFocused] = useState(false);
+  const [joinDraft, setJoinDraft] = useState('');
+  const [joining, setJoining] = useState(false);
+  // Keep the name field in sync when the profile loads/changes (unless editing).
+  useEffect(() => { if (!nameFocused) setNameDraft(myProfile?.displayName ?? ''); }, [myProfile?.displayName, nameFocused]);
+
+  const saveName = () => { const v = nameDraft.trim(); if (v && v !== myProfile?.displayName) updateMyProfile({ displayName: v }); };
+  const copyInvite = async () => {
+    const code = myProfile?.inviteCode ?? '';
+    if (!code) return;
+    const ok = await copyToClipboard(code);
+    showToast(ok ? '✅' : '⚠️', ok ? 'Invite code copied' : 'Copy failed', ok ? code : 'Select it to copy.');
+  };
+  const doJoin = async () => {
+    if (joining) return;
+    setJoining(true);
+    const res = await joinChallenge(joinDraft);
+    setJoining(false);
+    if (res.error) { showToast('⚠️', 'Could not join', res.error); return; }
+    setJoinDraft('');
+    showToast('🏆', 'Joined the challenge!', 'Find it in the Challenges tab.');
+    router.push('/tabs/challenges');
+  };
 
   return (
     <SafeAreaView style={{ flex:1, backgroundColor:colors.bg }} edges={['top']}>
       <ScrollView contentContainerStyle={{ paddingHorizontal:16, paddingBottom:120 }}
         showsVerticalScrollIndicator={false}>
-        <View style={{ alignItems:'center', paddingVertical:28 }}>
-          <View style={{ width:80, height:80, borderRadius:40, backgroundColor:colors.accent,
-            alignItems:'center', justifyContent:'center', marginBottom:12 }}>
-            <Text style={{ fontSize:34 }}>👤</Text>
+        <View style={{ alignItems:'center', paddingVertical:24 }}>
+          <View style={{ width:80, height:80, borderRadius:40, backgroundColor: colors.isDark ? colors.glass : colors.tint,
+            borderWidth:1, borderColor:colors.border, alignItems:'center', justifyContent:'center', marginBottom:12 }}>
+            <Text style={{ fontSize:38 }}>{myProfile?.avatarEmoji || '🙂'}</Text>
           </View>
-          <Text style={{ fontSize:20, fontWeight:'700', color:colors.text1 }}>
-            {user?.email ? user.email.split('@')[0] : 'Your Account'}
-          </Text>
-          <Text style={{ fontSize:13, color:colors.text3, marginTop:4 }}>
-            {user?.email || 'Not signed in'}
+          <TextInput value={nameDraft} onChangeText={setNameDraft}
+            onFocus={() => setNameFocused(true)}
+            onBlur={() => { setNameFocused(false); saveName(); }}
+            onEndEditing={saveName} returnKeyType="done"
+            placeholder="Your name" placeholderTextColor={colors.text3}
+            style={{ fontSize:20, fontWeight:'700', color:colors.text1, textAlign:'center', minWidth:180, paddingVertical:2 }} />
+          <Text style={{ fontSize:13, color:colors.text3, marginTop:4 }}>{user?.email || 'Not signed in'}</Text>
+        </View>
+
+        <SLabel label="Your avatar" />
+        <View style={{ marginBottom:24 }}>
+          <IconPicker value={myProfile?.avatarEmoji || '🙂'} onChange={e => updateMyProfile({ avatarEmoji: e })} accent={colors.accent} />
+        </View>
+
+        <SLabel label="Your invite code" />
+        <View style={{ backgroundColor:colors.surf, borderRadius:16, borderWidth:1, borderColor:colors.border, padding:16, marginBottom:24 }}>
+          <View style={{ flexDirection:'row', alignItems:'center', gap:12 }}>
+            <Text style={{ flex:1, fontSize:28, fontWeight:'800', color:colors.teal, letterSpacing:3 }}>
+              {myProfile?.inviteCode || '—'}
+            </Text>
+            <TouchableOpacity onPress={copyInvite} disabled={!myProfile?.inviteCode}
+              style={{ paddingVertical:9, paddingHorizontal:16, borderRadius:12, backgroundColor:colors.teal, opacity: myProfile?.inviteCode ? 1 : 0.5 }}>
+              <Text style={{ fontSize:14, fontWeight:'700', color: colors.isDark ? '#0A0A0F' : '#fff' }}>Copy</Text>
+            </TouchableOpacity>
+          </View>
+          <Text style={{ fontSize:12, color:colors.text3, marginTop:10 }}>
+            Your personal code — friends can find you by it. To join a specific challenge, use its join code below.
           </Text>
         </View>
+
+        <SLabel label="Join a challenge" />
+        <View style={{ flexDirection:'row', gap:8, marginBottom:8 }}>
+          <TextInput value={joinDraft} onChangeText={t => setJoinDraft(t.toUpperCase())} autoCapitalize="characters"
+            placeholder="Enter join code (e.g. JCR9CS)" placeholderTextColor={colors.text3} onSubmitEditing={doJoin} returnKeyType="go"
+            style={{ flex:1, backgroundColor:colors.glass, borderWidth:1, borderColor:colors.border, borderRadius:12, padding:12, color:colors.text1, fontSize:15, letterSpacing:1 }} />
+          <TouchableOpacity onPress={doJoin} disabled={joining || !joinDraft.trim()}
+            style={{ paddingHorizontal:18, borderRadius:12, backgroundColor:colors.accent, alignItems:'center', justifyContent:'center', opacity: joining || !joinDraft.trim() ? 0.5 : 1 }}>
+            <Text style={{ fontSize:14, fontWeight:'700', color:'#fff' }}>{joining ? '…' : 'Join'}</Text>
+          </TouchableOpacity>
+        </View>
+        <Text style={{ fontSize:12, color:colors.text3, marginBottom:24, marginLeft:2 }}>
+          Got a challenge code from a friend? Enter it to join their leaderboard.
+        </Text>
 
         <SLabel label="Daily Quote" />
         <View style={{ gap:8, marginBottom:28 }}>

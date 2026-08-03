@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { Event, Goal, Memory, UserPrefs, LogEntry, GoalAttempt } from '../store/types';
+import { Event, Goal, Memory, UserPrefs, LogEntry, GoalAttempt, Profile, Standing } from '../store/types';
 import { getPreset } from '../constants/lifelogs';
 import { countdownType } from '../utils/events';
 
@@ -155,6 +155,7 @@ export function rowToGoal(r: any): Goal {
     targetValue: r.target_value != null ? Number(r.target_value) : null,
     parentGoalId: r.parent_goal_id ?? null,
     joinCode: r.join_code ?? null,
+    ownerUserId: r.user_id ?? null,
   };
 }
 
@@ -352,6 +353,79 @@ export async function fetchPrimaryProfileId(userId: string): Promise<string | nu
     if (!byId.error && byId.data?.id) return byId.data.id as string;
   } catch { /* fall through */ }
   return null;
+}
+
+// ── Challenge identity + RPCs (all RLS/SECURITY DEFINER — see migrations 0001/0002) ──
+
+export function rowToProfile(r: any): Profile {
+  return { id: r.id, displayName: r.display_name ?? '', avatarEmoji: r.avatar_emoji || '🙂', inviteCode: r.invite_code ?? '' };
+}
+
+// The current user's primary profile (id + identity fields). Tries user_id (primary
+// first), then id == userId as a fallback (mirrors fetchPrimaryProfileId).
+export async function fetchMyProfile(userId: string): Promise<Profile | null> {
+  try {
+    const r = await supabase.from('profiles').select('id, display_name, avatar_emoji, invite_code, is_primary')
+      .eq('user_id', userId).order('is_primary', { ascending: false }).limit(1).maybeSingle();
+    if (!r.error && r.data) return rowToProfile(r.data);
+  } catch { /* fall through */ }
+  try {
+    const r = await supabase.from('profiles').select('id, display_name, avatar_emoji, invite_code').eq('id', userId).maybeSingle();
+    if (!r.error && r.data) return rowToProfile(r.data);
+  } catch { /* fall through */ }
+  return null;
+}
+
+export async function updateProfileRow(id: string, patch: { displayName?: string; avatarEmoji?: string }): Promise<boolean> {
+  const row: any = {};
+  if (patch.displayName !== undefined) row.display_name = patch.displayName;
+  if (patch.avatarEmoji !== undefined) row.avatar_emoji = patch.avatarEmoji;
+  const { error } = await supabase.from('profiles').update(row).eq('id', id);
+  return !error;
+}
+
+export function rowToStanding(r: any): Standing {
+  return {
+    profileId: r.profile_id,
+    displayName: r.display_name ?? '',
+    avatarEmoji: r.avatar_emoji || '🙂',
+    attempts: Number(r.attempts ?? 0),
+    score: r.score != null ? Number(r.score) : null,
+    latestValue: r.latest_value != null ? Number(r.latest_value) : null,
+    latestAt: r.latest_at ? datePart(r.latest_at) : null,
+    target: r.target != null ? Number(r.target) : null,
+    reached: !!r.reached,
+  };
+}
+
+/** goal_standings(gid) — DERIVED leaderboard rows. Empty on error / no access. */
+export async function rpcStandings(goalId: string): Promise<Standing[]> {
+  const { data, error } = await supabase.rpc('goal_standings', { gid: goalId });
+  if (error || !Array.isArray(data)) return [];
+  return data.map(rowToStanding);
+}
+
+/** share_goal(gid) — sets/returns the goal's join_code and adds the owner as a
+ *  participant. Returns the code, or a message on failure (e.g. not your goal). */
+export async function rpcShareGoal(goalId: string): Promise<{ code?: string; error?: string }> {
+  const { data, error } = await supabase.rpc('share_goal', { gid: goalId });
+  if (error) return { error: error.message };
+  return { code: data as string };
+}
+
+/** join_goal_by_code(code) — adds the caller as a participant; returns the goal id,
+ *  or a message ("no challenge with that code", "no profile"). */
+export async function rpcJoinByCode(code: string): Promise<{ goalId?: string; error?: string }> {
+  const { data, error } = await supabase.rpc('join_goal_by_code', { code });
+  if (error) return { error: error.message };
+  return { goalId: data as string };
+}
+
+/** Owner-set per-participant handicap target (goal_participants.target_value). */
+export async function rpcSetParticipantTarget(goalId: string, profileId: string, target: number | null): Promise<boolean> {
+  const { error } = await supabase.from('goal_participants').update({ target_value: target })
+    .eq('goal_id', goalId).eq('profile_id', profileId);
+  return !error;
 }
 
 export type CloudTable = 'events' | 'goals' | 'memories' | 'goal_attempts';

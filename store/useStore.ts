@@ -5,10 +5,11 @@ import { format, addDays } from 'date-fns';
 import { Event, Goal, Memory, UserPrefs, Alert, Recurrence } from './types';
 import { DEFAULT_HOLIDAY_IDS } from '../constants/holidays';
 import {
-  fetchAll, dbUpsert, dbDelete, dbDeleteById, dbUpsertPrefs, fetchPrimaryProfileId,
+  fetchAll, dbUpsert, dbDelete, dbDeleteById, dbUpsertPrefs, fetchMyProfile,
+  updateProfileRow, rpcShareGoal, rpcJoinByCode,
   eventToRow, goalToRow, memoryToRow, goalAttemptToRow, prefsToRow, uuid, CloudTable,
 } from '../lib/db';
-import type { GoalAttempt, Link } from './types';
+import type { GoalAttempt, Link, Profile } from './types';
 import { fetchUniverses, setUniverseOverlay, UniverseRow } from '../lib/universes';
 import { currentPeriodKey } from '../utils/recurring';
 import { goalDone, goalKind } from '../utils/goals';
@@ -39,6 +40,7 @@ interface TempoStore {
   memories: Memory[];
   goalAttempts: GoalAttempt[];       // value-goal measurements (goal_attempts table)
   profileId: string | null;          // current user's primary profile id (for attempt writes)
+  myProfile: Profile | null;         // current user's identity (name/avatar/invite code)
   prefs: UserPrefs;
   userId: string | null;
   prefsExists: boolean;   // did a prefs row exist in the cloud? (false => new user)
@@ -89,6 +91,11 @@ interface TempoStore {
   convertEventToMemory: (id: string, targetType: Memory['type']) => void;
   convertMemoryToEvent: (id: string) => void;
   convertMemoryType: (id: string, targetType: Memory['type']) => void;
+  // ── Challenges (multiplayer) ──
+  updateMyProfile: (patch: { displayName?: string; avatarEmoji?: string }) => void;
+  shareGoal: (goalId: string) => Promise<{ code?: string; error?: string }>;
+  joinChallenge: (code: string) => Promise<{ goalId?: string; error?: string }>;
+  refreshCloud: () => Promise<void>;
   updatePrefs: (patch: Partial<UserPrefs>) => void;
   setHolidaysEnabled: (on: boolean) => void;
   setHolidayShown: (id: string, shown: boolean) => void;
@@ -189,7 +196,7 @@ export const useStore = create<TempoStore>()(
       };
 
       return {
-        events: [], goals: [], memories: [], goalAttempts: [], profileId: null, prefs: DEFAULT_PREFS,
+        events: [], goals: [], memories: [], goalAttempts: [], profileId: null, myProfile: null, prefs: DEFAULT_PREFS,
         userId: null, prefsExists: false, loading: false, ready: false, outbox: [],
         remoteUniverses: [],
 
@@ -209,12 +216,13 @@ export const useStore = create<TempoStore>()(
           const sameUser = prev === uid;
           if (prev && !sameUser) {
             // User switch: never let User B see User A's cache.
-            set({ events: [], goals: [], memories: [], goalAttempts: [], profileId: null, prefs: DEFAULT_PREFS, prefsExists: false, outbox: [] });
+            set({ events: [], goals: [], memories: [], goalAttempts: [], profileId: null, myProfile: null, prefs: DEFAULT_PREFS, prefsExists: false, outbox: [] });
           }
           // Same user with a warm cache => show instantly and refresh in background.
           set({ userId: uid, loading: true, ready: sameUser });
-          // Resolve the primary profile id (non-blocking) so value-attempt writes work.
-          void fetchPrimaryProfileId(uid).then(pid => { if (pid) set({ profileId: pid }); });
+          // Resolve the primary profile (non-blocking): id gates attempt writes,
+          // name/avatar/invite-code drive the identity + challenge UI.
+          void fetchMyProfile(uid).then(p => { if (p) set({ myProfile: p, profileId: p.id }); });
           try {
             await get().flushOutbox();                 // push local intent first (LWW)
             const snap = await fetchAll(uid);
@@ -241,7 +249,7 @@ export const useStore = create<TempoStore>()(
 
         clearForSignOut: () => {
           set({
-            events: [], goals: [], memories: [], goalAttempts: [], profileId: null, prefs: DEFAULT_PREFS,
+            events: [], goals: [], memories: [], goalAttempts: [], profileId: null, myProfile: null, prefs: DEFAULT_PREFS,
             userId: null, prefsExists: false, loading: false, ready: false, outbox: [],
           });
         },
@@ -600,6 +608,53 @@ export const useStore = create<TempoStore>()(
           set(s => ({ prefs: { ...s.prefs, ...patch }, prefsExists: true }));
           enqueue({ kind: 'prefs' });
         },
+
+        // ---- Challenges (multiplayer) ----
+        // Identity: optimistic local update + write to profiles (RLS profiles_update_own).
+        updateMyProfile: (patch) => {
+          const mp = get().myProfile;
+          if (!mp) return;
+          set({ myProfile: { ...mp, ...(patch.displayName !== undefined ? { displayName: patch.displayName } : {}),
+            ...(patch.avatarEmoji !== undefined ? { avatarEmoji: patch.avatarEmoji } : {}) } });
+          void updateProfileRow(mp.id, patch);
+        },
+        // Re-pull cloud data (goals include joined challenges via RLS; goal_attempts
+        // include co-participants' attempts for shared goals). Used after join/share.
+        refreshCloud: async () => {
+          const uid = get().userId;
+          if (!uid) return;
+          try {
+            const snap = await fetchAll(uid);
+            const ob = get().outbox;
+            const prefsPending = ob.some(o => o.kind === 'prefs');
+            set({
+              events:   mergePending(snap.events,   get().events,   pendingUpsertIds(ob, 'events'),   pendingDeleteIds(ob, 'events')),
+              goals:    mergePending(snap.goals,    get().goals,    pendingUpsertIds(ob, 'goals'),    pendingDeleteIds(ob, 'goals')),
+              memories: mergePending(snap.memories, get().memories, pendingUpsertIds(ob, 'memories'), pendingDeleteIds(ob, 'memories')),
+              goalAttempts: mergePending(snap.goalAttempts, get().goalAttempts, pendingUpsertIds(ob, 'goal_attempts'), pendingDeleteIds(ob, 'goal_attempts')),
+              prefs: prefsPending ? get().prefs : (snap.prefs ?? get().prefs),
+            });
+          } catch (e) { slog('refreshCloud failed', e); }
+        },
+        // share_goal → join code; owner auto-added as participant server-side. Reflect
+        // the code locally and refresh so participants/attempts appear.
+        shareGoal: async (goalId) => {
+          const res = await rpcShareGoal(goalId);
+          if (res.error || !res.code) return { error: res.error ?? 'Could not create a challenge code.' };
+          set(s => ({ goals: s.goals.map(g => g.id === goalId ? { ...g, joinCode: res.code! } : g) }));
+          void get().refreshCloud();
+          return { code: res.code };
+        },
+        // join_goal_by_code → adds caller as participant server-side, then refresh so
+        // the joined goal (RLS goals_select_participant) + its attempts show up.
+        joinChallenge: async (code) => {
+          const c = (code ?? '').trim().toUpperCase();
+          if (!c) return { error: 'Enter a challenge code.' };
+          const res = await rpcJoinByCode(c);
+          if (res.error || !res.goalId) return { error: res.error ?? 'Could not join — check the code.' };
+          await get().refreshCloud();
+          return { goalId: res.goalId };
+        },
         // ---- Holidays (visibility layer; the library itself lives in code) ----
         setHolidaysEnabled: (on) => {
           set(s => {
@@ -645,7 +700,7 @@ export const useStore = create<TempoStore>()(
       // start resolves offline); loading/ready are runtime.
       partialize: (s) => ({
         events: s.events, goals: s.goals, memories: s.memories,
-        goalAttempts: s.goalAttempts, profileId: s.profileId,
+        goalAttempts: s.goalAttempts, profileId: s.profileId, myProfile: s.myProfile,
         prefs: s.prefs, userId: s.userId, prefsExists: s.prefsExists, outbox: s.outbox,
         remoteUniverses: s.remoteUniverses,
       }),

@@ -7,7 +7,7 @@ import { useStore } from '../../store/useStore';
 function TabIcon({ label, icon, focused }: { label: string; icon: string; focused: boolean }) {
   const { colors } = useTheme();
   return (
-    <View style={{ alignItems: 'center', gap: 3, width: 76 }}>
+    <View style={{ alignItems: 'center', gap: 3, width: 64 }}>
       <Text style={{ fontSize: 20, lineHeight: 24 }}>{icon}</Text>
       <Text numberOfLines={1} style={{ fontSize: 10, fontWeight: '600', color: focused ? colors.accent : colors.text3 }}>
         {label}
@@ -53,6 +53,10 @@ export default function TabLayout() {
       <Tabs.Screen
         name="goals"
         options={{ tabBarIcon: ({ focused }) => <TabIcon icon="🎯" label="Goals" focused={focused} /> }}
+      />
+      <Tabs.Screen
+        name="challenges"
+        options={{ tabBarIcon: ({ focused }) => <TabIcon icon="🏆" label="Challenges" focused={focused} /> }}
       />
       <Tabs.Screen
         name="profile"
