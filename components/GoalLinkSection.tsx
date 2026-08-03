@@ -4,6 +4,8 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useStore } from '../store/useStore';
 import { FL } from './FormControls';
 import { DateTimeField } from './DateTimeField';
+import { PresetBrowser } from './PresetBrowser';
+import { getPreset, LifelogPreset } from '../constants/lifelogs';
 import { valueFormat } from '../utils/values';
 import { ValueInput } from './ValueInput';
 import type { GoalWindowKind, GoalPeriodKind, GoalKind, GoalDirection, GoalAgg } from '../store/types';
@@ -127,8 +129,14 @@ export function GoalLogLink({ value, onChange }: { value: GoalLink; onChange: (v
   const logs = useStore(s => s.memories).filter(m => m.type === 'lifelog');
   const thisYear = new Date().getFullYear();
   const selectedLog = logs.find(l => l.id === value.linkedLogId);
-  const [open, setOpen] = useState(!!(value.linkedLogId || value.linkedPreset));
-  const [pickerOpen, setPickerOpen] = useState(!value.linkedLogId);
+  // A preset-only link (linked to a catalog preset with no backing memory yet):
+  // resolve its display straight from the catalog. Progress shows 0/N until the
+  // log materializes on first logging; target size comes from the preset universe.
+  const selectedPreset = !selectedLog && value.linkedPreset ? getPreset(value.linkedPreset) : undefined;
+  const hasSelection = !!(selectedLog || selectedPreset);
+  const [open, setOpen] = useState(hasSelection);
+  const [changing, setChanging] = useState(!hasSelection);   // show chooser vs the picked card
+  const [browse, setBrowse] = useState(false);               // full-catalog PresetBrowser open
 
   function pickLog(logId: string) {
     const log = logs.find(l => l.id === logId);
@@ -139,40 +147,75 @@ export function GoalLogLink({ value, onChange }: { value: GoalLink; onChange: (v
       windowKind: value.windowKind ?? 'all_time',
       windowYear: value.windowYear ?? thisYear,
     });
-    setPickerOpen(false);
+    setChanging(false);
+    setBrowse(false);
+  }
+  // From the full catalog. If the user already has a life log for this preset, bind
+  // linkedLogId to it (precise — coverage reflects the existing log). Otherwise link
+  // the bare preset (linkedLogId null); the log is created lazily on first logging.
+  function pickPreset(preset: LifelogPreset | null) {
+    if (!preset) return;   // "Custom" isn't offered here (showCustom omitted)
+    const existing = logs.find(l => l.logPreset === preset.id);
+    onChange({
+      ...value,
+      linkedLogId: existing?.id ?? null,
+      linkedPreset: preset.id,
+      windowKind: value.windowKind ?? 'all_time',
+      windowYear: value.windowYear ?? thisYear,
+    });
+    setChanging(false);
+    setBrowse(false);
   }
   function toggle(v: boolean) {
     setOpen(v);
-    if (v) setPickerOpen(!value.linkedLogId);
-    else onChange({ ...value, linkedLogId: null, linkedPreset: null });
+    if (v) { setChanging(!hasSelection); }
+    else { setBrowse(false); onChange({ ...value, linkedLogId: null, linkedPreset: null }); }
   }
+
+  const cardEmoji = selectedLog?.emoji ?? selectedPreset?.emoji ?? '📋';
+  const cardName = selectedLog?.name ?? selectedPreset?.name ?? '';
+  const presetOnly = !selectedLog && !!selectedPreset;
 
   return (
     <>
       <MiniToggle label="🔗 Link to a life log" value={open} onChange={toggle} />
       {open && (
         <View style={{ marginBottom: 8 }}>
-          {logs.length === 0 ? (
-            <Text style={{ fontSize: 12, color: colors.text2, marginBottom: 12 }}>
-              Create a life log first, then link this goal to track its progress automatically.
-            </Text>
+          <FL label="Life Log" />
+          {browse ? (
+            <>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                <Text style={{ fontSize: 12, color: colors.text2 }}>Pick any collection to track — a log isn’t needed yet.</Text>
+                <TouchableOpacity onPress={() => setBrowse(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  style={{ paddingVertical: 6, paddingHorizontal: 11, borderRadius: 9, borderWidth: 1, borderColor: colors.border }}>
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: colors.teal }}>Back</Text>
+                </TouchableOpacity>
+              </View>
+              <PresetBrowser selectedId={value.linkedPreset ?? ''} onSelect={pickPreset} />
+            </>
+          ) : hasSelection && !changing ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12,
+              backgroundColor: colors.surf, borderWidth: 1, borderColor: colors.teal,
+              borderRadius: 12, padding: 11, marginBottom: 12 }}>
+              <Text style={{ fontSize: 18 }}>{cardEmoji}</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: colors.text1 }} numberOfLines={1}>{cardName}</Text>
+                {presetOnly && (
+                  <Text style={{ fontSize: 11, color: colors.text3, marginTop: 1 }} numberOfLines={1}>
+                    New — your log is created when you first log a visit
+                  </Text>
+                )}
+              </View>
+              <Text style={{ fontSize: 15, color: colors.teal }}>✓</Text>
+              <TouchableOpacity onPress={() => setChanging(true)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                style={{ paddingVertical: 6, paddingHorizontal: 11, borderRadius: 9, borderWidth: 1, borderColor: colors.border }}>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: colors.teal }}>Change</Text>
+              </TouchableOpacity>
+            </View>
           ) : (
             <>
-              <FL label="Life Log" />
-              {selectedLog && !pickerOpen ? (
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12,
-                  backgroundColor: colors.surf, borderWidth: 1, borderColor: colors.teal,
-                  borderRadius: 12, padding: 11, marginBottom: 12 }}>
-                  <Text style={{ fontSize: 18 }}>{selectedLog.emoji}</Text>
-                  <Text style={{ flex: 1, fontSize: 13, fontWeight: '700', color: colors.text1 }} numberOfLines={1}>{selectedLog.name}</Text>
-                  <Text style={{ fontSize: 15, color: colors.teal }}>✓</Text>
-                  <TouchableOpacity onPress={() => setPickerOpen(true)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    style={{ paddingVertical: 6, paddingHorizontal: 11, borderRadius: 9, borderWidth: 1, borderColor: colors.border }}>
-                    <Text style={{ fontSize: 12, fontWeight: '700', color: colors.teal }}>Change</Text>
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                <View style={{ gap: 7, marginBottom: 12 }}>
+              {logs.length > 0 && (
+                <View style={{ gap: 7, marginBottom: 10 }}>
                   {logs.map(l => {
                     const sel = value.linkedLogId === l.id;
                     return (
@@ -188,6 +231,18 @@ export function GoalLogLink({ value, onChange }: { value: GoalLink; onChange: (v
                   })}
                 </View>
               )}
+              <TouchableOpacity onPress={() => setBrowse(true)}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 10, padding: 11, borderRadius: 11, borderWidth: 1.5,
+                  borderColor: colors.teal, backgroundColor: colors.isDark ? 'rgba(62,207,178,0.10)' : colors.tint, marginBottom: 12 }}>
+                <Text style={{ fontSize: 18 }}>🔎</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: colors.teal }}>Browse all collections</Text>
+                  <Text style={{ fontSize: 11, color: colors.text3, marginTop: 1 }} numberOfLines={1}>
+                    Link any tracker — no life log needed yet
+                  </Text>
+                </View>
+                <Text style={{ fontSize: 15, color: colors.teal }}>›</Text>
+              </TouchableOpacity>
             </>
           )}
         </View>
