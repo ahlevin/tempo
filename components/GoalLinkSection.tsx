@@ -305,6 +305,56 @@ export function GoalValueSection({ direction, agg, unit, targetValue, onPick, on
   );
 }
 
+// COLLECTION goal target — DERIVED from the linked universe, not typed. Default is
+// "visit them all" (target = universe size, shown read-only); an optional "Just some
+// of them?" toggle lets the user aim for a partial count.
+export function GoalCollectionTarget({ universeSize, partialOn, partialTarget, onTogglePartial, onPartialTarget }: {
+  universeSize: number;
+  partialOn: boolean;
+  partialTarget: string;
+  onTogglePartial: (on: boolean) => void;
+  onPartialTarget: (v: string) => void;
+}) {
+  const { colors } = useTheme();
+  const fi = { backgroundColor: colors.glass, borderWidth: 1, borderColor: colors.border,
+    borderRadius: 12, padding: 12, color: colors.text1, fontSize: 15, marginBottom: 14 };
+
+  if (universeSize <= 0) {
+    return (
+      <>
+        <FL label="Goal" />
+        <Text style={{ fontSize: 13, color: colors.text3, marginBottom: 14 }}>
+          Link a life log above — the goal becomes “visit them all”, sized automatically.
+        </Text>
+      </>
+    );
+  }
+  const partialN = parseInt(partialTarget, 10);
+  const eff = partialOn && partialN > 0 ? Math.min(partialN, universeSize) : universeSize;
+
+  return (
+    <>
+      <FL label="Goal" />
+      <View style={{ backgroundColor: colors.surf, borderWidth: 1, borderColor: colors.teal, borderRadius: 12, padding: 12, marginBottom: 12 }}>
+        <Text style={{ fontSize: 15, fontWeight: '700', color: colors.teal }}>
+          🎯 {partialOn && partialN > 0 ? `${eff} of ${universeSize}` : `Visit all ${universeSize}`}
+        </Text>
+        <Text style={{ fontSize: 12, color: colors.text3, marginTop: 2 }}>Target sizes itself to your list — no need to type it.</Text>
+      </View>
+      <MiniToggle label="Just some of them?" value={partialOn} onChange={onTogglePartial} />
+      {partialOn && (
+        <>
+          <TextInput value={partialTarget} onChangeText={onPartialTarget} keyboardType="numeric"
+            placeholder={`e.g. 10 (max ${universeSize})`} placeholderTextColor={colors.text3} style={fi} />
+          <Text style={{ fontSize: 11, color: colors.text3, marginTop: -8, marginBottom: 12, marginLeft: 2 }}>
+            Track “{partialN > 0 ? Math.min(partialN, universeSize) : 'N'} of {universeSize}”. Turn off to aim for the whole list.
+          </Text>
+        </>
+      )}
+    </>
+  );
+}
+
 // A compact toggle matching FormControls' Toggle but local to this section (teal).
 function MiniToggle({ label, value, onChange }: { label: string; value: boolean; onChange: (v: boolean) => void }) {
   const { colors } = useTheme();

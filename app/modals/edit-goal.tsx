@@ -11,10 +11,10 @@ import { Alert as AlertType, Link, GoalKind, GoalDirection, GoalAgg } from '../.
 import { DateTimeField } from '../../components/DateTimeField';
 import { AlertsEditor } from '../../components/AlertsEditor';
 import { LinksEditor } from '../../components/LinksEditor';
-import { GoalWindowPicker, GoalLogLink, GoalRepeatSection, GoalKindPicker, GoalValueSection, GoalLink } from '../../components/GoalLinkSection';
+import { GoalWindowPicker, GoalLogLink, GoalRepeatSection, GoalKindPicker, GoalValueSection, GoalCollectionTarget, GoalLink } from '../../components/GoalLinkSection';
 import { Toggle } from '../../components/FormControls';
 import { useConfirm } from '../../components/ConfirmDialog';
-import { goalKind, questChildren, isGoalComplete } from '../../utils/goals';
+import { goalKind, questChildren, isGoalComplete, linkedUniverseSize } from '../../utils/goals';
 import { fmtShort } from '../../utils/dates';
 import type { GoalPeriodKind } from '../../store/types';
 
@@ -56,11 +56,24 @@ export default function EditGoalModal() {
   const [agg, setAgg] = useState<GoalAgg>(g?.agg ?? 'best');
   const [targetValue, setTargetValue] = useState<number | null>(g?.targetValue ?? null);
   const [childName, setChildName] = useState('');
+  // Collection target: derived from the universe. Prefill as PARTIAL only if the saved
+  // target is below the universe size (an explicit partial the user chose); else "all".
+  const [partialOn, setPartialOn] = useState(() => {
+    if (!g) return false;
+    const size = linkedUniverseSize(g, memories);
+    return g.target > 0 && size > 0 && g.target < size;
+  });
+  const [partialTarget, setPartialTarget] = useState(g?.target ? String(g.target) : '');
 
   const fi = { backgroundColor:colors.glass, borderWidth:1,
     borderColor:colors.border, borderRadius:12, padding:12,
     color:colors.text1, fontSize:15, marginBottom:14 };
   const linked = !!(link.linkedLogId || link.linkedPreset);
+  const universeSize = linkedUniverseSize(link, memories);
+  const collectionTarget = (() => {
+    const n = parseInt(partialTarget, 10);
+    return partialOn && n > 0 ? Math.min(n, universeSize) : universeSize;
+  })();
 
   const deleting = useRef(false);
   useEffect(() => { if (!g) router.back(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -83,8 +96,8 @@ export default function EditGoalModal() {
         ...clearLink, windowKind: link.windowKind ?? null, windowYear: link.windowYear ?? null, windowStart: link.windowStart ?? null, ...clearRepeat, ...clearValue });
     } else if (kind === 'collection') {
       if (!linked) { showToast('⚠️', 'Link a life log', 'Collection goals track a linked log.'); return; }
-      if (!target) { showToast('⚠️', 'Missing info', 'Enter a target.'); return; }
-      updateGoal(id, { ...base, kind, target: parseFloat(target), unit: '', step: 1, date, ...link, ...clearRepeat, ...clearValue });
+      if (universeSize <= 0) { showToast('⚠️', 'No items', 'Link a life log that has an item list.'); return; }
+      updateGoal(id, { ...base, kind, target: collectionTarget, unit: '', step: 1, date, ...link, ...clearRepeat, ...clearValue });
     } else if (kind === 'streak') {
       const pt = parseFloat(periodTarget);
       if (!pt) { showToast('⚠️', 'Missing info', 'Enter a target per period.'); return; }
@@ -214,8 +227,8 @@ export default function EditGoalModal() {
               <GoalLogLink value={link} onChange={setLink} />
               <GoalWindowPicker value={link} onChange={setLink} createdDate={g.created} />
               <DateTimeField mode="date" label="Deadline" value={date || ''} onChange={setDate} />
-              <FL label="Target" />
-              <TextInput value={target} onChangeText={setTarget} keyboardType="numeric" placeholderTextColor={colors.text3} style={fi} />
+              <GoalCollectionTarget universeSize={universeSize} partialOn={partialOn} partialTarget={partialTarget}
+                onTogglePartial={setPartialOn} onPartialTarget={setPartialTarget} />
             </>
           )}
 

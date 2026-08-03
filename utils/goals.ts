@@ -1,6 +1,18 @@
 import type { Goal, Memory, LogEntry, GoalAttempt, GoalKind } from '../store/types';
-import { isCollectionLog, isUpcomingEntry } from './lifelog';
+import { isCollectionLog, isUpcomingEntry, logUniverse } from './lifelog';
+import { presetUniverse } from '../constants/lifelogs';
+import type { UniverseItem } from '../lib/universes';
 import { fmtShort } from './dates';
+
+// The item universe backing a COLLECTION goal — from its linked life log (preset or
+// user-authored) if resolvable, else the preset directly. Drives the auto target size.
+export function linkedUniverse(g: Pick<Goal, 'linkedLogId' | 'linkedPreset'>, memories: Memory[]): UniverseItem[] | undefined {
+  const log = linkedLog(g as Goal, memories);
+  if (log) return logUniverse(log);
+  return g.linkedPreset ? presetUniverse(g.linkedPreset) : undefined;
+}
+export const linkedUniverseSize = (g: Pick<Goal, 'linkedLogId' | 'linkedPreset'>, memories: Memory[]): number =>
+  linkedUniverse(g, memories)?.length ?? 0;
 
 // Lower bound for a 'by_date' goal: the explicit window_start, else the goal's
 // creation date — so it never counts entries from before the goal existed.
