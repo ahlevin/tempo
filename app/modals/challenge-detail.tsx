@@ -190,14 +190,7 @@ export default function ChallengeDetailModal() {
                 {rows.length === 0 ? (
                   <Text style={{ fontSize: 12, color: colors.text3, marginLeft: 23 }}>No attempts yet.</Text>
                 ) : (
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginLeft: 23 }}>
-                    {rows.map((a, i) => (
-                      <View key={a.id} style={{ backgroundColor: colors.surf, borderWidth: 1, borderColor: i === 0 ? teal : colors.border, borderRadius: 10, paddingVertical: 5, paddingHorizontal: 9 }}>
-                        <Text style={{ fontSize: 14, fontWeight: '800', color: i === 0 ? teal : colors.text1, fontVariant: ['tabular-nums'] }}>{formatValue(a.value, unit)}</Text>
-                        <Text style={{ fontSize: 9, color: colors.text3 }}>{fmtShort(a.occurredAt)}</Text>
-                      </View>
-                    ))}
-                  </View>
+                  <AttemptChips rows={rows} unit={unit} />
                 )}
               </View>
             );
@@ -206,6 +199,31 @@ export default function ChallengeDetailModal() {
         <View style={{ height: 30 }} />
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+// One participant's attempt chips (reverse-chron), capped so a player with many
+// attempts stays scannable — "＋ N more" expands without ever hiding a PERSON.
+const CHIP_LIMIT = 8;
+function AttemptChips({ rows, unit }: { rows: { id: string; value: number; occurredAt: string }[]; unit?: string }) {
+  const { colors } = useTheme();
+  const [expanded, setExpanded] = useState(false);
+  const teal = colors.teal;
+  const shown = expanded ? rows : rows.slice(0, CHIP_LIMIT);
+  return (
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginLeft: 23, alignItems: 'center' }}>
+      {shown.map((a, i) => (
+        <View key={a.id} style={{ backgroundColor: colors.surf, borderWidth: 1, borderColor: i === 0 ? teal : colors.border, borderRadius: 10, paddingVertical: 5, paddingHorizontal: 9 }}>
+          <Text style={{ fontSize: 14, fontWeight: '800', color: i === 0 ? teal : colors.text1, fontVariant: ['tabular-nums'] }}>{formatValue(a.value, unit)}</Text>
+          <Text style={{ fontSize: 9, color: colors.text3 }}>{fmtShort(a.occurredAt)}</Text>
+        </View>
+      ))}
+      {rows.length > CHIP_LIMIT && (
+        <TouchableOpacity onPress={() => setExpanded(e => !e)} style={{ paddingVertical: 6, paddingHorizontal: 8 }}>
+          <Text style={{ fontSize: 12, fontWeight: '700', color: teal }}>{expanded ? 'Show less' : `＋ ${rows.length - CHIP_LIMIT} more`}</Text>
+        </TouchableOpacity>
+      )}
+    </View>
   );
 }
 

@@ -7,7 +7,7 @@ import { useStore } from '../../store/useStore';
 import { ScreenTitle, EmptyPrompt } from '../../components/SectionUI';
 import { rpcStandings } from '../../lib/db';
 import { Goal, Standing } from '../../store/types';
-import { challengeGoals, myStanding, myRank, ordinalRank } from '../../utils/challenge';
+import { challengeGoals, myStanding, myRank, ordinalRank, challengeLeader } from '../../utils/challenge';
 import { formatValue } from '../../utils/values';
 
 // The CHALLENGES tab — a filtered view of SHARED goals (those with a join_code,
@@ -66,6 +66,10 @@ function ChallengeRow({ goal, standings, profileId }: { goal: Goal; standings: S
   const total = standings.length;
   const scoreStr = mine?.score != null ? formatValue(mine.score, goal.unit) : '—';
   const targetStr = mine?.target != null ? formatValue(mine.target, goal.unit) : (goal.targetValue != null ? formatValue(goal.targetValue, goal.unit) : '—');
+  // Who's actually winning (rank 1 with an attempt), and whether that's me.
+  const leader = challengeLeader(standings);
+  const iLead = !!leader && leader.profileId === profileId;
+  const leaderScore = leader?.score != null ? formatValue(leader.score, goal.unit) : null;
 
   return (
     <TouchableOpacity activeOpacity={0.8} onPress={() => router.push({ pathname: '/modals/challenge-detail', params: { id: goal.id } })}
@@ -88,6 +92,17 @@ function ChallengeRow({ goal, standings, profileId }: { goal: Goal; standings: S
             {total > 6 && <Text style={{ fontSize: 11, color: colors.text3, marginLeft: 2 }}>+{total - 6}</Text>}
             {total === 0 && <Text style={{ fontSize: 12, color: colors.text3 }}>Just you so far</Text>}
           </View>
+          {/* Who's leading — affirming when it's me, "who to beat" when it isn't. */}
+          {leader ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
+              {!iLead && <Text style={{ fontSize: 12 }}>{leader.avatarEmoji}</Text>}
+              <Text style={{ fontSize: 12, fontWeight: '700', color: iLead ? colors.teal : colors.text2 }} numberOfLines={1}>
+                {iLead ? '🏆 You’re leading' : `${leader.displayName || 'Player'} leading`}{leaderScore ? ` · ${leaderScore}` : ''}
+              </Text>
+            </View>
+          ) : (
+            <Text style={{ fontSize: 12, color: colors.text3, marginTop: 4 }}>No attempts yet</Text>
+          )}
         </View>
         <View style={{ alignItems: 'flex-end' }}>
           <Text style={{ fontSize: 16, fontWeight: '800', color: mine?.reached ? colors.teal : colors.text1, fontVariant: ['tabular-nums'] }}>

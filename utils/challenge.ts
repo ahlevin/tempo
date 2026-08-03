@@ -12,6 +12,14 @@ export function myStanding(standings: Standing[], profileId: string | null): Sta
   return profileId ? standings.find(s => s.profileId === profileId) : undefined;
 }
 
+// The current leader = the top-RANKED participant who has actually logged an attempt.
+// goal_standings is already server-ranked (reached first, then best score by
+// direction) with score-less players last, so the first attempter in order is rank 1.
+// Returns undefined when nobody has logged yet (no bogus leader).
+export function challengeLeader(standings: Standing[]): Standing | undefined {
+  return standings.find(s => s.attempts > 0);
+}
+
 // 1-based rank in the (already server-ranked) standings; 0 if not present.
 export function myRank(standings: Standing[], profileId: string | null): number {
   if (!profileId) return 0;
