@@ -205,11 +205,12 @@ export function rowToGoalAttempt(r: any): GoalAttempt {
     note: r.note ?? '',
     links: r.links ?? [],
     createdAt: r.created_at ?? undefined,
+    item: r.item ?? undefined,
   };
 }
 export function goalAttemptToRow(a: GoalAttempt) {
   // No user_id column — RLS scopes by profile ownership. created_at is a server default.
-  return {
+  const base = {
     id: a.id,
     goal_id: a.goalId,
     profile_id: a.profileId,
@@ -218,6 +219,9 @@ export function goalAttemptToRow(a: GoalAttempt) {
     note: a.note ?? '',
     links: a.links ?? [],
   };
+  // Emit `item` ONLY for collection visits — so value/count attempts produce the exact
+  // legacy row and keep syncing before the 0006 migration adds the column.
+  return a.item ? { ...base, item: a.item } : base;
 }
 
 // ---- Memory ---------------------------------------------------------------

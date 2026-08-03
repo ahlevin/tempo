@@ -70,7 +70,7 @@ interface TempoStore {
    *  `date` ("YYYY-MM-DD") sets the completion date; omitted → local today. */
   setMilestoneDone: (id: string, done: boolean, date?: string) => void;
   /** VALUE goals: attempts round-trip through goal_attempts. */
-  addGoalAttempt: (a: { goalId: string; value: number; occurredAt: string; note?: string; links?: Link[] }) => string | null;
+  addGoalAttempt: (a: { goalId: string; value: number; occurredAt: string; note?: string; links?: Link[]; item?: string }) => string | null;
   updateGoalAttempt: (id: string, patch: Partial<Pick<GoalAttempt, 'value' | 'occurredAt' | 'note' | 'links'>>) => void;
   deleteGoalAttempt: (id: string) => void;
   addMemory: (m: Omit<Memory, 'id'>) => string;
@@ -416,6 +416,7 @@ export const useStore = create<TempoStore>()(
           const attempt: GoalAttempt = {
             id, goalId: a.goalId, profileId, value: a.value, occurredAt: a.occurredAt,
             note: a.note ?? '', links: a.links ?? [], createdAt: new Date().toISOString(),
+            ...(a.item ? { item: a.item } : {}),
           };
           set(s => ({ goalAttempts: [...s.goalAttempts, attempt] }));
           enqueue({ kind: 'upsert', table: 'goal_attempts', id });

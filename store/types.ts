@@ -82,6 +82,9 @@ export interface GoalAttempt {
   note?: string;
   links?: Link[];
   createdAt?: string;    // ISO; server default
+  /** COLLECTION challenges: the visited item's canonical name (e.g. "Fenway Park").
+   *  Absent for value/count attempts. Coverage = distinct items per participant. */
+  item?: string;
 }
 
 // The current user's own profile (identity), from the `profiles` table. Other

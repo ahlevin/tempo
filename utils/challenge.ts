@@ -1,4 +1,5 @@
 import { Goal, GoalAttempt, Standing } from '../store/types';
+import { formatValue } from './values';
 
 // A goal becomes a CHALLENGE once it's been shared (share_goal set its join_code).
 // The store's goals array already includes goals the user JOINED (RLS
@@ -36,6 +37,29 @@ export function ordinalRank(rank: number): string {
 // This goal's attempts, grouped by participant profile, each list reverse-chron
 // (newest attempt first) — the per-person timeline. Built from the store's
 // goalAttempts (RLS already returns co-participants' attempts on a shared goal).
+// ── Collection-challenge coverage (from the shared goal_attempts item pool) ──
+
+// The distinct items a participant has visited on a collection challenge = coverage.
+export function collectionVisits(attempts: GoalAttempt[], goalId: string, profileId: string): Set<string> {
+  const set = new Set<string>();
+  for (const a of attempts) if (a.goalId === goalId && a.profileId === profileId && a.item) set.add(a.item);
+  return set;
+}
+
+// Per-item visit counts for a participant (for the picker's "· N×" badge).
+export function itemVisitCounts(attempts: GoalAttempt[], goalId: string, profileId: string): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const a of attempts) if (a.goalId === goalId && a.profileId === profileId && a.item) counts.set(a.item, (counts.get(a.item) ?? 0) + 1);
+  return counts;
+}
+
+// Leaderboard score label — collection shows coverage "12 / 30"; value uses the
+// value formatter (6:21, $…). Labelled by caller so it never reads as bare "X of Y".
+export function standingScoreLabel(s: Standing, unit: string | undefined, isCollection: boolean): string {
+  if (isCollection) return `${s.score ?? 0} / ${s.target != null ? s.target : '—'}`;
+  return s.score != null ? formatValue(s.score, unit) : '—';
+}
+
 export function attemptsByProfile(attempts: GoalAttempt[], goalId: string): Map<string, GoalAttempt[]> {
   const byP = new Map<string, GoalAttempt[]>();
   for (const a of attempts) {

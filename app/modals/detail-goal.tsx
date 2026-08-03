@@ -12,6 +12,7 @@ import { isLinkedGoal, goalDerivedProgress, goalDone, linkedLog, windowLabel, is
   goalKind, valueScore, valueReached, valuePct, sortedAttempts, questChildren, questProgress, isGoalComplete } from '../../utils/goals';
 import { currentPeriodProgress, goalStreak, goalPeriodKind, goalPeriodTarget, periodLabel, periodNoun } from '../../utils/recurring';
 import { formatValue } from '../../utils/values';
+import { presetUniverse } from '../../constants/lifelogs';
 
 export default function GoalDetailModal() {
   const { colors } = useTheme();
@@ -210,7 +211,7 @@ export default function GoalDetailModal() {
             valueCaption={done ? 'complete' : (days === 1 ? 'day left' : 'days left')} />
         ) : null}
 
-        <Section label={recurring ? `Progress ${periodLabel(pk)}` : 'Progress'}>
+        <Section label={recurring ? `Progress ${periodLabel(pk)}` : (linked ? 'Your log' : 'Progress')}>
           <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6, marginBottom: 8 }}>
             <Text style={{ fontSize: 26, fontWeight: '800', color: teal, fontVariant: ['tabular-nums'] }}>{prog.toLocaleString()}</Text>
             <Text style={{ fontSize: 15, fontWeight: '600', color: colors.text2 }}>
@@ -251,14 +252,25 @@ export default function GoalDetailModal() {
 function Footer({ g, recurring }: { g: import('../../store/types').Goal; recurring: boolean }) {
   const { colors } = useTheme();
   const shareGoal = useStore(s => s.shareGoal);
+  const updateGoal = useStore(s => s.updateGoal);
   const { showToast } = useToast();
   const [busy, setBusy] = useState(false);
   const kind = goalKind(g);
   const measurable = kind === 'value' || kind === 'count' || kind === 'collection' || kind === 'streak';
+  // Scope this pass: a collection is shareable only when PRESET-linked (joiners resolve
+  // items from bundled code). A custom collection (linkedLogId/logItems — items live on
+  // the owner's memory) is DEFERRED.
+  const collectionCustom = kind === 'collection' && !g.linkedPreset;
 
   const makeChallenge = async () => {
     if (busy) return;
     setBusy(true);
+    // Decision 4: at share time, set target = universe size so "X/30" and "reached"
+    // are correct (per-participant handicaps still override via goal_participants).
+    if (kind === 'collection' && g.linkedPreset) {
+      const size = presetUniverse(g.linkedPreset)?.length ?? 0;
+      if (size > 0 && g.target !== size) updateGoal(g.id, { target: size });
+    }
     const res = await shareGoal(g.id);
     setBusy(false);
     if (res.error || !res.code) { showToast('⚠️', 'Could not share', res.error ?? 'Try again.'); return; }
@@ -278,6 +290,10 @@ function Footer({ g, recurring }: { g: import('../../store/types').Goal; recurri
               <Text style={{ fontSize: 15, fontWeight: '700', color: colors.teal }}>🏆 View challenge</Text>
               <Text style={{ fontSize: 13, color: colors.text3, marginLeft: 'auto', letterSpacing: 1 }}>{g.joinCode}</Text>
             </TouchableOpacity>
+          ) : collectionCustom ? (
+            <Text style={{ fontSize: 13, color: colors.text3 }}>
+              Custom collections can’t be shared yet — link a preset (e.g. MLB stadiums) to make this a challenge.
+            </Text>
           ) : (
             <TouchableOpacity onPress={makeChallenge} disabled={busy}
               style={{ backgroundColor: colors.teal, borderRadius: 12, paddingVertical: 12, alignItems: 'center', opacity: busy ? 0.6 : 1 }}>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ScrollView, View, Text, TextInput, TouchableOpacity, ActivityIndicator, Share } from 'react-native';
+import { ScrollView, View, Text, TextInput, TouchableOpacity, ActivityIndicator, Share, DimensionValue } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams, useIsFocused } from 'expo-router';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -8,7 +8,8 @@ import { useStore } from '../../store/useStore';
 import { useToast } from '../../components/Toast';
 import { Standing } from '../../store/types';
 import { rpcStandings, rpcSetParticipantTarget } from '../../lib/db';
-import { attemptsByProfile } from '../../utils/challenge';
+import { attemptsByProfile, standingScoreLabel } from '../../utils/challenge';
+import { goalKind } from '../../utils/goals';
 import { formatValue, parseValue } from '../../utils/values';
 import { fmtShort } from '../../utils/dates';
 import { copyToClipboard } from '../../utils/clipboard';
@@ -51,6 +52,7 @@ export default function ChallengeDetailModal() {
   const isOwner = !!userId && g.ownerUserId === userId;
   const byProfile = attemptsByProfile(attempts, g.id);
   const teal = colors.teal;
+  const collection = goalKind(g) === 'collection';   // coverage challenge vs value/count
 
   // Timeline participants = the UNION of leaderboard participants (standings, in rank
   // order) and everyone who has a logged attempt locally. goal_attempts is fetched
@@ -108,10 +110,10 @@ export default function ChallengeDetailModal() {
           </View>
         )}
 
-        {/* Log an attempt (reuses the value-attempt sheet; RLS ga_insert_own) */}
-        <TouchableOpacity onPress={() => router.push({ pathname: '/modals/log-attempt', params: { id: g.id } })}
+        {/* Log — collection picks an item (log-visit), value logs a number (log-attempt) */}
+        <TouchableOpacity onPress={() => router.push({ pathname: collection ? '/modals/log-visit' : '/modals/log-attempt', params: { id: g.id } })}
           style={{ backgroundColor: teal, borderRadius: 14, paddingVertical: 14, alignItems: 'center', marginBottom: 16 }}>
-          <Text style={{ color: colors.isDark ? '#0A0A0F' : '#fff', fontWeight: '700', fontSize: 15 }}>＋ Log an attempt</Text>
+          <Text style={{ color: colors.isDark ? '#0A0A0F' : '#fff', fontWeight: '700', fontSize: 15 }}>{collection ? '＋ Log a visit' : '＋ Log an attempt'}</Text>
         </TouchableOpacity>
 
         {/* Leaderboard */}
@@ -137,11 +139,18 @@ export default function ChallengeDetailModal() {
                       {s.displayName || 'Player'}{me ? ' (you)' : ''}{s.reached ? ' 🏆' : ''}
                     </Text>
                     <Text style={{ fontSize: 11, color: colors.text3 }}>
-                      {s.attempts} attempt{s.attempts === 1 ? '' : 's'}{s.target != null ? ` · target ${formatValue(s.target, unit)}` : ''}
+                      {collection
+                        ? `${s.attempts} visit${s.attempts === 1 ? '' : 's'}`
+                        : `${s.attempts} attempt${s.attempts === 1 ? '' : 's'}${s.target != null ? ` · target ${formatValue(s.target, unit)}` : ''}`}
                     </Text>
+                    {collection && !!s.target && (
+                      <View style={{ height: 5, backgroundColor: colors.track, borderRadius: 3, marginTop: 5, overflow: 'hidden' }}>
+                        <View style={{ height: '100%', width: `${Math.min(100, Math.round(((s.score ?? 0) / s.target) * 100))}%` as DimensionValue, backgroundColor: s.reached ? teal : colors.accent, borderRadius: 3 }} />
+                      </View>
+                    )}
                   </View>
                   <Text style={{ fontSize: 17, fontWeight: '800', color: s.reached ? teal : colors.text1, fontVariant: ['tabular-nums'] }}>
-                    {s.score != null ? formatValue(s.score, unit) : '—'}
+                    {standingScoreLabel(s, unit, collection)}
                   </Text>
                 </View>
               );
@@ -170,10 +179,10 @@ export default function ChallengeDetailModal() {
           </>
         )}
 
-        {/* Per-person attempt timeline — the emotional core */}
-        <SectionLabel text="Attempt timeline" />
+        {/* Per-person timeline — collection shows visited ITEMS; value shows numbers */}
+        <SectionLabel text={collection ? 'Who visited what' : 'Attempt timeline'} />
         {timelinePids.length === 0 ? (
-          <Text style={{ fontSize: 13, color: colors.text3 }}>No attempts logged yet — be the first.</Text>
+          <Text style={{ fontSize: 13, color: colors.text3 }}>No {collection ? 'visits' : 'attempts'} logged yet — be the first.</Text>
         ) : (
           timelinePids.map(pid => {
             const s = standings.find(x => x.profileId === pid);
@@ -188,7 +197,9 @@ export default function ChallengeDetailModal() {
                   </Text>
                 </View>
                 {rows.length === 0 ? (
-                  <Text style={{ fontSize: 12, color: colors.text3, marginLeft: 23 }}>No attempts yet.</Text>
+                  <Text style={{ fontSize: 12, color: colors.text3, marginLeft: 23 }}>No {collection ? 'visits' : 'attempts'} yet.</Text>
+                ) : collection ? (
+                  <VisitedChips rows={rows} />
                 ) : (
                   <AttemptChips rows={rows} unit={unit} />
                 )}
@@ -199,6 +210,32 @@ export default function ChallengeDetailModal() {
         <View style={{ height: 30 }} />
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+// One participant's DISTINCT visited items (collection challenge), most-recent first,
+// capped like the numeric chips — coverage counts distinct items, so repeats collapse.
+function VisitedChips({ rows }: { rows: { id: string; item?: string; occurredAt: string }[] }) {
+  const { colors } = useTheme();
+  const [expanded, setExpanded] = useState(false);
+  const teal = colors.teal;
+  const seen = new Set<string>();
+  const items: string[] = [];
+  for (const r of rows) { const it = r.item; if (it && !seen.has(it)) { seen.add(it); items.push(it); } }
+  const shown = expanded ? items : items.slice(0, CHIP_LIMIT);
+  return (
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginLeft: 23, alignItems: 'center' }}>
+      {shown.map(it => (
+        <View key={it} style={{ backgroundColor: colors.surf, borderWidth: 1, borderColor: colors.border, borderRadius: 10, paddingVertical: 5, paddingHorizontal: 9 }}>
+          <Text style={{ fontSize: 13, fontWeight: '700', color: colors.text1 }}>✓ {it}</Text>
+        </View>
+      ))}
+      {items.length > CHIP_LIMIT && (
+        <TouchableOpacity onPress={() => setExpanded(e => !e)} style={{ paddingVertical: 6, paddingHorizontal: 8 }}>
+          <Text style={{ fontSize: 12, fontWeight: '700', color: teal }}>{expanded ? 'Show less' : `＋ ${items.length - CHIP_LIMIT} more`}</Text>
+        </TouchableOpacity>
+      )}
+    </View>
   );
 }
 

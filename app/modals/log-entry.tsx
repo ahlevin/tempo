@@ -12,7 +12,8 @@ import { LinksEditor } from '../../components/LinksEditor';
 import { AlertsEditor } from '../../components/AlertsEditor';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { useToast } from '../../components/Toast';
-import { logUniverse, isCollectionLog, isUpcomingEntry, itemName, itemCityState, locationForName, UniverseItem } from '../../utils/lifelog';
+import { logUniverse, isCollectionLog, isUpcomingEntry, locationForName } from '../../utils/lifelog';
+import { UniversePicker } from '../../components/UniversePicker';
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const PRECISIONS: { id: DatePrecision; label: string }[] = [
@@ -55,27 +56,14 @@ export default function LogEntryModal() {
   const showAlerts = isEdit && !!editing && isUpcomingEntry(editing);
   const [label, setLabel] = useState(!isPicker ? (editing?.item ?? '') : ''); // count/custom label
   const [item,  setItem]  = useState(isPicker ? (editing?.item ?? '') : '');  // collection item
-  const [query, setQuery] = useState('');
   const [addedCount, setAddedCount] = useState(0);
 
-  // The FULL universe is always shown (repeat visits allowed). Each item carries
-  // its current entry count so it can render a "· N×" badge; selecting it logs
-  // ANOTHER visit. Search filters over all items.
-  // Each row keeps the full item (for its location) plus the normalized name and
-  // logged count. Search matches NAME, city, and state (typing "Chicago" or "CA"
-  // surfaces matches); coverage/counts still key off the name string only.
-  const pickItems = useMemo(() => {
-    if (!isPicker || !universe || !m) return [] as { it: UniverseItem; name: string; cityState: string; count: number }[];
+  // Per-item visit counts from this log's entries (for the "· N×" badge in the picker).
+  const itemCounts = useMemo(() => {
     const counts = new Map<string, number>();
-    m.entries.forEach(e => { if (e.item) counts.set(e.item, (counts.get(e.item) ?? 0) + 1); });
-    const q = query.trim().toLowerCase();
-    return universe
-      .filter(x => {
-        if (!q) return true;
-        return itemName(x).toLowerCase().includes(q) || itemCityState(x).toLowerCase().includes(q);
-      })
-      .map(x => ({ it: x, name: itemName(x), cityState: itemCityState(x), count: counts.get(itemName(x)) ?? 0 }));
-  }, [isPicker, universe, m, query]);
+    m?.entries.forEach(e => { if (e.item) counts.set(e.item, (counts.get(e.item) ?? 0) + 1); });
+    return counts;
+  }, [m]);
 
   const fi = { backgroundColor:colors.glass, borderWidth:1,
     borderColor:colors.border, borderRadius:12, padding:12,
@@ -124,7 +112,7 @@ export default function LogEntryModal() {
     if (!item) return;
     addLogEntry(id, entryPayload());
     setAddedCount(c => c + 1);
-    setItem(''); setNote(''); setQuery(''); setLinks([]); setAlerts([]);
+    setItem(''); setNote(''); setLinks([]); setAlerts([]);
   }
   // Edit an existing entry.
   function saveEdit() {
@@ -175,47 +163,13 @@ export default function LogEntryModal() {
 
           {isPicker && universe && (
             <>
-              <View style={{ flexDirection:'row', alignItems:'center', justifyContent:'space-between', marginBottom:8 }}>
-                <Text style={{ fontSize:11, fontWeight:'600', color:colors.text3,
-                  textTransform:'uppercase', letterSpacing:0.5 }}>
-                  {isEdit ? 'Change item' : 'Pick one'} · {loggedCount} of {universe.length} logged
-                </Text>
-                {addedCount > 0 && (
+              <UniversePicker key={addedCount} universe={universe} counts={itemCounts} selected={item} onSelect={setItem}
+                headerLabel={`${isEdit ? 'Change item' : 'Pick one'} · ${loggedCount} of ${universe.length} logged`}
+                rightBadge={addedCount > 0 ? (
                   <View style={{ backgroundColor: colors.isDark ? 'rgba(62,207,178,0.16)' : colors.tint, borderRadius:10, paddingVertical:3, paddingHorizontal:9 }}>
                     <Text style={{ fontSize:11, fontWeight:'700', color:colors.teal }}>{addedCount} added</Text>
                   </View>
-                )}
-              </View>
-              <TextInput value={query} onChangeText={setQuery}
-                placeholder="Search…" placeholderTextColor={colors.text3} style={fi} />
-              <View style={{ maxHeight:240, borderWidth:1, borderColor:colors.border, borderRadius:12,
-                overflow:'hidden', marginBottom:14 }}>
-                <ScrollView keyboardShouldPersistTaps="handled" nestedScrollEnabled>
-                  {pickItems.length === 0 ? (
-                    <Text style={{ fontSize:13, color:colors.text3, padding:14 }}>
-                      {query ? 'No matches.' : 'No items.'}
-                    </Text>
-                  ) : pickItems.map((x, i) => {
-                    const sel = item === x.name;
-                    return (
-                      <TouchableOpacity key={x.name} onPress={() => setItem(x.name)}
-                        style={{ padding:12, borderTopWidth: i === 0 ? 0 : 1, borderTopColor:colors.border,
-                          backgroundColor: sel ? (colors.isDark ? 'rgba(62,207,178,0.14)' : colors.tint) : 'transparent' }}>
-                        <Text style={{ fontSize:14, fontWeight: sel ? '700' : '500',
-                          color: sel ? colors.teal : colors.text1 }}>
-                          {sel ? '✓ ' : ''}{x.name}
-                          {!!x.cityState && (
-                            <Text style={{ color: sel ? colors.teal : colors.text3, fontWeight:'500' }}>{`  ·  ${x.cityState}`}</Text>
-                          )}
-                          {x.count > 0 && (
-                            <Text style={{ color: sel ? colors.teal : colors.text3, fontWeight:'600' }}>{`  · ${x.count}×`}</Text>
-                          )}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </ScrollView>
-              </View>
+                ) : null} />
               {/* Alternate view: browse the full universe WITH addresses + map
                   links + multi-select add. Same universe, same add logic. */}
               <TouchableOpacity onPress={() => router.push({ pathname: '/modals/browse-universe', params: { id } })}

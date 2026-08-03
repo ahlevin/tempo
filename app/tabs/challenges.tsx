@@ -8,6 +8,7 @@ import { ScreenTitle, EmptyPrompt } from '../../components/SectionUI';
 import { rpcStandings } from '../../lib/db';
 import { Goal, Standing } from '../../store/types';
 import { challengeGoals, myStanding, myRank, ordinalRank, challengeLeader } from '../../utils/challenge';
+import { goalKind } from '../../utils/goals';
 import { formatValue } from '../../utils/values';
 
 // The CHALLENGES tab — a filtered view of SHARED goals (those with a join_code,
@@ -64,12 +65,16 @@ function ChallengeRow({ goal, standings, profileId }: { goal: Goal; standings: S
   const mine = myStanding(standings, profileId);
   const rank = myRank(standings, profileId);
   const total = standings.length;
-  const scoreStr = mine?.score != null ? formatValue(mine.score, goal.unit) : '—';
-  const targetStr = mine?.target != null ? formatValue(mine.target, goal.unit) : (goal.targetValue != null ? formatValue(goal.targetValue, goal.unit) : '—');
+  const collection = goalKind(goal) === 'collection';
+  const myTarget = mine?.target ?? goal.target ?? (goal.targetValue ?? null);
+  // Coverage "12 / 30" for collections; the value formatter (6:21, $…) otherwise.
+  const bigScore = collection
+    ? `${mine?.score ?? 0} / ${myTarget != null ? myTarget : '—'}`
+    : (mine?.score != null ? formatValue(mine.score, goal.unit) : '—');
   // Who's actually winning (rank 1 with an attempt), and whether that's me.
   const leader = challengeLeader(standings);
   const iLead = !!leader && leader.profileId === profileId;
-  const leaderScore = leader?.score != null ? formatValue(leader.score, goal.unit) : null;
+  const leaderScore = leader?.score != null ? (collection ? String(leader.score) : formatValue(leader.score, goal.unit)) : null;
 
   return (
     <TouchableOpacity activeOpacity={0.8} onPress={() => router.push({ pathname: '/modals/challenge-detail', params: { id: goal.id } })}
@@ -106,9 +111,11 @@ function ChallengeRow({ goal, standings, profileId }: { goal: Goal; standings: S
         </View>
         <View style={{ alignItems: 'flex-end' }}>
           <Text style={{ fontSize: 16, fontWeight: '800', color: mine?.reached ? colors.teal : colors.text1, fontVariant: ['tabular-nums'] }}>
-            {scoreStr}{mine?.reached ? ' 🏆' : ''}
+            {bigScore}{mine?.reached ? ' 🏆' : ''}
           </Text>
-          <Text style={{ fontSize: 11, color: colors.text3 }}>of {targetStr}</Text>
+          <Text style={{ fontSize: 11, color: colors.text3 }}>
+            {collection ? 'this challenge' : `of ${myTarget != null ? formatValue(myTarget, goal.unit) : '—'}`}
+          </Text>
           {rank > 0 && total > 1 && (
             <Text style={{ fontSize: 11, fontWeight: '700', color: colors.teal, marginTop: 2 }}>{ordinalRank(rank)} of {total}</Text>
           )}

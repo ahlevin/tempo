@@ -158,6 +158,7 @@ function RootNavigator() {
         <Stack.Screen name="modals/notif-debug" options={{ presentation: 'modal' }} />
         <Stack.Screen name="modals/log-attempt" options={{ presentation: 'modal' }} />
         <Stack.Screen name="modals/challenge-detail" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="modals/log-visit" options={{ presentation: 'modal' }} />
         <Stack.Screen name="modals/exact-edit"  options={{ presentation: 'modal' }} />
         <Stack.Screen name="modals/holiday-detail"    options={{ presentation: 'modal' }} />
         <Stack.Screen name="modals/holidays-settings" options={{ presentation: 'modal' }} />
