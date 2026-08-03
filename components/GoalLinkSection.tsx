@@ -308,8 +308,9 @@ export function GoalValueSection({ direction, agg, unit, targetValue, onPick, on
 // COLLECTION goal target — DERIVED from the linked universe, not typed. Default is
 // "visit them all" (target = universe size, shown read-only); an optional "Just some
 // of them?" toggle lets the user aim for a partial count.
-export function GoalCollectionTarget({ universeSize, partialOn, partialTarget, onTogglePartial, onPartialTarget }: {
+export function GoalCollectionTarget({ universeSize, linked, partialOn, partialTarget, onTogglePartial, onPartialTarget }: {
   universeSize: number;
+  linked: boolean;
   partialOn: boolean;
   partialTarget: string;
   onTogglePartial: (on: boolean) => void;
@@ -320,11 +321,26 @@ export function GoalCollectionTarget({ universeSize, partialOn, partialTarget, o
     borderRadius: 12, padding: 12, color: colors.text1, fontSize: 15, marginBottom: 14 };
 
   if (universeSize <= 0) {
+    // No resolvable item list. If a log IS linked (e.g. a count/numeric collection
+    // with no universe), let the user type a target so the goal still saves; else
+    // nudge them to link a list that auto-sizes.
+    if (!linked) {
+      return (
+        <>
+          <FL label="Goal" />
+          <Text style={{ fontSize: 13, color: colors.text3, marginBottom: 14 }}>
+            Link a life log above — the goal becomes “visit them all”, sized automatically.
+          </Text>
+        </>
+      );
+    }
     return (
       <>
-        <FL label="Goal" />
-        <Text style={{ fontSize: 13, color: colors.text3, marginBottom: 14 }}>
-          Link a life log above — the goal becomes “visit them all”, sized automatically.
+        <FL label="Target" />
+        <TextInput value={partialTarget} onChangeText={onPartialTarget} keyboardType="numeric"
+          placeholder="e.g. 30 (how many to collect)" placeholderTextColor={colors.text3} style={fi} />
+        <Text style={{ fontSize: 11, color: colors.text3, marginTop: -8, marginBottom: 12, marginLeft: 2 }}>
+          This list has no fixed item set, so set the target yourself.
         </Text>
       </>
     );

@@ -54,11 +54,6 @@ export default function AddGoalModal() {
     color:colors.text1, fontSize:15, marginBottom:14 };
   const linked = !!(link.linkedLogId || link.linkedPreset);
   const universeSize = linkedUniverseSize(link, memories);
-  // Effective collection target: full universe, or a partial count (clamped).
-  const collectionTarget = (() => {
-    const n = parseInt(partialTarget, 10);
-    return partialOn && n > 0 ? Math.min(n, universeSize) : universeSize;
-  })();
 
   function submit() {
     if (!name.trim()) { showToast('⚠️', 'Missing info', 'Give the goal a name.'); return; }
@@ -70,8 +65,14 @@ export default function AddGoalModal() {
       addGoal({ ...base, kind, target: parseFloat(target), unit: unit.trim() || 'units', step: parseFloat(step) || 1, date, repeats: false, ...link });
     } else if (kind === 'collection') {
       if (!linked) { showToast('⚠️', 'Link a life log', 'Collection goals track a linked log.'); return; }
-      if (universeSize <= 0) { showToast('⚠️', 'No items', 'Link a life log that has an item list.'); return; }
-      addGoal({ ...base, kind, target: collectionTarget, unit: '', step: 1, date, repeats: false, ...link });
+      // Resolve the target FRESH at submit (never a stale render-closure value). A
+      // linked universe auto-sizes the target (visit all / partial); a link with no
+      // resolvable item list falls back to a typed number so the goal still saves.
+      const size = linkedUniverseSize(link, memories);
+      const n = parseInt(partialTarget, 10);
+      const t = size > 0 ? (partialOn && n > 0 ? Math.min(n, size) : size) : (n > 0 ? n : 0);
+      if (!(t > 0)) { showToast('⚠️', 'Set a target', size > 0 ? 'Enter how many to collect.' : 'Enter a target (how many to collect).'); return; }
+      addGoal({ ...base, kind, target: t, unit: '', step: 1, date, repeats: false, ...link });
     } else if (kind === 'streak') {
       const pt = parseFloat(periodTarget);
       if (!pt) { showToast('⚠️', 'Missing info', 'Enter a target per period.'); return; }
@@ -164,7 +165,7 @@ export default function AddGoalModal() {
               <GoalLogLink value={link} onChange={setLink} />
               <GoalWindowPicker value={link} onChange={setLink} createdDate={format(new Date(), 'yyyy-MM-dd')} />
               <DateTimeField mode="date" label="Deadline" value={date} onChange={setDate} />
-              <GoalCollectionTarget universeSize={universeSize} partialOn={partialOn} partialTarget={partialTarget}
+              <GoalCollectionTarget universeSize={universeSize} linked={linked} partialOn={partialOn} partialTarget={partialTarget}
                 onTogglePartial={setPartialOn} onPartialTarget={setPartialTarget} />
             </>
           )}

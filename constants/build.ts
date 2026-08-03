@@ -2,4 +2,4 @@
 // you need to confirm a fresh deploy actually went live (Cloudflare Pages can lag
 // or cache) — if the footer still shows the old marker after a hard refresh, the
 // new build hasn't deployed yet, so the issue is the deploy, not the code.
-export const BUILD_ID = '2026-08-02 · collection goals auto-set target to universe size (optional partial target)';
+export const BUILD_ID = '2026-08-02 · fix: collection goal save unblocked (fresh target + manual fallback)';
