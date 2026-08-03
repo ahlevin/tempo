@@ -2,4 +2,4 @@
 // you need to confirm a fresh deploy actually went live (Cloudflare Pages can lag
 // or cache) — if the footer still shows the old marker after a hard refresh, the
 // new build hasn't deployed yet, so the issue is the deploy, not the code.
-export const BUILD_ID = '2026-08-02 · fix: joined challenge appears immediately (goals fetch was owner-filtered, hiding joined goals)';
+export const BUILD_ID = '2026-08-02 · fix: leaderboard/timeline show all participants (goal_standings SECURITY DEFINER + timeline union)';

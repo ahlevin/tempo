@@ -52,6 +52,16 @@ export default function ChallengeDetailModal() {
   const byProfile = attemptsByProfile(attempts, g.id);
   const teal = colors.teal;
 
+  // Timeline participants = the UNION of leaderboard participants (standings, in rank
+  // order) and everyone who has a logged attempt locally. goal_attempts is fetched
+  // unfiltered so RLS returns co-participants' attempts — so even a rival not present
+  // in `standings` (e.g. before the goal_standings definer fix propagates) still shows
+  // their attempts here rather than being dropped.
+  const timelinePids = [
+    ...standings.map(s => s.profileId),
+    ...[...byProfile.keys()].filter(pid => !standings.some(s => s.profileId === pid)),
+  ];
+
   const refetch = async () => setStandings(await rpcStandings(gid));
 
   async function shareCode() {
@@ -162,10 +172,10 @@ export default function ChallengeDetailModal() {
 
         {/* Per-person attempt timeline — the emotional core */}
         <SectionLabel text="Attempt timeline" />
-        {standings.length === 0 && byProfile.size === 0 ? (
+        {timelinePids.length === 0 ? (
           <Text style={{ fontSize: 13, color: colors.text3 }}>No attempts logged yet — be the first.</Text>
         ) : (
-          (standings.length ? standings.map(s => s.profileId) : [...byProfile.keys()]).map(pid => {
+          timelinePids.map(pid => {
             const s = standings.find(x => x.profileId === pid);
             const rows = byProfile.get(pid) ?? [];
             const me = pid === profileId;
