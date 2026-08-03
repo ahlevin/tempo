@@ -28,6 +28,7 @@ export default function GoalDetailModal() {
   // participants see each other's); those belong on the challenge screen, not here.
   const attempts = allAttempts.filter(a => a.profileId === profileId);
   const setMilestoneDone = useStore(s => s.setMilestoneDone);
+  const ensureLinkedLog = useStore(s => s.ensureLinkedLog);
   const g = goals.find(x => x.id === id);
   useEffect(() => { if (!g) router.dismissTo('/tabs/goals'); }, [g]);
   if (!g) return null;
@@ -235,6 +236,17 @@ export default function GoalDetailModal() {
             </Text>
           )}
         </Section>
+
+        {/* Direct log action for a linked collection goal — materializes the backing
+            life log on first use (preset-only goals have no log yet), then opens its
+            entry picker. Repairs preset-only goals that were stuck at 0/N. */}
+        {linked && gk === 'collection' && (
+          <TouchableOpacity
+            onPress={() => { const logId = ensureLinkedLog(g.id); if (logId) router.push({ pathname: '/modals/log-entry', params: { id: logId } }); }}
+            style={{ backgroundColor: teal, borderRadius: 12, paddingVertical: 13, alignItems: 'center', marginBottom: 12 }}>
+            <Text style={{ fontSize: 15, fontWeight: '700', color: colors.isDark ? '#0A0A0F' : '#fff' }}>➕ Log a visit</Text>
+          </TouchableOpacity>
+        )}
 
         {recurring && (
           <Section label="Streak">

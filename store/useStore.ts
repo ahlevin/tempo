@@ -14,6 +14,7 @@ import { fetchUniverses, setUniverseOverlay, UniverseRow } from '../lib/universe
 import { currentPeriodKey } from '../utils/recurring';
 import { goalDone, goalKind } from '../utils/goals';
 import { ownLogCoverage } from '../utils/challenge';
+import { getPreset } from '../constants/lifelogs';
 
 const today = () => format(new Date(), 'yyyy-MM-dd');
 
@@ -70,6 +71,11 @@ interface TempoStore {
   /** MILESTONE goals: set/clear completed_at (its done state). When marking done,
    *  `date` ("YYYY-MM-DD") sets the completion date; omitted → local today. */
   setMilestoneDone: (id: string, done: boolean, date?: string) => void;
+  /** Resolve (or lazily CREATE) the life-log memory backing a linked goal, binding
+   *  linkedLogId to it. For a preset-only goal (linkedPreset, no memory) this
+   *  materializes the log so it appears in the Life Log list and can be logged
+   *  against. Returns the memory id, or null if the goal has no link to resolve. */
+  ensureLinkedLog: (goalId: string) => string | null;
   /** VALUE goals: attempts round-trip through goal_attempts. */
   addGoalAttempt: (a: { goalId: string; value: number; occurredAt: string; note?: string; links?: Link[]; item?: string }) => string | null;
   updateGoalAttempt: (id: string, patch: Partial<Pick<GoalAttempt, 'value' | 'occurredAt' | 'note' | 'links'>>) => void;
@@ -412,6 +418,34 @@ export const useStore = create<TempoStore>()(
           const completedAt = done ? `${day}T12:00:00` : null;
           set(s => ({ goals: s.goals.map(g => g.id === id ? { ...g, completedAt } : g) }));
           enqueue({ kind: 'upsert', table: 'goals', id });
+        },
+        // Resolve-or-create the life log backing a linked goal, binding linkedLogId.
+        // Order: (1) an existing memory already bound by id; (2) any memory for the
+        // goal's preset (bind it — precise); (3) create the preset's life log now
+        // (eager materialization) so a preset-only goal has a real, loggable log that
+        // shows in the Life Log list. Same addMemory shape as the log-visit template.
+        ensureLinkedLog: (goalId) => {
+          const g = get().goals.find(x => x.id === goalId);
+          if (!g) return null;
+          if (g.linkedLogId && get().memories.some(m => m.id === g.linkedLogId && m.type === 'lifelog')) return g.linkedLogId;
+          const preset = g.linkedPreset;
+          if (!preset) return g.linkedLogId ?? null;
+          const existing = get().memories.find(m => m.type === 'lifelog' && m.logPreset === preset);
+          if (existing) {
+            if (g.linkedLogId !== existing.id) get().updateGoal(goalId, { linkedLogId: existing.id });
+            return existing.id;
+          }
+          const p = getPreset(preset);
+          const universe = p?.universe ?? [];
+          const logId = get().addMemory({
+            type: 'lifelog', name: p?.name ?? g.name, emoji: p?.emoji ?? g.emoji,
+            originDate: '', yearUnknown: false, entries: [],
+            logKind: p?.kind === 'count' ? 'count' : 'collection',
+            logPreset: preset, logTarget: universe.length,
+            note: '', fav: false, alerts: [], links: [],
+          });
+          get().updateGoal(goalId, { linkedLogId: logId });
+          return logId;
         },
         // VALUE attempts. profileId must be resolved (loaded on sign-in); returns
         // null if it isn't yet (UI surfaces that). Attempts round-trip via goal_attempts.

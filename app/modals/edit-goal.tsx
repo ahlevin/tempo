@@ -28,6 +28,7 @@ export default function EditGoalModal() {
   // Solo view: quest-child completion reflects the current user's own attempts only.
   const attempts   = allAttempts.filter(a => a.profileId === profileId);
   const updateGoal = useStore(s => s.updateGoal);
+  const ensureLinkedLog = useStore(s => s.ensureLinkedLog);
   const deleteGoal = useStore(s => s.deleteGoal);
   const addGoal    = useStore(s => s.addGoal);
   const setMilestoneDone = useStore(s => s.setMilestoneDone);
@@ -99,10 +100,14 @@ export default function EditGoalModal() {
       const t = size > 0 ? (partialOn && n > 0 ? Math.min(n, size) : size) : (n > 0 ? n : 0);
       if (!(t > 0)) { showToast('⚠️', 'Set a target', 'Enter how many to collect.'); return; }
       updateGoal(id, { ...base, kind, target: t, unit: '', step: 1, date, ...link, ...clearRepeat, ...clearValue });
+      // Preset-only link (no backing memory): materialize the life log now so it's
+      // visible in the Life Log list and loggable (solo goals have no lazy path).
+      if (link.linkedPreset && !link.linkedLogId) ensureLinkedLog(id);
     } else if (kind === 'streak') {
       const pt = parseFloat(periodTarget);
       if (!pt) { showToast('⚠️', 'Missing info', 'Enter a target per period.'); return; }
       updateGoal(id, { ...base, kind, target: pt, unit: '', step: 1, date: '', repeats: true, periodKind, periodTarget: pt, manualPeriods: g!.manualPeriods ?? [], ...link, ...clearValue });
+      if (link.linkedPreset && !link.linkedLogId) ensureLinkedLog(id);
     } else if (kind === 'value') {
       const tv = targetValue;
       if (tv == null) { showToast('⚠️', 'Missing info', 'Enter a target value.'); return; }

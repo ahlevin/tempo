@@ -20,6 +20,7 @@ import type { GoalPeriodKind } from '../../store/types';
 export default function AddGoalModal() {
   const { colors } = useTheme();
   const addGoal = useStore(s => s.addGoal);
+  const ensureLinkedLog = useStore(s => s.ensureLinkedLog);
   const { showToast } = useToast();
   const [kind,   setKind]   = useState<GoalKind>('count');
   const [name,   setName]   = useState('');
@@ -62,7 +63,8 @@ export default function AddGoalModal() {
       addGoal({ ...base, kind, target: 0, unit: '', step: 1, date, repeats: false });
     } else if (kind === 'count') {
       if (!target) { showToast('⚠️', 'Missing info', 'Enter a target.'); return; }
-      addGoal({ ...base, kind, target: parseFloat(target), unit: unit.trim() || 'units', step: parseFloat(step) || 1, date, repeats: false, ...link });
+      const gid = addGoal({ ...base, kind, target: parseFloat(target), unit: unit.trim() || 'units', step: parseFloat(step) || 1, date, repeats: false, ...link });
+      if (link.linkedPreset && !link.linkedLogId) ensureLinkedLog(gid);
     } else if (kind === 'collection') {
       if (!linked) { showToast('⚠️', 'Link a life log', 'Collection goals track a linked log.'); return; }
       // Resolve the target FRESH at submit (never a stale render-closure value). A
@@ -72,11 +74,15 @@ export default function AddGoalModal() {
       const n = parseInt(partialTarget, 10);
       const t = size > 0 ? (partialOn && n > 0 ? Math.min(n, size) : size) : (n > 0 ? n : 0);
       if (!(t > 0)) { showToast('⚠️', 'Set a target', size > 0 ? 'Enter how many to collect.' : 'Enter a target (how many to collect).'); return; }
-      addGoal({ ...base, kind, target: t, unit: '', step: 1, date, repeats: false, ...link });
+      const gid = addGoal({ ...base, kind, target: t, unit: '', step: 1, date, repeats: false, ...link });
+      // Preset-only link (no backing memory yet): materialize the life log now so it
+      // appears in the Life Log list and is loggable — solo goals have no lazy path.
+      if (link.linkedPreset && !link.linkedLogId) ensureLinkedLog(gid);
     } else if (kind === 'streak') {
       const pt = parseFloat(periodTarget);
       if (!pt) { showToast('⚠️', 'Missing info', 'Enter a target per period.'); return; }
-      addGoal({ ...base, kind, target: pt, unit: '', step: 1, date: '', repeats: true, periodKind, periodTarget: pt, manualPeriods: [], ...link });
+      const gid = addGoal({ ...base, kind, target: pt, unit: '', step: 1, date: '', repeats: true, periodKind, periodTarget: pt, manualPeriods: [], ...link });
+      if (link.linkedPreset && !link.linkedLogId) ensureLinkedLog(gid);
     } else if (kind === 'value') {
       const tv = targetValue;
       if (tv == null) { showToast('⚠️', 'Missing info', 'Enter a target value.'); return; }

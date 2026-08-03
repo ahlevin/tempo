@@ -2,4 +2,4 @@
 // you need to confirm a fresh deploy actually went live (Cloudflare Pages can lag
 // or cache) — if the footer still shows the old marker after a hard refresh, the
 // new build hasn't deployed yet, so the issue is the deploy, not the code.
-export const BUILD_ID = '2026-08-02 · link a goal to any preset from the full searchable catalog (lazy log creation)';
+export const BUILD_ID = '2026-08-02 · preset-linked solo goals materialize their life log (+ Log a visit action)';
