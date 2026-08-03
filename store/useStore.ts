@@ -375,7 +375,10 @@ export const useStore = create<TempoStore>()(
           const s = get();
           // Only numeric-target one-shot kinds auto-stamp on reaching target.
           // milestone/value/quest manage their own completion; streak recurs.
+          // Skip goals the user only JOINED (owned by someone else) — never write
+          // to another owner's row (RLS blocks it anyway) and don't mutate it locally.
           const toStamp = s.goals.filter(g => {
+            if (g.ownerUserId && s.userId && g.ownerUserId !== s.userId) return false;
             const k = goalKind(g);
             return (k === 'count' || k === 'collection') && !g.completedAt && goalDone(g, s.memories);
           });

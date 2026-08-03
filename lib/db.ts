@@ -318,10 +318,13 @@ export interface CloudSnapshot {
 
 export async function fetchAll(userId: string): Promise<CloudSnapshot> {
   // goal_attempts has no user_id column — RLS scopes it to the user's profiles,
-  // so an unfiltered select returns only their own rows.
+  // so an unfiltered select returns their own rows PLUS co-participants' attempts on
+  // shared goals. goals is ALSO left unfiltered on purpose: RLS returns owned goals
+  // (own goals) PLUS goals the user has JOINED (goals_select_participant). Filtering
+  // by user_id here would drop joined challenge goals — the join-doesn't-appear bug.
   const [ev, go, me, ga, pr] = await Promise.all([
     supabase.from('events').select('*').eq('user_id', userId),
-    supabase.from('goals').select('*').eq('user_id', userId),
+    supabase.from('goals').select('*'),
     supabase.from('memories').select('*').eq('user_id', userId),
     supabase.from('goal_attempts').select('*'),
     supabase.from('prefs').select('*').eq('user_id', userId).maybeSingle(),
