@@ -13,6 +13,8 @@ import { isLinkedGoal, goalDerivedProgress, goalDone, linkedLog, windowLabel, is
 import { currentPeriodProgress, goalStreak, goalPeriodKind, goalPeriodTarget, periodLabel, periodNoun } from '../../utils/recurring';
 import { formatValue } from '../../utils/values';
 import { presetUniverse } from '../../constants/lifelogs';
+import { ownLogCoverage } from '../../utils/challenge';
+import { useConfirm } from '../../components/ConfirmDialog';
 
 export default function GoalDetailModal() {
   const { colors } = useTheme();
@@ -253,6 +255,9 @@ function Footer({ g, recurring }: { g: import('../../store/types').Goal; recurri
   const { colors } = useTheme();
   const shareGoal = useStore(s => s.shareGoal);
   const updateGoal = useStore(s => s.updateGoal);
+  const memories = useStore(s => s.memories);
+  const importCollectionCoverage = useStore(s => s.importCollectionCoverage);
+  const confirm = useConfirm();
   const { showToast } = useToast();
   const [busy, setBusy] = useState(false);
   const kind = goalKind(g);
@@ -275,7 +280,27 @@ function Footer({ g, recurring }: { g: import('../../store/types').Goal; recurri
     setBusy(false);
     if (res.error || !res.code) { showToast('⚠️', 'Could not share', res.error ?? 'Try again.'); return; }
     showToast('🏆', 'Challenge created!', `Join code ${res.code}`);
+    await offerCoverageImport();
     router.push({ pathname: '/modals/challenge-detail', params: { id: g.id } });
+  };
+
+  // Preset collections only: if the owner already has logged coverage in their own
+  // life log, offer to count it as a head start. Import is idempotent (dedup by
+  // item), so choosing "count" never double-writes. No prompt when coverage is 0.
+  const offerCoverageImport = async () => {
+    if (kind !== 'collection' || !g.linkedPreset) return;
+    const size = presetUniverse(g.linkedPreset)?.length ?? 0;
+    const n = ownLogCoverage(memories, g.linkedPreset).length;
+    if (n <= 0) return;
+    const ok = await confirm({
+      title: 'Count your existing visits?',
+      message: `You've already visited ${n} of ${size} in your log. Count them in this challenge as a head start?\n\nThis is per-person — each participant chooses for themselves.`,
+      confirmLabel: `Count my ${n}`,
+      cancelLabel: 'Start fresh',
+    });
+    if (!ok) return;
+    const added = importCollectionCoverage(g.id, g.linkedPreset);
+    if (added > 0) showToast('✅', 'Head start counted', `Counted ${added} existing ${added === 1 ? 'visit' : 'visits'}.`);
   };
 
   return (

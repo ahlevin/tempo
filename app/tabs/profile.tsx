@@ -7,6 +7,10 @@ import { useStore } from '../../store/useStore';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../components/Toast';
 import { IconPicker } from '../../components/IconPicker';
+import { useConfirm } from '../../components/ConfirmDialog';
+import { goalKind } from '../../utils/goals';
+import { ownLogCoverage } from '../../utils/challenge';
+import { presetUniverse } from '../../constants/lifelogs';
 import { copyToClipboard } from '../../utils/clipboard';
 import { TIMEZONES, QUOTES } from '../../constants/data';
 import { catColor } from '../../constants/colors';
@@ -27,6 +31,8 @@ export default function ProfileScreen() {
   const myProfile = useStore(s => s.myProfile);
   const updateMyProfile = useStore(s => s.updateMyProfile);
   const joinChallenge = useStore(s => s.joinChallenge);
+  const importCollectionCoverage = useStore(s => s.importCollectionCoverage);
+  const confirm = useConfirm();
   const { user, signOut } = useAuth();
   const { showToast } = useToast();
   const [locOpen, setLocOpen] = useState(false);
@@ -55,7 +61,29 @@ export default function ProfileScreen() {
     if (res.error) { showToast('⚠️', 'Could not join', res.error); return; }
     setJoinDraft('');
     showToast('🏆', 'Joined the challenge!', 'Find it in the Challenges tab.');
+    await offerCoverageImport(res.goalId);
     router.push('/tabs/challenges');
+  };
+
+  // After joining a PRESET collection challenge, if this user has their own prior
+  // coverage for that collection, offer to count it (per-person head start). Import
+  // is idempotent, so re-choosing "count" never double-writes. No prompt at 0.
+  const offerCoverageImport = async (goalId?: string) => {
+    if (!goalId) return;
+    const goal = useStore.getState().goals.find(g => g.id === goalId);
+    if (!goal || goalKind(goal) !== 'collection' || !goal.linkedPreset) return;
+    const size = presetUniverse(goal.linkedPreset)?.length ?? 0;
+    const n = ownLogCoverage(useStore.getState().memories, goal.linkedPreset).length;
+    if (n <= 0) return;
+    const ok = await confirm({
+      title: 'Count your existing visits?',
+      message: `You've already visited ${n} of ${size} of these in your log. Count them, or start fresh?\n\nThis is per-person — each participant chooses for themselves.`,
+      confirmLabel: `Count my ${n}`,
+      cancelLabel: 'Start fresh',
+    });
+    if (!ok) return;
+    const added = importCollectionCoverage(goalId, goal.linkedPreset);
+    if (added > 0) showToast('✅', 'Head start counted', `Counted ${added} existing ${added === 1 ? 'visit' : 'visits'}.`);
   };
 
   return (

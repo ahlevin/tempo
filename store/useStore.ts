@@ -13,6 +13,7 @@ import type { GoalAttempt, Link, Profile } from './types';
 import { fetchUniverses, setUniverseOverlay, UniverseRow } from '../lib/universes';
 import { currentPeriodKey } from '../utils/recurring';
 import { goalDone, goalKind } from '../utils/goals';
+import { ownLogCoverage } from '../utils/challenge';
 
 const today = () => format(new Date(), 'yyyy-MM-dd');
 
@@ -95,6 +96,11 @@ interface TempoStore {
   updateMyProfile: (patch: { displayName?: string; avatarEmoji?: string }) => void;
   shareGoal: (goalId: string) => Promise<{ code?: string; error?: string }>;
   joinChallenge: (code: string) => Promise<{ goalId?: string; error?: string }>;
+  /** Import the caller's OWN existing life-log coverage for a preset collection
+   *  into this challenge as goal_attempts (per-person head start). Idempotent:
+   *  skips items already attempted (goal_id + profile_id + item). Returns the
+   *  number of NEW items written. Reads only the caller's own log. */
+  importCollectionCoverage: (goalId: string, preset: string | undefined) => number;
   refreshCloud: () => Promise<void>;
   updatePrefs: (patch: Partial<UserPrefs>) => void;
   setHolidaysEnabled: (on: boolean) => void;
@@ -658,6 +664,25 @@ export const useStore = create<TempoStore>()(
           if (res.error || !res.goalId) return { error: res.error ?? 'Could not join — check the code.' };
           await get().refreshCloud();
           return { goalId: res.goalId };
+        },
+        // Snapshot the caller's OWN prior life-log coverage into this collection
+        // challenge as goal_attempts. Idempotent + distinct: keyed on (goalId,
+        // profileId, item), so re-running or re-logging an already-counted item
+        // never inflates. Uses canonical universe names (via ownLogCoverage) so
+        // dedupe/distinct-count are exact. Never reads another user's log.
+        importCollectionCoverage: (goalId, preset) => {
+          const profileId = get().profileId;
+          if (!profileId || !preset) return 0;
+          const coverage = ownLogCoverage(get().memories, preset);
+          if (!coverage.length) return 0;
+          const have = new Set(
+            get().goalAttempts
+              .filter(a => a.goalId === goalId && a.profileId === profileId && a.item)
+              .map(a => a.item as string),
+          );
+          const fresh = coverage.filter(c => !have.has(c.item));
+          for (const c of fresh) get().addGoalAttempt({ goalId, value: 1, occurredAt: c.date || today(), item: c.item });
+          return fresh.length;
         },
         // ---- Holidays (visibility layer; the library itself lives in code) ----
         setHolidaysEnabled: (on) => {

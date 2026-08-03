@@ -1,5 +1,31 @@
-import { Goal, GoalAttempt, Standing } from '../store/types';
+import { Goal, GoalAttempt, Memory, Standing } from '../store/types';
 import { formatValue } from './values';
+import { presetUniverse } from '../constants/lifelogs';
+import { canonItem, isUpcomingEntry } from './lifelog';
+
+// ── Existing-coverage import (life log → collection challenge) ────────────────
+// The caller's OWN completed coverage for a PRESET collection, read from THEIR
+// life log for that preset (matched by logPreset). Returns one row per DISTINCT
+// canonical item, carrying the earliest completed entry date (for occurred_at;
+// '' when the entries are dateless). Upcoming (future-dated) entries are excluded,
+// matching coverage rules. Reads ONLY the passed-in memories — never another user's
+// log. Empty when there's no such log, no preset, or no completed items.
+export function ownLogCoverage(memories: Memory[], preset: string | undefined): { item: string; date: string }[] {
+  if (!preset) return [];
+  const mem = memories.find(m => m.type === 'lifelog' && m.logPreset === preset);
+  if (!mem) return [];
+  const universe = presetUniverse(preset) ?? [];
+  const byItem = new Map<string, string>();               // canonical item → earliest date
+  for (const e of mem.entries) {
+    if (isUpcomingEntry(e) || !e.item) continue;
+    const item = canonItem(universe, e.item);              // snap to canonical universe name
+    if (!item) continue;
+    const prev = byItem.get(item);
+    if (prev === undefined) byItem.set(item, e.date || '');
+    else if (e.date && (prev === '' || e.date < prev)) byItem.set(item, e.date);
+  }
+  return [...byItem.entries()].map(([item, date]) => ({ item, date }));
+}
 
 // A goal becomes a CHALLENGE once it's been shared (share_goal set its join_code).
 // The store's goals array already includes goals the user JOINED (RLS
