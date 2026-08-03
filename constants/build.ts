@@ -2,4 +2,4 @@
 // you need to confirm a fresh deploy actually went live (Cloudflare Pages can lag
 // or cache) — if the footer still shows the old marker after a hard refresh, the
 // new build hasn't deployed yet, so the issue is the deploy, not the code.
-export const BUILD_ID = '2026-07-30 · edit custom-collection items post-creation; attach parity via logUniverse';
+export const BUILD_ID = '2026-08-02 · default theme is now light (fresh installs); splash + userInterfaceStyle light';

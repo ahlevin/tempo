@@ -1,6 +1,6 @@
 import { createContext, useContext } from 'react';
 import { useStore } from '../store/useStore';
-import { palettes, darkColors, Palette, ThemeName } from '../constants/colors';
+import { palettes, lightColors, Palette, ThemeName } from '../constants/colors';
 
 interface ThemeValue {
   colors: Palette;
@@ -9,8 +9,8 @@ interface ThemeValue {
 }
 
 const ThemeContext = createContext<ThemeValue>({
-  colors: darkColors,
-  theme: 'dark',
+  colors: lightColors,
+  theme: 'light',
   setTheme: () => {},
 });
 
@@ -19,7 +19,7 @@ export function useTheme() {
 }
 
 // Latest active palette, for the rare non-hook reader (e.g. imperative code).
-let active: Palette = darkColors;
+let active: Palette = lightColors;
 export function getActiveColors(): Palette {
   return active;
 }
@@ -31,8 +31,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const theme = useStore(s => s.prefs.theme);
   const updatePrefs = useStore(s => s.updatePrefs);
 
-  const name: ThemeName = theme === 'light' ? 'light' : 'dark';
-  const colors = palettes[name] ?? darkColors;
+  // Default to LIGHT: only an explicit 'dark' preference yields dark, so a fresh
+  // user (or one who never chose a theme) sees light; an explicit choice is kept.
+  const name: ThemeName = theme === 'dark' ? 'dark' : 'light';
+  const colors = palettes[name] ?? lightColors;
   active = colors;
 
   return (

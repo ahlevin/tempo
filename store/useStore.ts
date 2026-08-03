@@ -21,7 +21,7 @@ const DEFAULT_PREFS: UserPrefs = {
   location: '',
   displayName: '',
   onboarded: false,
-  theme: 'dark',
+  theme: 'light',
   holidays: { enabled: false, shown: {}, fav: {}, reminders: {} },
   isSuperuser: false,
 };
